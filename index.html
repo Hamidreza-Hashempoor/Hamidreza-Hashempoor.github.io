@@ -1,0 +1,99 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252"><title>Hamidreza Hashempoor</title>
+  
+    <style>
+    body {font-family: "Lato", sans-serif;}
+    
+    div.tab {
+        overflow: hidden;
+        border: 1px solid #ccc;
+        background-color: #f1f1f1;
+    }
+    
+    div.tab button {
+        background-color: inherit;
+        float: left;
+        border: none;
+        outline: none;
+        cursor: pointer;
+        padding: 14px 16px;
+        transition: 0.3s;
+        font-size: 17px;
+    }
+    
+    div.tab button:hover {
+        background-color: #ddd;
+    }
+    
+    div.tab button.active {
+        background-color: #ccc;
+    }
+    
+    .tabcontent {
+        display: none;
+        padding: 6px 12px;
+        border: 1px solid #ccc;
+        border-top: none;
+    }
+    </style></head><body>
+      
+    <div class="w3-container">
+      
+    <table border="0" width="300" cellpadding="10">
+    <tbody>
+    <tr valign="top">
+    <td>
+    
+    <img src="/fig/hamid.jpg" height="220"></td>
+    <td nowrap=""><h3>Hamidreza Hashempoor</h3>
+    <address><br>ELLIS Student<br>Gmail: "hamidreza dot hashemp"</address>
+    
+    </td>
+    </tr>
+    </tbody>
+    </table>  
+    
+    <table style="width: 70%;" border="0" cellspacing="10"> 
+    <tbody>    
+    <tr>
+    <td>  
+      
+    <p>
+    I am a ELLIS student. Prior to that I was a researcher at Korea. I was a researcher at Seoul National University
+     with <a href="http://wcisl.snu.ac.kr">Wan Choi</a>.
+    </p>
+      
+    <p>
+    <b>Research interests:</b> Probabilistic models and statistical analysis.
+    </p>
+    
+    <p>
+    <a href="https://scholar.google.com/citations?user=Gx6JOqoAAAAJ&hl=en">
+    Google Scholar</a>
+    </p>
+    
+    
+    </td>
+    </tr>
+    </tbody>
+    </table>  
+    
+    <script>
+    
+    document.getElementById("defaultOpen").click();
+    
+    function openItm(evt, itmName) {
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tabcontent");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tablinks");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(itmName).style.display = "block";
+        evt.currentTarget.className += " active";
+    }
+    </script>  
+      
+    </body></html>

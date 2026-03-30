@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Structured Temporal Inference in Hybrid State-Space Models</title>
+  <meta name="description" content="Pi-SSM for hybrid continuous-discrete temporal inference. AISTATS 2026." />
+  <style>
+    :root {
+      --paper: #fffef8;
+      --ink: #1f2429;
+      --muted: #55606a;
+      --line: #d8d3c9;
+      --accent: #8a2d1f;
+      --accent-soft: #f2ebe2;
+      --maxw: 920px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 520px at 5% -10%, #f3efe5 0%, rgba(243, 239, 229, 0) 65%),
+        radial-gradient(900px 440px at 95% 0%, #efe6dc 0%, rgba(239, 230, 220, 0) 62%),
+        #f8f6f1;
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", serif;
+      line-height: 1.7;
+    }
+
+    .page {
+      width: min(var(--maxw), 94vw);
+      margin: 0 auto;
+      padding: 42px 0 56px;
+    }
+
+    .article {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 14px 40px rgba(40, 35, 26, 0.08);
+      padding: clamp(20px, 4vw, 46px);
+    }
+
+    .meta {
+      color: var(--muted);
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      letter-spacing: 0.02em;
+      font-size: 0.88rem;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 4vw, 2.85rem);
+      line-height: 1.15;
+      letter-spacing: -0.015em;
+    }
+
+    .authors {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 1.02rem;
+    }
+
+    .tools {
+      margin-top: 18px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    .tools a {
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid #d6c6b7;
+      background: #fff;
+      border-radius: 999px;
+      padding: 7px 13px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .toc {
+      margin-top: 20px;
+      padding: 10px 14px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      font-size: 0.92rem;
+    }
+
+    .toc a {
+      color: #203142;
+      text-decoration: none;
+      margin-right: 10px;
+      white-space: nowrap;
+    }
+
+    h2 {
+      margin: 34px 0 10px;
+      font-size: clamp(1.25rem, 2.7vw, 1.75rem);
+      line-height: 1.25;
+    }
+
+    p {
+      margin: 0 0 13px;
+      font-size: 1.04rem;
+    }
+
+    .eq {
+      margin: 15px 0;
+      padding: 12px 14px;
+      border: 1px solid #e0dbd1;
+      background: #fff;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+
+    .eq-note {
+      margin-top: -3px;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .wrap-figure {
+      float: right;
+      clear: right;
+      margin: 5px 0 10px 22px;
+      max-width: min(46%, 430px);
+      width: max-content;
+      background: #fff;
+      border: 1px solid #e4dfd6;
+      border-radius: 9px;
+      padding: 8px;
+    }
+
+    .wrap-figure.left {
+      float: left;
+      clear: left;
+      margin: 5px 22px 10px 0;
+    }
+
+    .wrap-figure img,
+    .figure-full img,
+    .figure-grid img {
+      display: block;
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      image-rendering: auto;
+    }
+
+    .wrap-figure figcaption,
+    .figure-full figcaption,
+    .figure-grid figcaption {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.4;
+    }
+
+    .clear {
+      clear: both;
+    }
+
+    .figure-full {
+      margin: 20px auto;
+      border: 1px solid #e4dfd6;
+      border-radius: 9px;
+      background: #fff;
+      padding: 8px;
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    .figure-grid {
+      margin: 14px 0 6px;
+      border: 1px solid #e4dfd6;
+      border-radius: 9px;
+      background: #fff;
+      padding: 8px;
+    }
+
+    .figure-grid .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    ul {
+      margin-top: 6px;
+      margin-bottom: 14px;
+      padding-left: 20px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    footer {
+      margin-top: 30px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    @media (max-width: 900px) {
+      .wrap-figure,
+      .wrap-figure.left {
+        float: none;
+        clear: both;
+        max-width: 100%;
+        width: fit-content;
+        margin: 12px auto;
+      }
+
+      .figure-grid .grid {
+        grid-template-columns: 1fr;
+      }
+
+      p {
+        font-size: 1rem;
+      }
+    }
+  </style>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+  <div class="page">
+    <article class="article">
+      <div class="meta">AISTATS 2026 • Research Note</div>
+      <h1>Structured Temporal Inference in Hybrid State-Space Models</h1>
+      <p class="authors">Hamidreza Hashempoor • Institute for AI, University of Stuttgart</p>
+
+      <div class="tools">
+        <a href="resources/aistat.pdf">Paper PDF</a>
+        <a href="#equations">Core Equations</a>
+        <a href="#results">Results</a>
+      </div>
+
+      <div class="toc">
+        <a href="#intro">Introduction</a>
+        <a href="#model">Model</a>
+        <a href="#equations">Equations</a>
+        <a href="#inference">Inference</a>
+        <a href="#results">Empirics</a>
+      </div>
+
+      <h2 id="intro">Introduction</h2>
+      <figure class="wrap-figure" aria-label="Graphical model figure">
+        <img src="resources/Figs/web/graphical_model_r.png" alt="Graphical model of Pi-SSM" />
+        <figcaption>
+          Figure 1. Hybrid graph structure with continuous states and sampled discrete modes.
+        </figcaption>
+      </figure>
+      <p>
+        Real-world temporal systems are often hybrid: they evolve smoothly most of the time, then switch regimes under discrete events.
+        Classical SLDS-style methods are principled but often require explicit Markov edges in the discrete chain and can become expensive
+        when inference needs global sequence-level updates. Pi-SSM is designed to keep the useful structure of state-space inference while
+        allowing local, state-conditioned mode selection.
+      </p>
+      <p>
+        The central modeling choice is to infer the mode directly from the latent trajectory signal, using $q(z_t \mid \mathbf{x}_{t-1})$.
+        This avoids forcing a hard coded transition prior of the form $p(z_t \mid z_{t-1})$, and enables online operation in which each step
+        is updated with local information rather than global backward passes.
+      </p>
+      <p class="clear">
+        To preserve numerical structure, Pi-SSM keeps a Kalman-like update template for the continuous posterior but uses a learned,
+        positive-definite surrogate for the inversion-like component. This provides flexibility without abandoning filtering algebra.
+      </p>
+
+      <h2 id="model">Model Factorization</h2>
+      <figure class="wrap-figure left" aria-label="Factor graph figure">
+        <img src="resources/Figs/web/factor_plot.png" alt="Factor-graph interpretation" />
+        <figcaption>
+          Figure 2. Factor-graph view motivating local message updates over $(\mathbf{x}_t, z_t)$.
+        </figcaption>
+      </figure>
+      <p>
+        We model trajectories with continuous latent states $\mathbf{x}_{1:T}$, discrete modes $z_{1:T}$, and observations
+        $\mathbf{y}_{1:T}$. The joint distribution is factorized as
+      </p>
+
+      <div class="eq" id="equations">
+        $$
+        p(\mathbf{x}_{1:T}, z_{1:T}, \mathbf{y}_{1:T})
+        = p(\mathbf{x}_0)
+        \prod_{t=1}^{T}
+        p(z_t \mid \mathbf{x}_{t-1})
+        p(\mathbf{x}_t \mid \mathbf{x}_{t-1}, z_t)
+        p(\mathbf{y}_t \mid \mathbf{x}_t, z_t).
+        $$
+      </div>
+      <p class="eq-note">
+        This state-dependent discrete factorization is the key structural difference relative to Markov-mode SLDS.
+      </p>
+
+      <p>
+        At each step, the filtered approximation is represented as
+      </p>
+
+      <div class="eq">
+        $$
+        q(\mathbf{x}_t \mid \mathbf{y}_{1:t}) = \mathcal{N}\!\left(\hat{\boldsymbol{\mu}}_{t\mid t},\, \hat{\boldsymbol{\Sigma}}_{t\mid t}\right),
+        \qquad
+        z_t \sim q(z_t \mid \mathbf{x}_{t-1}).
+        $$
+      </div>
+
+      <p class="clear">
+        This decomposition supports local updates in time while retaining a probabilistic interpretation for both state and mode variables.
+      </p>
+
+      <h2 id="inference">Nested Inference and Updates</h2>
+      <p>
+        Continuous updates follow a pseudo-Kalman form with a learned gain parameterization:
+      </p>
+
+      <div class="eq">
+        $$
+        \hat{\mathbf{K}}_t
+        = \hat{\boldsymbol{\Sigma}}_{t\mid t-1}\mathbf{C}_{z_t}^{\top}\mathbf{L}_t\mathbf{L}_t^{\top},
+        \qquad
+        \mathbf{L}_t = \mathrm{RNN}\!\left([\hat{\boldsymbol{\Sigma}}_{t\mid t-1}, \mathbf{r}_t]\right).
+        $$
+      </div>
+
+      <div class="eq">
+        $$
+        \hat{\boldsymbol{\mu}}_{t\mid t}
+        = \hat{\boldsymbol{\mu}}_{t\mid t-1}
+        + \hat{\mathbf{K}}_t\left(\mathbf{y}_t - \mathbf{C}_{z_t}\hat{\boldsymbol{\mu}}_{t\mid t-1}\right),
+        $$
+        $$
+        \hat{\boldsymbol{\Sigma}}_{t\mid t}
+        = \hat{\boldsymbol{\Sigma}}_{t\mid t-1}
+        + \hat{\mathbf{K}}_t\left(\mathbf{C}_{z_t}\hat{\boldsymbol{\Sigma}}_{t\mid t-1}\mathbf{C}_{z_t}^{\top}+\mathbf{R}_t\right)\hat{\mathbf{K}}_t^{\top}.
+        $$
+      </div>
+      <p class="eq-note">
+        The gain keeps the structure of filtering while replacing unstable inverse terms with a learned PSD factor.
+      </p>
+
+      <p>
+        A compact message-passing approximation for beliefs can be summarized as
+      </p>
+      <div class="eq">
+        $$
+      \operatorname{Belief}(\mathbf{x}_t)
+        \propto
+        m_{f_{\mathrm{dyn}}\to\mathbf{x}_t}
+      \cdot
+        m_{f_{\mathrm{obs}}\to\mathbf{x}_t}
+      \cdot
+        m_{f_{\mathrm{mode}}\to\mathbf{x}_t},
+        $$
+        $$
+      \operatorname{Belief}(z_t)
+        \propto
+        m_{f_{\mathrm{dyn}}\to z_t}
+      \cdot
+        m_{f_{\mathrm{mode}}\to z_t}.
+        $$
+      </div>
+
+      <p>
+        For training, we optimize predictive likelihood terms with local discrete-variable gradients.
+        One practical objective is a rolling negative log-likelihood:
+      </p>
+      <div class="eq">
+        $$
+        \mathcal{L}(\theta,\phi)
+        = -\sum_{t=1}^{T}\log q\!\left(\mathbf{y}_t \mid \mathbf{y}_{1:t-1};\theta,\phi\right),
+        $$
+        $$
+        \nabla_\theta \mathcal{L}
+        \approx
+        -\sum_{t=1}^{T}
+        \mathbb{E}_{z_t\sim q_\theta(z_t\mid\mathbf{x}_{t-1})}
+        \left[
+        \log q_\phi(\mathbf{y}_t\mid z_t,\mathbf{x}_{t-1})\,\nabla_\theta\log q_\theta(z_t\mid\mathbf{x}_{t-1})
+        \right].
+        $$
+      </div>
+
+      <h2 id="results">Empirical Behavior</h2>
+      <figure class="figure-full" aria-label="Pong figure">
+        <img src="resources/Figs/web/pong_plot_main_body.png" alt="Pong experiment figure" />
+        <figcaption>
+          Figure 3. Pong analysis: mode evolution, transition-spectrum dynamics, and predictive uncertainty near collision events.
+        </figcaption>
+      </figure>
+
+      <p>
+        In Pong, regime changes align with contact events and are visible in both learned discrete assignments and transition-spectrum shifts.
+        The state-conditioned mode predictor captures these transitions without explicit $p(z_t\mid z_{t-1})$ persistence terms.
+      </p>
+      <p>
+        Across tasks, we observe three consistent behaviors:
+      </p>
+      <ul>
+        <li>Reliable tracking under hybrid continuous-discrete dynamics.</li>
+        <li>Stable recursive updates from the learned gain factorization.</li>
+        <li>Practical online inference without full-sequence backtracking.</li>
+      </ul>
+
+      <figure class="figure-grid" aria-label="Navier comparison figure">
+        <div class="grid">
+          <img src="resources/Figs/Navier/160_30.png" alt="Navier ground-truth-like panel" />
+          <img src="resources/Figs/Navier/150_30.png" alt="Navier Pi-SSM panel" />
+          <img src="resources/Figs/Navier/120_20.png" alt="Navier SPINN panel" />
+          <img src="resources/Figs/Navier/100_10.png" alt="Navier PINN panel" />
+        </div>
+        <figcaption>
+          Figure 4. Qualitative comparison on Navier-Stokes-type dynamics.
+        </figcaption>
+      </figure>
+
+      <footer>
+        Pi-SSM project page. Content is adapted from the AISTATS 2026 manuscript and uses original figures from this repository.
+      </footer>
+    </article>
+  </div>
+</body>
+</html>

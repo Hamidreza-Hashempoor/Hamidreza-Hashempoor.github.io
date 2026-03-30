@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hamidreza Hashempoor | Publications and Code</title>
+    <style>
+        :root {
+            --bg: #f4f5f7;
+            --panel: #fafbfc;
+            --text: #3f464d;
+            --muted: #6b727a;
+            --line: #d9dde2;
+            --link: #48a5c0;
+            --link-hover: #2f8ea9;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            color: var(--text);
+            background: var(--bg);
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+        }
+
+        a {
+            color: var(--link);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+        }
+
+        a:hover {
+            color: var(--link-hover);
+            border-bottom-color: rgba(47, 142, 169, 0.55);
+        }
+
+        .page {
+            max-width: 1320px;
+            margin: 0 auto;
+            padding: 38px 34px 64px;
+            display: grid;
+            grid-template-columns: 280px minmax(0, 1fr);
+            gap: 44px;
+        }
+
+        .sidebar {
+            position: sticky;
+            top: 24px;
+            align-self: start;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 18px;
+        }
+
+        .photo-wrap {
+            width: 100%;
+            margin-bottom: 12px;
+        }
+
+        .avatar {
+            width: 100%;
+            aspect-ratio: 4 / 5;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid var(--line);
+            display: block;
+        }
+
+        .sidebar-name {
+            margin: 0 0 8px;
+            font-size: 1.3rem;
+            line-height: 1.2;
+            color: #40474e;
+            font-weight: 700;
+        }
+
+        .sidebar-bio {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .side-links {
+            margin: 16px 0 0;
+            padding: 14px 0 0;
+            border-top: 1px solid var(--line);
+            list-style: none;
+            display: grid;
+            gap: 8px;
+            padding-left: 0;
+        }
+
+        .side-links li {
+            font-size: 0.97rem;
+        }
+
+        .content {
+            padding-right: 20px;
+        }
+
+        .hero {
+            margin-bottom: 18px;
+        }
+
+        .hero h1 {
+            margin: 0 0 10px;
+            font-size: clamp(2rem, 3.8vw, 2.8rem);
+            line-height: 1.12;
+            color: #40474e;
+            font-weight: 700;
+        }
+
+        .hero p {
+            margin: 0;
+            max-width: 70ch;
+            color: #56606a;
+            font-size: 1rem;
+        }
+
+        .section {
+            border-top: 1px solid var(--line);
+            padding-top: 14px;
+            margin-top: 16px;
+        }
+
+        .section h2 {
+            margin: 0 0 10px;
+            font-size: 1.45rem;
+            line-height: 1.2;
+            color: #40474e;
+            font-weight: 700;
+        }
+
+        .section-intro {
+            margin: 0 0 8px;
+            color: var(--muted);
+            font-size: 0.96rem;
+            max-width: 74ch;
+        }
+
+        .item-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 12px;
+        }
+
+        .item-list li {
+            font-size: 0.98rem;
+            color: #50575f;
+        }
+
+        .item-title {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #3f464d;
+        }
+
+        .item-meta {
+            margin: 4px 0 0;
+            font-size: 0.92rem;
+            color: var(--muted);
+        }
+
+        .item-actions {
+            margin-top: 4px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 0.9rem;
+        }
+
+        .pub-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .pub-item {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fbfcfd;
+            overflow: hidden;
+        }
+
+        .pub-item summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 12px 14px;
+        }
+
+        .pub-item summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .pub-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .pub-title {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #3f464d;
+            flex: 1;
+        }
+
+        .pub-links {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            white-space: nowrap;
+        }
+
+        .pub-link-chip {
+            font-size: 0.82rem;
+            border: 1px solid #cfd5dc;
+            border-radius: 999px;
+            padding: 2px 8px;
+            background: #ffffff;
+        }
+
+        .pub-link-chip.muted {
+            color: #9aa2ab;
+            border-color: #dde2e7;
+            pointer-events: none;
+        }
+
+        .pub-meta {
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .pub-authors {
+            margin-top: 4px;
+            color: #59626c;
+            font-size: 0.9rem;
+        }
+
+        .pub-body {
+            border-top: 1px solid var(--line);
+            padding: 12px 14px;
+            font-size: 0.93rem;
+            color: #4f5760;
+            background: #ffffff;
+        }
+
+        .pub-body p {
+            margin: 0;
+        }
+
+        .news-list {
+            margin: 0;
+            padding-left: 20px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .news-list li {
+            font-size: 0.97rem;
+            color: #4e555d;
+        }
+
+        .news-date {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 2px 8px;
+            border: 1px solid #cfd6dd;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            color: #68707a;
+            background: #f8fafc;
+            vertical-align: 1px;
+        }
+
+        .footer {
+            margin-top: 24px;
+            color: var(--muted);
+            font-size: 0.88rem;
+        }
+
+        @media (max-width: 980px) {
+            .page {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 26px 18px 48px;
+            }
+
+            .sidebar {
+                position: static;
+            }
+
+            .photo-wrap {
+                max-width: 220px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <aside class="sidebar">
+            <div class="photo-wrap">
+                <img class="avatar" src="../fig/hamid.jpg" alt="Hamidreza Hashempoor portrait">
+            </div>
+            <h2 class="sidebar-name">Hamidreza Hashempoor</h2>
+            <p class="sidebar-bio">
+                ELLIS and IMPRSIS doctoral on probabilistic models.
+            </p>
+            <p class="sidebar-bio">
+                 Stuttgart and Amsterdam.
+            </p>
+
+
+            <ul class="side-links">
+                <li><a href="https://hamidreza-hashempoor.github.io/">Home page</a></li>
+                <li><a href="cv/Resume.pdf">CV (PDF)</a></li>
+                <li><a href="https://scholar.google.com/citations?user=Gx6JOqoAAAAJ&amp;hl=en">Google Scholar</a></li>
+                <li><a href="https://sites.google.com/view/hamidrezahashempoor/home?authuser=3">Previous website (Out Dated)</a></li>
+            </ul>
+        </aside>
+
+        <section class="content">
+            <section class="hero">
+                <h1>About</h1>
+                <p>
+                    Here I put the latest updates and news about myself, plus blog posts related to scientific notes, publications, and activities I have had so far.
+                </p>
+            </section>
+
+            <!-- Blogs post -->
+            <section class="section">
+                <h2>Blog posts</h2>
+                <!-- <p class="section-intro">Recent updates, milestones, and activities.</p> -->
+                <ul class="news-list">
+                    <li>
+                        AISTATS 2026 paper block: in this post I explain a structured temporal inference framework for nonlinear state-space models with hybrid discrete-continuous dynamics. I also summarize the two-stage Kalman-inspired and neural inference pipeline, stabilization strategy, and why it improves state estimation, regime detection, and imputation.
+                        <span class="news-date">Late March 2026</span>
+                        [<a href="aistats2026/pissm.html">open post</a>]
+                    </li>
+
+                </ul>
+            </section>
+
+            <!-- NEWS -->
+            <section class="section">
+                <h2>News</h2>
+                <!-- <p class="section-intro">Recent updates, milestones, and activities.</p> -->
+                <ul class="news-list">
+                    <li>
+                        A paper is accepted at AISTATS 2026.
+                        <span class="news-date">Late March 2026</span>
+                        [<a href="https://openreview.net/forum?id=ccV8Efl4yb&referrer=%5BAuthor%20Console%5D(%2Fgroup%3Fid%3Daistats.org%2FAISTATS%2F2026%2FConference%2FAuthors%23your-submissions)">link</a>]
+                    </li>
+                    <li>
+                        Participated in ELLIS Winter school 2026 in Athens, Greece, about climate science and machine learning.
+                        <span class="news-date">March 2026</span>
+                        [<a href="https://meditwin-project.eu/ai4eo-winter-school/">link</a>]
+                    </li>
+                    <li>
+                        A paper is accepted at Pattern Recognition 2026.
+                        <span class="news-date">February 2026</span>
+                        [<a href="https://www.sciencedirect.com/science/article/abs/pii/S0031320326001111">link</a>]
+                    </li>
+
+                </ul>
+            </section>
+
+            <section class="section">
+                <h2>Publications</h2>
+                <p class="section-intro">Selected papers with direct PDF and code links. Click each item to view abstract.</p>
+                <div class="pub-list">
+                    
+                    <details class="pub-item">
+                        <summary>
+                            <div class="pub-head">
+                                <p class="pub-title">FastTracker is a real-Time and accurate visual tracking framework</p>
+                                <div class="pub-links">
+                                    <a class="pub-link-chip" href="https://arxiv.org/pdf/2508.14370" target="_blank">pdf link</a>
+                                    <a class="pub-link-chip" href="https://github.com/Hamidreza-Hashempoor/FastTracker" target="_blank">code link</a>
+                                </div>
+                            </div>
+                            <div class="pub-meta">Preprint 2026</div>
+                            <div class="pub-authors"><strong>Hamidreza Hashempoor</strong>, Yu Dong Hwang, Steffen Staab </div>
+                        </summary>
+                        <div class="pub-body">
+                            <p><strong>Abstract:</strong> Conventional multi-object tracking (MOT) systems
+                            are predominantly designed for pedestrian tracking and often
+                            exhibit limited generalization to other object categories. This
+                            paper presents a generalized tracking framework capable of
+                            handling multiple object types, with a particular emphasis on
+                            vehicle tracking in complex traffic scenes. The proposed method
+                            incorporates two key components: (1) an occlusion-aware re-
+                            identification mechanism that enhances identity preservation for
+                            heavily occluded objects, and (2) a road-structure-aware tracklet
+                            refinement strategy that utilizes semantic scene priors—such as
+                            lane directions, crosswalks, and road boundaries—to improve
+                            trajectory continuity and accuracy. In addition, we introduce
+                            a new benchmark dataset comprising diverse vehicle classes
+                            with frame-level tracking annotations, specifically curated to
+                            support evaluation of vehicle-focused tracking methods. Extensive
+                            experimental results demonstrate that the proposed approach
+                            achieves robust performance on both the newly introduced dataset
+                            and several public benchmarks, highlighting its effectiveness in
+                            general-purpose object tracking. While our framework is designed
+                            for generalized multi-class tracking, it also achieves strong per-
+                            formance on conventional benchmarks, with HOTA scores of 66.4
+                            on MOT17 and 65.7 on MOT20 test sets. github.com/Hamidreza-
+                            Hashempoor/FastTracker, huggingface.co/datasets/Hamidreza-
+                            Hashemp/FastTracker-Benchmark.</p>
+                        </div>
+                    </details>
+
+                    <details class="pub-item">
+                        <summary>
+                            <div class="pub-head">
+                                <p class="pub-title">Structured Temporal Inference in State-Space Models</p>
+                                <div class="pub-links">
+                                    <a class="pub-link-chip" href="https://openreview.net/forum?id=ccV8Efl4yb&referrer=%5BAuthor%20Console%5D(%2Fgroup%3Fid%3Daistats.org%2FAISTATS%2F2026%2FConference%2FAuthors%23your-submissions)" target="_blank">pdf link</a>
+                                    <span class="pub-link-chip muted">code link</span>
+                                </div>
+                            </div>
+                            <div class="pub-meta">AISTATS 2026</div>
+                            <div class="pub-authors"><strong>Hamidreza Hashempoor</strong> </div>
+                        </summary>
+                        <div class="pub-body">
+                            <p><strong>Abstract:</strong> We propose a framework for structured temporal inference in nonlinear state-space models (SSMs) with hybrid latent dynamics that mix discrete and continuous variables. Our method follows a two-stage inference: continuous states are estimated via Kalman inspired updates, while discrete variables are sampled by a neural model conditioned on these states, avoiding explicit Markov assumptions. To handle instabilities arising from recurrent dynamics, we introduce stabilization approach, and train all components jointly using surrogate gradient estimators that support REINFORCE-style updates. This design achieves SOTA results across synthetic and real-world datasets, in state estimation, regime detection, and imputation under noise and partial observability.</p>
+                        </div>
+                    </details>
+
+                    <details class="pub-item">
+                        <summary>
+                            <div class="pub-head">
+                                <p class="pub-title">FeatureSORT: A robust tracker with optimized feature integration</p>
+                                <div class="pub-links">
+                                    <a class="pub-link-chip" href="https://www.sciencedirect.com/science/article/abs/pii/S0031320326001111" target="_blank">pdf link</a>
+                                    <span class="pub-link-chip muted">code link</span>
+                                </div>
+                            </div>
+                            <div class="pub-meta">Pattern Recognition 2026</div>
+                            <div class="pub-authors"><strong>Hamidreza Hashempoor</strong>, Rosemary Koikara, Yu Dong Hwang</div>
+                        </summary>
+                        <div class="pub-body">
+                            <p><strong>Abstract:</strong> We introduce FeatureSORT, a simple yet effective online multiple object tracker that reinforces the baselines with a redesigned detector and additional feature cues, while keeping computational complexity low. In contrast to conventional detectors that only provide bounding boxes, our designed detector architecture is extended to output multiple appearance attributes, including clothing color, clothing style, and motion direction, alongside the bounding boxes. These feature cues, together with a ReID network, form complementary embeddings that substantially improve association accuracy. The rationale behind selecting and combining these attributes is thoroughly examined in extensive ablation studies. Furthermore, we incorporate stronger post-processing strategies, such as global linking and Gaussian Smoothing Process interpolation, to handle missing associations and detections. During online tracking, we define a measurement-to-track distance function that jointly considers IoU, direction, color, style, and ReID similarity. This design enables FeatureSORT to maintain consistent identities through longer occlusions while reducing identity switches. Extensive experiments on standard MOT benchmarks demonstrate that FeatureSORT achieves state-of-the-art (SOTA) online performance, with MOTA scores of 79.7 on MOT16, 80.6 on MOT17, 77.9 on MOT20, and 92.2 on DanceTrack, underscoring the effectiveness of feature-enriched detection in advancing multi-object tracking. Our Github repository includes code implementation.</p>
+                        </div>
+                    </details>
+
+
+                    <details class="pub-item">
+                        <summary>
+                            <div class="pub-head">
+                                <p class="pub-title">Glance-MCMT: A General MCMT Framework with Glance Initialization and Progressive Association</p>
+                                <div class="pub-links">
+                                    <a class="pub-link-chip" href="https://arxiv.org/abs/2507.10115" target="_blank">pdf link</a>
+                                    <a class="pub-link-chip" href="https://github.com/Hamidreza-Hashempoor/Glance-MCMT" target="_blank">code link</a>
+                                </div>
+                            </div>
+                            <div class="pub-meta">Preprint 2025</div>
+                            <div class="pub-authors"><strong>Hamidreza Hashempoor</strong></div>
+                        </summary>
+                        <div class="pub-body">
+                            <p><strong>Abstract:</strong> A multi-camera multi-target tracking framework that assigns globally consistent identities using trajectory and appearance cues, with glance-based initialization and progressive global association.</p>
+                        </div>
+                    </details>
+
+                    <details class="pub-item">
+                        <summary>
+                            <div class="pub-head">
+                                <p class="pub-title">Deep Learning Based Data-Assisted Channel Estimation and Detection</p>
+                                <div class="pub-links">
+                                    <a class="pub-link-chip" href="https://ieeexplore.ieee.org/document/10960353" target="_blank">pdf link</a>
+                                    <a class="pub-link-chip" href="https://github.com/Hamidreza-Hashempoor/5g-dataaided-channel-estimate" target="_blank">code link</a>
+                                </div>
+                            </div>
+                            <div class="pub-meta">IEEE TMLCN 2025</div>
+                            <div class="pub-authors"><strong>Hamidreza Hashempoor</strong>, Wan Choi</div>
+                        </summary>
+                        <div class="pub-body">
+                            <p><strong>Abstract:</strong> Proposes a deep learning-based data-assisted channel estimation and detection framework for MIMO-OFDM systems, with denoising and correctness classification blocks that improve estimation MSE and detection quality.</p>
+                        </div>
+                    </details>
+
+                    <details class="pub-item">
+                        <summary>
+                            <div class="pub-head">
+                                <p class="pub-title">Gated Inference Network: Inferencing and Learning State-Space Models</p>
+                                <div class="pub-links">
+                                    <a class="pub-link-chip" href="https://neurips.cc/virtual/2024/poster/92976" target="_blank">pdf link</a>
+                                    <span class="pub-link-chip muted">code link</span>
+                                </div>
+                            </div>
+                            <div class="pub-meta">NeurIPS 2024</div>
+                            <div class="pub-authors"><strong>Hamidreza Hashempoor</strong>, Wan Choi</div>
+                        </summary>
+                        <div class="pub-body">
+                            <p><strong>Abstract:</strong> Introduces GIN, an approximate Bayesian inference algorithm for nonlinear state-space models that disentangles object and dynamic latent representations for state estimation and missing data imputation.</p>
+                        </div>
+                    </details>
+
+                    <details class="pub-item">
+                        <summary>
+                            <div class="pub-head">
+                                <p class="pub-title">FeatureSORT: Essential Features for Effective Tracking</p>
+                                <div class="pub-links">
+                                    <a class="pub-link-chip" href="https://arxiv.org/abs/2407.04249" target="_blank">pdf link</a>
+                                    <span class="pub-link-chip muted">code link</span>
+                                </div>
+                            </div>
+                            <div class="pub-meta">Preprint 2024</div>
+                            <div class="pub-authors"><strong>Hamidreza Hashempoor</strong>, Rosemary Koikara, Yu Dong Hwang</div>
+                        </summary>
+                        <div class="pub-body">
+                            <p><strong>Abstract:</strong> Presents an online MOT tracker that combines multiple appearance cues and ReID with stronger detection and post-processing, improving identity consistency and occlusion robustness.</p>
+                        </div>
+                    </details>
+
+                    <details class="pub-item">
+                        <summary>
+                            <div class="pub-head">
+                                <p class="pub-title">GaussianNet: Data-Assisted Channel Estimation with Deep Gaussian Networks</p>
+                                <div class="pub-links">
+                                    <a class="pub-link-chip" href="https://www.dbpia.co.kr/Journal/articleDetail?nodeId=NODE11107595" target="_blank">pdf link</a>
+                                    <span class="pub-link-chip muted">code link</span>
+                                </div>
+                            </div>
+                            <div class="pub-meta">KICS 2022 (Best Paper Award)</div>
+                            <div class="pub-authors"><strong>Hamidreza Hashempoor</strong>, Wan Choi</div>
+                        </summary>
+                        <div class="pub-body">
+                            <p><strong>Abstract:</strong> Proposes GaussianNet, a Gaussian stochastic network for selecting reliable detected symbols in data-assisted channel estimation, reducing MSE and BER versus conventional methods.</p>
+                        </div>
+                    </details>
+
+                    <details class="pub-item">
+                        <summary>
+                            <div class="pub-head">
+                                <p class="pub-title">Deep-LfD: Deep robot learning from demonstrations</p>
+                                <div class="pub-links">
+                                    <a class="pub-link-chip" href="https://www.sciencedirect.com/science/article/pii/S2665963821000312" target="_blank">pdf link</a>
+                                    <a class="pub-link-chip" href="https://github.com/SoftwareImpacts/SIMPAC-2021-39" target="_blank">code link</a>
+                                </div>
+                            </div>
+                            <div class="pub-meta">SoftwareImpacts 2021</div>
+                            <div class="pub-authors">Amir Ghalamzan E., Kiyanoush Nazari, <strong>Hamidreza Hashempoor</strong>, Fangxun Zhong</div>
+                        </summary>
+                        <div class="pub-body">
+                            <p><strong>Abstract:</strong> Provides a benchmark deep learning-from-demonstration pipeline and dataset for needle insertion tasks with da Vinci Research Kit, linking visual observations to robot control trajectories.</p>
+                        </div>
+                    </details>
+
+                    <details class="pub-item">
+                        <summary>
+                            <div class="pub-head">
+                                <p class="pub-title">A data-set of piercing needle through deformable objects for Deep Learning from Demonstrations</p>
+                                <div class="pub-links">
+                                    <a class="pub-link-chip" href="https://arxiv.org/abs/2012.02458" target="_blank">pdf link</a>
+                                    <a class="pub-link-chip" href="https://github.com/imanlab/d-lfd" target="_blank">code link</a>
+                                </div>
+                            </div>
+                            <div class="pub-meta">Preprint 2020</div>
+                            <div class="pub-authors"><strong>Hamidreza Hashempoor</strong>, Kiyanoush Nazari, Fangxun Zhong, Amir Ghalamzan E.</div>
+                        </summary>
+                        <div class="pub-body">
+                            <p><strong>Abstract:</strong> Introduces a synchronized multi-camera dataset and baseline deep RLfD architectures for robotic needle insertion through deformable objects, supporting visual-to-action learning.</p>
+                        </div>
+                    </details>
+                </div>
+            </section>
+
+
+            <section class="section">
+                <h2>Other activities</h2>
+                <p class="section-intro">Talks, collaborations, and additional scientific updates.</p>
+                <ul class="item-list">
+                    <li>
+                        <p class="item-title">Activity timeline</p>
+                        <p class="item-meta">Future updates will be posted here as short entries.</p>
+                    </li>
+                </ul>
+                <p class="footer">Last updated: March 30, 2026</p>
+            </section>
+        </section>
+    </main>
+</body>
+</html>

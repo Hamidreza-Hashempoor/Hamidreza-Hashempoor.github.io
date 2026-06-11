@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Distances & Divergences — Notebook</title>
+  <meta name="description" content="Rendered notebook: each distance/divergence shown as a rendered equation, its minimal numpy code, and the computed output." />
+  <style>
+    :root {
+      --paper: #fffef8; --ink: #1f2429; --muted: #55606a; --line: #d8d3c9;
+      --accent: #8a2d1f; --accent-soft: #f2ebe2; --maxw: 920px;
+      --code-bg: #f6f8fa; --code-border: #e3e6ea; --out-bg: #fbfbfd;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; color: var(--ink);
+      background:
+        radial-gradient(1200px 520px at 5% -10%, #f3efe5 0%, rgba(243,239,229,0) 65%),
+        radial-gradient(900px 440px at 95% 0%, #efe6dc 0%, rgba(239,230,220,0) 62%),
+        #f8f6f1;
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", serif;
+      line-height: 1.7;
+    }
+    .page { width: min(var(--maxw), 94vw); margin: 0 auto; padding: 42px 0 56px; }
+    .article {
+      background: var(--paper); border: 1px solid var(--line); border-radius: 14px;
+      box-shadow: 0 14px 40px rgba(40,35,26,0.08); padding: clamp(20px, 4vw, 46px);
+    }
+    .meta {
+      color: var(--muted); font-family: "Avenir Next","Segoe UI","Helvetica Neue",sans-serif;
+      letter-spacing: 0.02em; font-size: 0.88rem; text-transform: uppercase; margin-bottom: 12px;
+    }
+    h1 { margin: 0 0 6px; font-size: clamp(1.7rem, 3.6vw, 2.5rem); line-height: 1.15; }
+    h2 {
+      margin: 30px 0 8px; font-size: clamp(1.2rem, 2.6vw, 1.6rem);
+      color: var(--accent); border-bottom: 1px solid var(--line); padding-bottom: 4px;
+    }
+    p { margin: 0 0 13px; font-size: 1.04rem; }
+    p.intro { color: var(--muted); }
+    .tools {
+      margin: 16px 0 6px; display: flex; gap: 10px; flex-wrap: wrap;
+      font-family: "Avenir Next","Segoe UI","Helvetica Neue",sans-serif;
+    }
+    .tools a {
+      color: var(--accent); text-decoration: none; border: 1px solid #d6c6b7;
+      background: #fff; border-radius: 999px; padding: 7px 13px; font-weight: 600; font-size: 0.9rem;
+    }
+    .nb-cell { margin: 16px 0 20px; }
+    .nb-cell.note { background: var(--accent-soft); border-left: 4px solid var(--accent);
+      border-radius: 8px; padding: 10px 14px; }
+    .nb-name { font-weight: 700; font-size: 1.06rem; margin-bottom: 4px; }
+    .nb-eq { margin: 6px 0 8px; padding: 8px 12px; border: 1px solid #e0dbd1;
+      background: #fff; border-radius: 8px; overflow-x: auto; }
+    .nb-in, .nb-out { position: relative; }
+    .nb-in pre, .nb-out pre {
+      margin: 4px 0; padding: 11px 13px 11px 58px; border-radius: 8px; overflow-x: auto;
+      font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 0.86rem; line-height: 1.5;
+    }
+    .nb-in pre { background: var(--code-bg); border: 1px solid var(--code-border); }
+    .nb-out pre {
+      background: var(--out-bg); border: 1px solid var(--code-border);
+      border-left: 3px solid #6f9e6f; color: #243024; white-space: pre-wrap;
+    }
+    .nb-in pre code { font-family: inherit; }
+    .nb-label {
+      position: absolute; left: 10px; top: 11px; font-size: 0.72rem; font-weight: 700;
+      color: #8a93a0; font-family: "SF Mono", Menlo, Consolas, monospace; user-select: none;
+    }
+    .nb-label.out { color: #6f9e6f; }
+    .nb-note { margin: 4px 0 0; font-size: 0.98rem; }
+    footer {
+      margin-top: 30px; padding-top: 16px; border-top: 1px solid var(--line);
+      color: var(--muted); font-size: 0.92rem;
+      font-family: "Avenir Next","Segoe UI","Helvetica Neue",sans-serif;
+    }
+    @media (max-width: 900px) { p { font-size: 1rem; } }
+  </style>
+  <script>
+    window.MathJax = { tex: { inlineMath: [['$','$'], ['\\(','\\)']] }, svg: { fontCache: 'global' } };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+  <div class="page">
+    <article class="article">
+      <div class="meta">Rendered Notebook • Distances &amp; Divergences</div>
+      <h1>Distances &amp; Divergences — Minimal Examples</h1>
+      <p>
+        Each distance/divergence is shown as a rendered <strong>equation</strong>, then its minimal
+        <code>numpy</code> <strong>code</strong>, then the <strong>computed output</strong>. The
+        numbers match the <em>Example</em> lines in the post. A few intractable objects are described
+        in notes instead of code.
+      </p>
+      <div class="tools">
+        <a href="../distances.html">&larr; Back to post</a>
+        <a href="distances_examples.ipynb">Download .ipynb</a>
+      </div>
+
+<h2>1. Vector &amp; metric distances</h2>
+<p class="intro">Classical distances between two points $\mathbf p,\mathbf q\in\mathbb R^n$. All are true metrics.</p>
+
+<div class="nb-cell">
+  <div class="nb-name">Euclidean distance, $L_2$</div>
+  <div class="nb-eq">$$d_2(\mathbf p,\mathbf q)=\sqrt{\textstyle\sum_i (p_i-q_i)^2}$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.0, 0.0]); q = np.array([3.0, 4.0])
+print(&quot;Euclidean L2:&quot;, np.sqrt(((p - q) ** 2).sum()))</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Euclidean L2: 5.0</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Manhattan / city-block distance, $L_1$</div>
+  <div class="nb-eq">$$d_1(\mathbf p,\mathbf q)=\textstyle\sum_i |p_i-q_i|$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.0, 0.0]); q = np.array([3.0, 4.0])
+print(&quot;Manhattan L1:&quot;, np.abs(p - q).sum())</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Manhattan L1: 7.0</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Minkowski distance, $L_k$-norm</div>
+  <div class="nb-eq">$$d_k(\mathbf p,\mathbf q)=\Big(\textstyle\sum_i |p_i-q_i|^k\Big)^{1/k}$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.0, 0.0]); q = np.array([3.0, 4.0]); k = 3
+print(&quot;Minkowski k=3:&quot;, (np.abs(p - q) ** k).sum() ** (1 / k))</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Minkowski k=3: 4.497941445275415</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Chebyshev distance, $L_\infty$</div>
+  <div class="nb-eq">$$d_\infty(\mathbf p,\mathbf q)=\max_i |p_i-q_i|$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.0, 0.0]); q = np.array([3.0, 4.0])
+print(&quot;Chebyshev Linf:&quot;, np.abs(p - q).max())</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Chebyshev Linf: 4.0</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Quadratic (generalized) distance</div>
+  <div class="nb-eq">$$d_Q(\mathbf p,\mathbf q)=\sqrt{(\mathbf p-\mathbf q)^{\top} Q\,(\mathbf p-\mathbf q)}\,,\quad Q \succeq 0$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.0, 0.0]); q = np.array([3.0, 4.0])
+Q = np.array([[2.0, 0.5], [0.5, 1.0]]); d = p - q
+print(&quot;Quadratic:&quot;, np.sqrt(d @ Q @ d))</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Quadratic: 6.782329983125268</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Mahalanobis metric</div>
+  <div class="nb-eq">$$d_\Sigma(\mathbf p,\mathbf q)=\sqrt{(\mathbf p-\mathbf q)^{\top} \Sigma^{-1}(\mathbf p-\mathbf q)}$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>a = np.array([2.0, 1.0]); b = np.array([0.0, 0.0])
+Sigma = np.array([[2.0, 0.5], [0.5, 1.0]]); diff = a - b
+print(&quot;Mahalanobis:&quot;, np.sqrt(diff @ np.linalg.inv(Sigma) @ diff))</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Mahalanobis: 1.5118578920369088</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Hamming distance</div>
+  <div class="nb-eq">$$d_H(\mathbf p,\mathbf q)=\big|\{\,i : p_i \ne q_i\,\}\big|$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>s1, s2 = &quot;10110&quot;, &quot;10011&quot;
+print(&quot;Hamming:&quot;, sum(c1 != c2 for c1, c2 in zip(s1, s2)))</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Hamming: 2</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">String / time-series distances (Levenshtein, DTW)</div>
+  <div class="nb-eq">$$\text{edit / alignment cost between sequences}$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>def levenshtein(s, t):
+    m, n = len(s), len(t)
+    dp = np.zeros((m + 1, n + 1), int)
+    dp[:, 0] = np.arange(m + 1); dp[0, :] = np.arange(n + 1)
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            cost = 0 if s[i-1] == t[j-1] else 1
+            dp[i, j] = min(dp[i-1, j] + 1, dp[i, j-1] + 1, dp[i-1, j-1] + cost)
+    return dp[m, n]
+
+def dtw(x, y):
+    n, m = len(x), len(y)
+    D = np.full((n + 1, m + 1), np.inf); D[0, 0] = 0
+    for i in range(1, n + 1):
+        for j in range(1, m + 1):
+            c = abs(x[i-1] - y[j-1])
+            D[i, j] = c + min(D[i-1, j], D[i, j-1], D[i-1, j-1])
+    return D[n, m]
+
+print(&quot;Levenshtein(&#x27;kitten&#x27;,&#x27;sitting&#x27;):&quot;, levenshtein(&quot;kitten&quot;, &quot;sitting&quot;))
+print(&quot;DTW([1,2,3],[1,2,2,3]):&quot;, dtw([1, 2, 3], [1, 2, 2, 3]))</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Levenshtein(&#x27;kitten&#x27;,&#x27;sitting&#x27;): 3
+DTW([1,2,3],[1,2,2,3]): 0.0</pre></div>
+</div>
+
+<h2>2. Riemannian &amp; information geometry</h2>
+<p class="intro">Distance becomes the length of the shortest path (geodesic) on a curved manifold; for statistical models the curvature is the Fisher information.</p>
+
+<div class="nb-cell">
+  <div class="nb-name">Fisher information matrix</div>
+  <div class="nb-eq">$$\mathbf I(\theta)=\mathbb E\!\left[\big(\partial_\theta\ln p\big)\big(\partial_\theta\ln p\big)^{\top}\right]$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code># Gaussian N(mu, sigma^2): I(mu) = 1 / sigma^2, verified by Monte Carlo.
+sigma = 2.0
+rng = np.random.default_rng(0)
+x = rng.normal(0.0, sigma, size=200000)
+score = x / sigma**2                       # d/dmu log p at mu = 0
+print(&quot;Fisher info I(mu) analytic:&quot;, 1 / sigma**2)
+print(&quot;Fisher info I(mu) numeric :&quot;, (score**2).mean())</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Fisher info I(mu) analytic: 0.25
+Fisher info I(mu) numeric : 0.25060033195535436</pre></div>
+</div>
+
+<div class="nb-cell note">
+  <div class="nb-name">Riemannian geodesic, Finsler metric, Fisher–Rao distance</div>
+  <div class="nb-eq">$$L(\gamma)=\int \sqrt{g_{ij}\,\dot x^i \dot x^j}\;dt \qquad \rho_{FR}(p,q)=\min_\gamma\!\int_0^1\!\sqrt{\dot\gamma^{\top}\mathbf I\,\dot\gamma}\,dt$$</div>
+  <p class="nb-note">These require solving a variational/geodesic problem on a manifold, so there is no one-line snippet. On a unit sphere the geodesic between points at angular separation $\theta$ is the arc $L=\theta$ (orthogonal points $\Rightarrow \pi/2\approx1.571$). Locally the Fisher–Rao distance satisfies $\rho_{FR}(p,q)\approx\sqrt{2\,\mathrm{KL}(p\|q)}$; for the $p,q$ below that is $\sqrt{2\cdot0.511}\approx1.011$.</p>
+</div>
+
+<h2>3a. $f$-divergences (Csiszár / Ali–Silvey)</h2>
+<p class="intro">Template $D_f(p\|q)=\int p\,f(q/p)\,d\mu$. Examples use the pmfs $p=[0.5,0.5]$, $q=[0.9,0.1]$.</p>
+
+<div class="nb-cell">
+  <div class="nb-name">Kullback–Leibler divergence ($f(t)=-\log t$)</div>
+  <div class="nb-eq">$$\mathrm{KL}(p\|q)=\int p\,\log\frac{p}{q}\,d\mu$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.5, 0.5]); q = np.array([0.9, 0.1])
+print(&quot;KL(p||q) nats:&quot;, (p * np.log(p / q)).sum())
+print(&quot;KL(q||p) nats:&quot;, (q * np.log(q / p)).sum())   # asymmetric</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>KL(p||q) nats: 0.5108256237659907
+KL(q||p) nats: 0.3680642071684971</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Pearson $\chi^2$ divergence ($f(t)=(t-1)^2$)</div>
+  <div class="nb-eq">$$\chi^2(p\|q)=\int \frac{(q-p)^2}{p}\,d\mu$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.5, 0.5]); q = np.array([0.9, 0.1])
+print(&quot;Pearson chi2:&quot;, (((q - p) ** 2) / p).sum())</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Pearson chi2: 0.6400000000000001</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Hellinger distance ($f(t)=(\sqrt t-1)^2$)</div>
+  <div class="nb-eq">$$H(p,q)=\sqrt{\tfrac12\int\!\big(\sqrt{p}-\sqrt{q}\big)^2 d\mu}$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.5, 0.5]); q = np.array([0.9, 0.1])
+print(&quot;Hellinger:&quot;, np.sqrt(((np.sqrt(p) - np.sqrt(q)) ** 2).sum() / 2))</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Hellinger: 0.32491969623290634</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Total variation distance ($f(t)=\tfrac12|t-1|$)</div>
+  <div class="nb-eq">$$\mathrm{TV}(p,q)=\tfrac12\int |p-q|\,d\mu$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.5, 0.5]); q = np.array([0.9, 0.1])
+print(&quot;Total variation:&quot;, 0.5 * np.abs(p - q).sum())</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Total variation: 0.4</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Amari $\alpha$-divergence</div>
+  <div class="nb-eq">$$f_\alpha(t)=\frac{4}{1-\alpha^2}\Big(1-t^{\frac{1+\alpha}{2}}\Big)$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.5, 0.5]); q = np.array([0.9, 0.1]); alpha = 0.0
+t = q / p
+f = 4 / (1 - alpha**2) * (1 - t ** ((1 + alpha) / 2))
+print(&quot;Amari alpha=0:&quot;, (p * f).sum())</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Amari alpha=0: 0.4222912360003366</pre></div>
+</div>
+
+<h2>3b. Bregman divergences</h2>
+<p class="intro">Template $B_F(x\|y)=F(x)-F(y)-\langle x-y,\nabla F(y)\rangle$ for a strictly convex potential $F$.</p>
+
+<div class="nb-cell">
+  <div class="nb-name">Squared Euclidean ($F=\|\cdot\|^2$)</div>
+  <div class="nb-eq">$$B_F(x\|y)=\|x-y\|^2$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>x = np.array([1.0, 2.0]); y = np.array([0.0, 0.0])
+print(&quot;Bregman sq-Euclidean:&quot;, ((x - y) ** 2).sum())</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Bregman sq-Euclidean: 5.0</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Kullback–Leibler (discrete), $F=-H$</div>
+  <div class="nb-eq">$$B_F(p\|q)=\mathrm{KL}(p\|q)\quad(\text{unique } f\cap\text{Bregman})$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.5, 0.5]); q = np.array([0.9, 0.1])
+print(&quot;Bregman (F=-H) = KL(p||q):&quot;, (p * np.log(p / q)).sum())</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Bregman (F=-H) = KL(p||q): 0.5108256237659907</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Itakura–Saito divergence ($F=-\sum_i\log x_i$)</div>
+  <div class="nb-eq">$$\mathrm{IS}(p\|q)=\sum_i\Big(\frac{p_i}{q_i}-\log\frac{p_i}{q_i}-1\Big)$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>pi = np.array([1.0, 2.0, 3.0]); qi = np.array([1.0, 1.0, 4.0])
+print(&quot;Itakura-Saito:&quot;, (pi / qi - np.log(pi / qi) - 1).sum())</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Itakura-Saito: 0.3445348918918354</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Log-Det divergence (SPD matrices)</div>
+  <div class="nb-eq">$$D(\mathbf P\|\mathbf Q)=\langle\mathbf P,\mathbf Q^{-1}\rangle-\log\det(\mathbf P\mathbf Q^{-1})-n$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>P = np.array([[2.0, 0.0], [0.0, 1.0]]); Q = np.eye(2); n = 2
+PQ = P @ np.linalg.inv(Q)
+print(&quot;Log-Det:&quot;, np.trace(PQ) - np.log(np.linalg.det(PQ)) - n)</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Log-Det: 0.3068528194400546</pre></div>
+</div>
+
+<h2>3c. Overlap / $\alpha$-power family</h2>
+<p class="intro">All built from the affinity $\int p^{\alpha}q^{1-\alpha}d\mu$ (same $p,q$ pmfs).</p>
+
+<div class="nb-cell">
+  <div class="nb-name">Bhattacharyya distance</div>
+  <div class="nb-eq">$$d_B(p,q)=-\log\!\int \sqrt{p\,q}\,d\mu$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.5, 0.5]); q = np.array([0.9, 0.1])
+BC = np.sqrt(p * q).sum()
+print(&quot;Bhattacharyya coeff:&quot;, BC)
+print(&quot;Bhattacharyya dist :&quot;, -np.log(BC))</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Bhattacharyya coeff: 0.8944271909999159
+Bhattacharyya dist : 0.11157177565710491</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Chernoff information</div>
+  <div class="nb-eq">$$C(p,q)=\max_{\alpha\in(0,1)}\Big(-\log\!\int p^{\alpha}q^{1-\alpha}d\mu\Big)$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.5, 0.5]); q = np.array([0.9, 0.1])
+als = np.linspace(0.01, 0.99, 99)
+print(&quot;Chernoff info:&quot;, max(-np.log((p**a * q**(1 - a)).sum()) for a in als))</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Chernoff info: 0.11237628278879076</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Rényi divergence</div>
+  <div class="nb-eq">$$R_\alpha(p\|q)=\frac{1}{\alpha-1}\log\!\int p^{\alpha}q^{1-\alpha}d\mu$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.5, 0.5]); q = np.array([0.9, 0.1]); a = 0.5
+print(&quot;Renyi div a=0.5:&quot;, 1 / (a - 1) * np.log((p**a * q**(1 - a)).sum()))</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Renyi div a=0.5: 0.22314355131420957</pre></div>
+</div>
+
+<h2>3d. Symmetrized &amp; Jensen-type divergences</h2>
+<p class="intro">Symmetric combinations of KL and Jensen gaps (same $p,q$ pmfs).</p>
+
+<div class="nb-cell">
+  <div class="nb-name">Jeffreys divergence (symmetric KL)</div>
+  <div class="nb-eq">$$J(p,q)=\mathrm{KL}(p\|q)+\mathrm{KL}(q\|p)$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.5, 0.5]); q = np.array([0.9, 0.1])
+kl = lambda u, v: (u * np.log(u / v)).sum()
+print(&quot;Jeffreys:&quot;, kl(p, q) + kl(q, p))</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Jeffreys: 0.8788898309344878</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Jensen–Shannon divergence</div>
+  <div class="nb-eq">$$\mathrm{JS}(p,q)=\tfrac12\mathrm{KL}(p\|m)+\tfrac12\mathrm{KL}(q\|m),\ m=\tfrac{p+q}{2}$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.5, 0.5]); q = np.array([0.9, 0.1])
+kl = lambda u, v: (u * np.log(u / v)).sum()
+m = (p + q) / 2
+js = 0.5 * kl(p, m) + 0.5 * kl(q, m)
+print(&quot;Jensen-Shannon:&quot;, js, &quot; sqrt(JS):&quot;, np.sqrt(js))</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Jensen-Shannon: 0.10174922507919676  sqrt(JS): 0.31898154347735663</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Burbea–Rao / Jensen divergence</div>
+  <div class="nb-eq">$$J_F(p,q)=\frac{F(p)+F(q)}{2}-F\!\Big(\frac{p+q}{2}\Big)$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.5, 0.5]); q = np.array([0.9, 0.1])
+negH = lambda z: (z * np.log(z)).sum()      # F = -Shannon entropy
+m = (p + q) / 2
+print(&quot;Burbea-Rao (=JS):&quot;, (negH(p) + negH(q)) / 2 - negH(m))</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Burbea-Rao (=JS): 0.10174922507919681</pre></div>
+</div>
+
+<h2>4. Entropies</h2>
+<p class="intro">Uncertainty of a single distribution. Examples use $r=[0.5,0.25,0.25]$.</p>
+
+<div class="nb-cell">
+  <div class="nb-name">Shannon / Boltzmann–Gibbs entropy</div>
+  <div class="nb-eq">$$H(p)=-\!\int p\log p\,d\mu$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>r = np.array([0.5, 0.25, 0.25])
+print(&quot;Shannon (nats):&quot;, -(r * np.log(r)).sum())
+print(&quot;Shannon (bits):&quot;, -(r * np.log2(r)).sum())</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Shannon (nats): 1.0397207708399179
+Shannon (bits): 1.5</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Rényi entropy</div>
+  <div class="nb-eq">$$H_\alpha(p)=\frac{1}{1-\alpha}\log\!\int p^{\alpha}\,d\mu$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>r = np.array([0.5, 0.25, 0.25]); alpha = 2.0
+print(&quot;Renyi entropy a=2:&quot;, 1 / (1 - alpha) * np.log((r**alpha).sum()))</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Renyi entropy a=2: 0.9808292530117262</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Tsallis entropy (non-additive)</div>
+  <div class="nb-eq">$$T_\alpha(p)=\frac{1}{1-\alpha}\Big(\int p^{\alpha}\,d\mu-1\Big)$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>r = np.array([0.5, 0.25, 0.25]); alpha = 2.0
+print(&quot;Tsallis a=2:&quot;, 1 / (1 - alpha) * ((r**alpha).sum() - 1))</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Tsallis a=2: 0.625</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Sharma–Mittal entropy (two-parameter unifier)</div>
+  <div class="nb-eq">$$h_{\alpha,\beta}(p)=\frac{1}{1-\beta}\bigg(\Big(\int p^{\alpha}d\mu\Big)^{\frac{1-\beta}{1-\alpha}}-1\bigg)$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>r = np.array([0.5, 0.25, 0.25]); alpha = 2.0; beta = 3.0
+print(&quot;Sharma-Mittal a=2,b=3:&quot;, 1 / (1 - beta) * ((r**alpha).sum() ** ((1 - beta) / (1 - alpha)) - 1))</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Sharma-Mittal a=2,b=3: 0.4296875</pre></div>
+</div>
+
+<h2>5. Distances between sets &amp; metric spaces</h2>
+<p class="intro">How far apart whole sets / shapes are.</p>
+
+<div class="nb-cell">
+  <div class="nb-name">Hausdorff distance</div>
+  <div class="nb-eq">$$d_{\mathrm{Haus}}(X,Y)=\max\Big\{\sup_{x\in X}\rho(x,Y),\ \sup_{y\in Y}\rho(X,y)\Big\}$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>A = np.array([[0, 0], [1, 0], [0, 1.0]]); B = np.array([[0, 0], [1, 1.0]])
+def directed(X, Y):
+    return max(np.min(np.sqrt(((x - Y) ** 2).sum(1))) for x in X)
+print(&quot;Hausdorff:&quot;, max(directed(A, B), directed(B, A)))</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Hausdorff: 1.0</pre></div>
+</div>
+
+<div class="nb-cell note">
+  <div class="nb-name">Gromov–Hausdorff distance</div>
+  <div class="nb-eq">$$d_{GH}(X,Y)=\inf_{\phi_X,\phi_Y}\rho_{\mathrm{Haus}}^{Z}\big(\phi_X(X),\phi_Y(Y)\big)$$</div>
+  <p class="nb-note">Compares whole metric spaces up to isometry; computing it exactly is NP-hard (an infimum over all isometric embeddings). Two isometric shapes give $d_{GH}=0$; in practice it is approximated via the Gromov–Wasserstein relaxation.</p>
+</div>
+
+<h2>6. Optimal transport &amp; integral probability metrics (IPMs)</h2>
+<p class="intro">An IPM is $\gamma_{\mathcal F}(p,q)=\sup_{f\in\mathcal F}|\int f\,dp-\int f\,dq|$.</p>
+
+<div class="nb-cell">
+  <div class="nb-name">Wasserstein-1 / Earth Mover&#x27;s Distance</div>
+  <div class="nb-eq">$$W_1(p,q)=\inf_{\gamma\in\Gamma(p,q)}\int \rho(x,y)\,d\gamma$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>u = np.array([0.0, 1, 2, 3]); v = np.array([1.0, 2, 3, 4])
+print(&quot;Wasserstein-1:&quot;, np.abs(np.sort(u) - np.sort(v)).mean())</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Wasserstein-1: 1.0</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Maximum Mean Discrepancy (MMD)</div>
+  <div class="nb-eq">$$\mathrm{MMD}(p,q)=\sup_{\|f\|_{\mathcal H}\le1}\big|\mathbb E_p f-\mathbb E_q f\big|$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>def mmd2(X, Y, g=0.5):
+    XX = ((X[:, None, :] - X[None, :, :]) ** 2).sum(-1)
+    YY = ((Y[:, None, :] - Y[None, :, :]) ** 2).sum(-1)
+    XY = ((X[:, None, :] - Y[None, :, :]) ** 2).sum(-1)
+    return np.exp(-g * XX).mean() + np.exp(-g * YY).mean() - 2 * np.exp(-g * XY).mean()
+X = np.array([[0.0], [1.0], [2.0]]); Y = np.array([[3.0], [4.0], [5.0]])
+print(&quot;MMD^2 (RBF, g=0.5):&quot;, mmd2(X, Y))</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>MMD^2 (RBF, g=0.5): 1.0634645194698213</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Kolmogorov–Smirnov distance</div>
+  <div class="nb-eq">$$K(p,q)=\sup_x \big|F_p(x)-F_q(x)\big|$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>u = np.array([0.0, 1, 2, 3]); v = np.array([1.0, 2, 3, 4])
+grid = np.sort(np.concatenate([u, v]))
+Fu = np.searchsorted(np.sort(u), grid, side=&quot;right&quot;) / len(u)
+Fv = np.searchsorted(np.sort(v), grid, side=&quot;right&quot;) / len(v)
+print(&quot;KS statistic:&quot;, np.abs(Fu - Fv).max())</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>KS statistic: 0.25</pre></div>
+</div>
+
+<div class="nb-cell note">
+  <div class="nb-name">Stein discrepancy &amp; Lévy–Prokhorov distance</div>
+  <div class="nb-eq">$$\mathrm{LP}_\rho(p,q)=\inf\{\varepsilon>0:\ p(A)\le q(A^{\varepsilon})+\varepsilon\ \forall A\}$$</div>
+  <p class="nb-note">The Stein discrepancy is a supremum over a Stein-RKHS ball (needs the score $\nabla\log p$, not the normalizer) — estimated from samples, not a one-liner. Lévy–Prokhorov is an infimum over all Borel sets; for a point mass shifted by $\delta$ it equals $\min(\delta,1)$ (e.g. $\delta=0.3\Rightarrow0.3$).</p>
+</div>
+
+<h2>7. Quantum geometry (density matrices)</h2>
+<p class="intro">Densities become density matrices $\rho$; integrals become traces. With diagonal $\rho$ these reduce to the classical formulas on the eigenvalues.</p>
+
+<div class="nb-cell">
+  <div class="nb-name">Von Neumann entropy</div>
+  <div class="nb-eq">$$S(\rho)=-\mathrm{Tr}(\rho\log\rho)$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>rho = np.array([[0.7, 0.0], [0.0, 0.3]])
+ev = np.linalg.eigvalsh(rho)
+print(&quot;Von Neumann entropy (nats):&quot;, -(ev * np.log(ev)).sum())</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Von Neumann entropy (nats): 0.6108643020548935</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Von Neumann (quantum relative) divergence</div>
+  <div class="nb-eq">$$D(\mathbf P\|\mathbf Q)=\mathrm{Tr}\big(\mathbf P(\log\mathbf P-\log\mathbf Q)-\mathbf P+\mathbf Q\big)$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>def logm_sym(M):
+    w, V = np.linalg.eigh(M)
+    return V @ np.diag(np.log(w)) @ V.T
+P = np.array([[0.7, 0.0], [0.0, 0.3]]); Q = np.array([[0.5, 0.0], [0.0, 0.5]])
+print(&quot;Von Neumann divergence (nats):&quot;, np.trace(P @ (logm_sym(P) - logm_sym(Q)) - P + Q))</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Von Neumann divergence (nats): 0.08228287850505178</pre></div>
+</div>
+
+      <footer>
+        Generated from <code>distances_examples.ipynb</code> (numpy only). Equations rendered with
+        MathJax; outputs are the actual printed results of each cell.
+      </footer>
+    </article>
+  </div>
+</body>
+</html>

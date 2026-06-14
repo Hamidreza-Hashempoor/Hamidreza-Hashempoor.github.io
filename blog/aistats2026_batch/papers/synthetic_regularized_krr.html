@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Synthetic-Regularized Kernel Regression</title>
+  <meta name="description" content="A kernel regressor that trades noisy real labels against a synthetic generator: closed-form estimator, bias-variance decomposition, a spectral (Mercer) view of generator mismatch, and a 1-D RBF experiment with a reproducible notebook." />
+  <style>
+    :root {
+      --paper: #fffef8;
+      --ink: #1f2429;
+      --muted: #55606a;
+      --line: #d8d3c9;
+      --accent: #8a2d1f;
+      --accent-soft: #f2ebe2;
+      --maxw: 920px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 520px at 5% -10%, #f3efe5 0%, rgba(243, 239, 229, 0) 65%),
+        radial-gradient(900px 440px at 95% 0%, #efe6dc 0%, rgba(239, 230, 220, 0) 62%),
+        #f8f6f1;
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", serif;
+      line-height: 1.7;
+    }
+
+    .page {
+      width: min(var(--maxw), 94vw);
+      margin: 0 auto;
+      padding: 42px 0 56px;
+    }
+
+    .article {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 14px 40px rgba(40, 35, 26, 0.08);
+      padding: clamp(20px, 4vw, 46px);
+    }
+
+    .meta {
+      color: var(--muted);
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      letter-spacing: 0.02em;
+      font-size: 0.88rem;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .post-stats {
+      margin: 6px 0 16px;
+      display: grid;
+      gap: 8px;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      color: #4f5963;
+    }
+
+    .stat {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.02rem;
+      line-height: 1.35;
+    }
+
+    .stat svg {
+      width: 20px; height: 20px;
+      stroke: #5a626c; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .stat strong { color: #343b42; font-weight: 700; }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 4vw, 2.85rem);
+      line-height: 1.15;
+      letter-spacing: -0.015em;
+    }
+
+    .authors {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 1.02rem;
+    }
+
+    .tools {
+      margin-top: 18px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    .tools a {
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid #d6c6b7;
+      background: #fff;
+      border-radius: 999px;
+      padding: 7px 13px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .toc {
+      margin-top: 20px;
+      padding: 10px 14px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      font-size: 0.92rem;
+    }
+
+    .toc a {
+      color: #203142;
+      text-decoration: none;
+      margin-right: 10px;
+      white-space: nowrap;
+    }
+
+    h2 {
+      margin: 34px 0 10px;
+      font-size: clamp(1.25rem, 2.7vw, 1.75rem);
+      line-height: 1.25;
+    }
+
+    h3 {
+      margin: 22px 0 6px;
+      font-size: clamp(1.05rem, 2vw, 1.3rem);
+      color: var(--accent);
+    }
+
+    p { margin: 0 0 13px; font-size: 1.04rem; }
+
+    .eq {
+      margin: 15px 0;
+      padding: 12px 14px;
+      border: 1px solid #e0dbd1;
+      background: #fff;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+
+    .eq-note {
+      margin-top: -3px;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .figure-full {
+      margin: 20px auto;
+      border: 1px solid #e4dfd6;
+      border-radius: 9px;
+      background: #fff;
+      padding: 8px;
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    .figure-full img { display: block; width: auto; height: auto; max-width: 100%; }
+
+    .figure-full figcaption {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.4;
+    }
+
+    ul { margin-top: 6px; margin-bottom: 14px; padding-left: 20px; }
+    li { margin-bottom: 6px; }
+
+    .callout {
+      margin: 16px 0 22px;
+      padding: 14px 16px;
+      border: 1px solid #d5e0ef;
+      border-left: 4px solid var(--accent);
+      background: #f4f7fb;
+      border-radius: 8px;
+      font-size: 1.0rem;
+    }
+
+    .callout strong { color: var(--accent); }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin: 14px 0 8px;
+      border: 1px solid #e0dbd1;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    table.dist-table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.93rem;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    table.dist-table th {
+      background: var(--accent);
+      color: #fff;
+      text-align: left;
+      padding: 9px 12px;
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+    }
+
+    table.dist-table td {
+      padding: 8px 12px;
+      border-top: 1px solid #ece6dc;
+      vertical-align: top;
+    }
+
+    table.dist-table tr:nth-child(even) td { background: #faf7f0; }
+
+    table.dist-table td.group {
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft) !important;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    table.dist-table td.best { color: #2a6a2a; font-weight: 700; }
+
+    footer {
+      margin-top: 30px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    @media (max-width: 900px) {
+      p { font-size: 1rem; }
+    }
+  </style>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+  <div class="page">
+    <article class="article">
+      <div class="meta">AISTATS 2026 Batch • Paper 1</div>
+      <div class="post-stats" aria-label="Post metadata">
+        <div class="stat">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M12 7v6l4 2"></path>
+          </svg>
+          <span>15 minute read</span>
+        </div>
+        <div class="stat">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="4.5" width="18" height="16" rx="2"></rect>
+            <path d="M8 2.5v4M16 2.5v4M3 9.5h18"></path>
+          </svg>
+          <span><strong>Published:</strong> June 2026</span>
+        </div>
+      </div>
+      <h1>Synthetic-Regularized Kernel Regression</h1>
+      <p class="authors">Hamidreza Hashempoor • Institute for AI, University of Stuttgart</p>
+
+      <div class="tools">
+        <a href="../index.html">← Back to series</a>
+        <a href="resources/synth_krr/synthetic_krr_examples.html">View notebook</a>
+        <a href="resources/synth_krr/synthetic_krr_examples.ipynb">Download .ipynb</a>
+        <a href="#experiment">Experiment</a>
+        <a href="#results">Results</a>
+      </div>
+
+      <div class="toc">
+        <a href="#idea">The idea</a>
+        <a href="#estimator">Estimator</a>
+        <a href="#biasvar">Bias–variance</a>
+        <a href="#spectral">Spectral view</a>
+        <a href="#experiment">Experiment</a>
+        <a href="#results">Results</a>
+        <a href="#notebook">Notebook</a>
+      </div>
+
+      <p style="margin-top:18px;">
+        This first entry in the <a href="../index.html">AISTATS&nbsp;2026 Batch</a> series looks at a
+        deceptively simple question: if you only have a handful of <em>noisy</em> real labels, but you
+        also have a cheap <em>synthetic generator</em> $g$ that you <em>think</em> resembles the truth,
+        how much should you trust the generator? The method below answers this with one knob,
+        $\lambda$, inside a kernel regressor — and the theory tells us exactly when turning that knob
+        up helps and when it backfires. The whole story is then verified on a tiny 1-D experiment whose
+        numbers are reproduced by the companion <a href="#notebook">notebook</a>.
+      </p>
+
+      <!-- ===================== IDEA ===================== -->
+      <h2 id="idea">The idea: regularize toward a synthetic prior</h2>
+      <p>
+        Ordinary kernel ridge regression fits noisy labels and penalizes the size of the function in a
+        reproducing kernel Hilbert space (RKHS) $\mathcal H_K$. Here we instead penalize the
+        <em>distance to a synthetic generator</em> $g$. The estimator solves
+      </p>
+      <div class="eq">
+        $$
+        f_N=\arg\min_{f\in\mathcal H_K}\;
+        \frac1N\sum_{n=1}^N\bigl(y_n-f(x_n)\bigr)^2
+        \;+\;\lambda\,\lVert f-g\rVert_{\mathcal H_K}^2 .
+        $$
+      </div>
+      <p>The pieces:</p>
+      <ul>
+        <li>$f_\star$ — the unknown <em>real</em> target function we want to recover;</li>
+        <li>$y_n=f_\star(x_n)+\varepsilon_n$ — noisy observations, $\varepsilon_n\sim\mathcal N(0,\sigma^2)$;</li>
+        <li>$g$ — a <em>synthetic generator</em> / prior function (cheap to evaluate, possibly biased);</li>
+        <li>$K$ — a positive-definite kernel, with RKHS $\mathcal H_K$;</li>
+        <li>$\lambda>0$ — how strongly we trust $g$ over the noisy data.</li>
+      </ul>
+      <div class="callout">
+        The knob $\lambda$ <strong>interpolates between data and prior</strong>. As $\lambda\to0$ the
+        fit interpolates the noisy labels (low bias, high variance). As $\lambda\to\infty$ it collapses
+        onto the synthetic generator $g$ (low variance, but bias equal to however wrong $g$ is). The
+        central claim: <strong>synthetic regularization reduces variance but can introduce bias</strong>,
+        and the best $\lambda$ depends on the discrepancy between $g$ and $f_\star$.
+      </div>
+
+      <!-- ===================== ESTIMATOR ===================== -->
+      <h2 id="estimator">Closed-form estimator</h2>
+      <p>
+        By the Representer Theorem the minimizer lives in the span of the training kernels,
+      </p>
+      <div class="eq">$$ f_N(x)=\sum_{i=1}^N \alpha_i\,K(x,x_i). $$</div>
+      <p>
+        Writing $(K_N)_{ij}=K(x_i,x_j)$ for the $N\times N$ Gram matrix and letting $\beta$ be the
+        coefficients of the part of $g$ visible in the training kernel span,
+        $g_\parallel(x)=\sum_i\beta_i K(x,x_i)$, the objective becomes finite-dimensional:
+      </p>
+      <div class="eq">
+        $$
+        J(\alpha)=\frac1N\lVert y-K_N\alpha\rVert_2^2
+        +\lambda\,(\alpha-\beta)^\top K_N(\alpha-\beta).
+        $$
+      </div>
+      <p>Setting $\nabla_\alpha J=0$ gives the estimator we actually implement:</p>
+      <div class="eq">
+        $$ \boxed{\;\alpha=(K_N+N\lambda I)^{-1}\,(y+N\lambda\beta)\;} $$
+      </div>
+      <p>
+        The synthetic coefficients $\beta$ are obtained by projecting $g$ onto the training kernel span
+        with a tiny numerical ridge $\eta$ (here $\eta=10^{-8}$):
+      </p>
+      <div class="eq">$$ \beta=(K_N+\eta I)^{-1} g_X,\qquad g_X=[\,g(x_1),\dots,g(x_N)\,]^\top. $$</div>
+      <p>And predictions on a test grid are a single matrix product:</p>
+      <div class="eq">$$ \hat y_{\text{test}}=K_{\text{test,train}}\,\alpha. $$</div>
+      <p class="eq-note">
+        Reading the boxed formula: the $N\lambda\beta$ term pulls the solution toward the synthetic
+        prior, while $N\lambda I$ shrinks the influence of the noisy labels $y$. When $\lambda\to0$ it
+        reduces to plain kernel interpolation $\alpha=K_N^{-1}y$; when $\lambda\to\infty$ it tends to
+        $\alpha\to\beta$, i.e. $f_N\to g_\parallel$.
+      </p>
+
+      <!-- ===================== BIAS-VARIANCE ===================== -->
+      <h2 id="biasvar">Bias–variance decomposition</h2>
+      <p>The population test error, over both inputs and label noise, is</p>
+      <div class="eq">
+        $$ \mathcal R_N(\lambda;g)=\mathbb E_{x,\varepsilon}\bigl[(f_\star(x)-f_N(x))^2\bigr]
+        =\mathcal B^2+\mathcal V, $$
+      </div>
+      <p>with the usual squared-bias and variance pieces</p>
+      <div class="eq">
+        $$
+        \mathcal B^2=\mathbb E_x\bigl[f_\star(x)-\mathbb E_\varepsilon f_N(x)\bigr]^2,
+        \qquad
+        \mathcal V=\mathbb E_{x,\varepsilon}\bigl[(f_N(x)-\mathbb E_\varepsilon f_N(x))^2\bigr].
+        $$
+      </div>
+      <p>
+        We estimate these by Monte Carlo: <strong>fix</strong> the training inputs $x_1,\dots,x_N$,
+        then repeat training over $R$ independent noise draws $\varepsilon^{(r)}$ and evaluate every
+        learned function on a dense test grid. With $\bar f_N$ the average prediction across
+        repetitions,
+      </p>
+      <div class="eq">
+        $$
+        \widehat{\mathcal B}^2=\frac{1}{n_{\text{test}}}\sum_i
+        \bigl(f_\star(x_i^{\text{test}})-\bar f_N(x_i^{\text{test}})\bigr)^2,
+        \qquad
+        \widehat{\mathcal V}=\frac{1}{n_{\text{test}}}\sum_i\frac1R\sum_{r=1}^R
+        \bigl(f_N^{(r)}(x_i^{\text{test}})-\bar f_N(x_i^{\text{test}})\bigr)^2,
+        $$
+      </div>
+      <p>and $\widehat{\mathcal R}=\widehat{\mathcal B}^2+\widehat{\mathcal V}$. Only the label noise is
+      resampled across repetitions — the inputs stay fixed, which is exactly what the decomposition
+      assumes.</p>
+
+      <!-- ===================== SPECTRAL ===================== -->
+      <h2 id="spectral">A spectral (Mercer) view of generator mismatch</h2>
+      <p>
+        Why should a generator that is "slightly off" sometimes be catastrophic and sometimes harmless?
+        The answer is spectral. The population kernel operator
+        $(T_K f)(x)=\int K(x,x')f(x')\,dp_x(x')$ has eigenpairs $T_K\phi_j=\mu_j\phi_j$. Expanding both
+        functions in this Mercer basis, $f_\star=\sum_j\theta_j\phi_j$ and $g=\sum_j\omega_j\phi_j$, the
+        theory measures mismatch by
+      </p>
+      <div class="eq">
+        $$ \mathcal D(f_\star,g)^2=\sum_{j=1}^{\infty}\frac{(\theta_j-\omega_j)^2}{\mu_j^2}. $$
+      </div>
+      <p>
+        The $1/\mu_j^2$ weighting is the whole point: mismatch in <strong>small-eigenvalue</strong>
+        directions (the "hard", typically high-frequency directions that an RBF kernel suppresses) is
+        penalized enormously. The risk bound takes the shape
+      </p>
+      <div class="eq">
+        $$ \mathcal R_N(\lambda;g)=\mathcal O\!\left(
+        \underbrace{\frac{\mathcal D(f_\star,g)+\sigma^2}{N\lambda^2}}_{\text{variance-like}}
+        +\underbrace{\lambda^{\,2-\frac{1}{4r}}\,\mathcal D(f_\star,g)}_{\text{bias-like}}
+        \right). $$
+      </div>
+      <ul>
+        <li>The first term decreases with larger $N$ and larger $\lambda$ — it behaves like finite-sample variance.</li>
+        <li>The second term grows with $\lambda$ whenever $g\neq f_\star$ — it is the bias of trusting the prior.</li>
+        <li><strong>Good generators</strong> (small $\mathcal D$) let you push $\lambda$ high and win.</li>
+        <li><strong>Bad generators</strong>, especially wrong in hard directions, force $\lambda$ small.</li>
+      </ul>
+
+      <!-- ===================== EXPERIMENT ===================== -->
+      <h2 id="experiment">The minimal experiment</h2>
+      <p>
+        A 1-D regression on $[0,1]$ makes every claim checkable. The target is a smooth two-frequency
+        signal,
+      </p>
+      <div class="eq">$$ f_\star(x)=\sin(2\pi x)+0.5\cos(4\pi x),\qquad x\sim\mathrm{Uniform}(0,1), $$</div>
+      <p>
+        observed with Gaussian label noise $y_n=f_\star(x_n)+\varepsilon_n$,
+        $\varepsilon_n\sim\mathcal N(0,\sigma^2)$, through an RBF kernel
+        $K(x,x')=\exp(-\lVert x-x'\rVert^2/2\ell^2)$. We then build <strong>three</strong> synthetic
+        generators of increasing difficulty:
+      </p>
+      <ul>
+        <li><strong>Perfect:</strong> $g_{\text{perfect}}(x)=f_\star(x)$ — no mismatch.</li>
+        <li><strong>Smooth bias:</strong> $g_{\text{smooth}}(x)=f_\star(x)+\delta\sin(2\pi x)$ — error in an <em>easy</em>, low-frequency direction.</li>
+        <li><strong>High-frequency bias:</strong> $g_{\text{hf}}(x)=f_\star(x)+\delta\sin(2\pi\cdot 10\,x)$ — error in a <em>hard</em>, high-frequency direction the RBF kernel damps.</li>
+      </ul>
+      <p>The exact configuration used for the run reported below (<code>runs/002</code>):</p>
+      <div class="table-wrap">
+        <table class="dist-table">
+          <thead><tr><th>Setting</th><th>Value</th><th>Setting</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td>train size $N$</td><td>64</td><td>test grid</td><td>1000 points</td></tr>
+            <tr><td>noise std $\sigma$</td><td>0.10</td><td>repetitions $R$</td><td>200</td></tr>
+            <tr><td>RBF lengthscale $\ell$</td><td>0.15</td><td>projection ridge $\eta$</td><td>$10^{-8}$</td></tr>
+            <tr><td>bias offset $\delta$</td><td>0.30</td><td>hf frequency</td><td>10</td></tr>
+            <tr><td>$\lambda$ grid</td><td colspan="3">$\{3\!\times\!10^{-4},10^{-3},3\!\times\!10^{-3},10^{-2},3\!\times\!10^{-2},10^{-1},3\!\times\!10^{-1},1,3,10\}$</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ===================== RESULTS ===================== -->
+      <h2 id="results">Results</h2>
+      <p>
+        The three generators trace out three qualitatively different risk curves — exactly the three
+        regimes the theory predicts.
+      </p>
+
+      <figure class="figure-full">
+        <img src="resources/synth_krr/risk_vs_lambda.png" alt="Population risk versus regularization strength lambda for the three synthetic generators, log-log axes." />
+        <figcaption>
+          Figure 1. Population risk $\mathcal R_N(\lambda;g)$ vs. $\lambda$ (log–log). <strong>Perfect</strong>
+          falls monotonically as $\lambda$ grows; <strong>smooth&nbsp;bias</strong> is U-shaped with a
+          sweet spot at moderate $\lambda$; <strong>high-frequency&nbsp;bias</strong> sits high and flat —
+          no setting of $\lambda$ rescues a generator wrong in a hard direction.
+        </figcaption>
+      </figure>
+
+      <figure class="figure-full">
+        <img src="resources/synth_krr/bias_variance_vs_lambda.png" alt="Bias squared and variance versus lambda, one panel per generator." />
+        <figcaption>
+          Figure 2. Bias$^2$ and variance separately, one panel per generator. Variance falls steadily
+          with $\lambda$ in all three. For <em>perfect</em>, bias stays negligible, so risk just tracks
+          the shrinking variance. For <em>smooth&nbsp;bias</em>, bias$^2$ grows at large $\lambda$ and
+          crosses the variance — producing the U-shape. For <em>high-frequency&nbsp;bias</em>, bias$^2$
+          dominates everywhere.
+        </figcaption>
+      </figure>
+
+      <figure class="figure-full">
+        <img src="resources/synth_krr/generator_comparison.png" alt="Overlaid risk curves with best-lambda marked, and a log-scale bar chart of the spectral discrepancy proxy." />
+        <figcaption>
+          Figure 3. Left: overlaid risk curves with the best $\lambda$ starred per generator. Right: the
+          empirical spectral-discrepancy proxy $\widehat{\mathcal D}(f_\star,g)^2$ on a log scale —
+          essentially $0$ for perfect, $\sim\!10^{11}$ for smooth bias, $\sim\!10^{23}$ for
+          high-frequency bias. The ranking of discrepancies predicts the ranking of achievable risk.
+        </figcaption>
+      </figure>
+
+      <h3>Representative numbers</h3>
+      <p>A few rows from <code>summary.json</code> (run&nbsp;002) make the three regimes concrete:</p>
+      <div class="table-wrap">
+        <table class="dist-table">
+          <thead>
+            <tr><th>Generator</th><th>$\lambda$</th><th>bias$^2$</th><th>variance</th><th>risk</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="group" rowspan="3">perfect</td><td>0.0003</td><td>7.45e&minus;06</td><td>1.583e&minus;03</td><td>1.590e&minus;03</td></tr>
+            <tr><td>0.01</td><td>1.46e&minus;06</td><td>8.887e&minus;04</td><td>8.902e&minus;04</td></tr>
+            <tr><td>10.0</td><td>2.17e&minus;09</td><td>3.803e&minus;07</td><td class="best">3.825e&minus;07</td></tr>
+
+            <tr><td class="group" rowspan="4">smooth&nbsp;bias</td><td>0.0003</td><td>6.47e&minus;06</td><td>1.561e&minus;03</td><td>1.567e&minus;03</td></tr>
+            <tr><td>0.01</td><td>1.57e&minus;04</td><td>8.801e&minus;04</td><td class="best">1.037e&minus;03</td></tr>
+            <tr><td>0.1</td><td>3.78e&minus;03</td><td>2.749e&minus;04</td><td>4.060e&minus;03</td></tr>
+            <tr><td>10.0</td><td>4.246e&minus;02</td><td>3.78e&minus;07</td><td>4.246e&minus;02</td></tr>
+
+            <tr><td class="group" rowspan="3">high-freq&nbsp;bias</td><td>0.0003</td><td>7.024e&minus;02</td><td>1.553e&minus;03</td><td class="best">7.179e&minus;02</td></tr>
+            <tr><td>0.01</td><td>8.964e&minus;02</td><td>8.802e&minus;04</td><td>9.052e&minus;02</td></tr>
+            <tr><td>10.0</td><td>1.094e&minus;01</td><td>3.58e&minus;07</td><td>1.094e&minus;01</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="eq-note">Best risk per generator is highlighted. Discrepancy proxy
+        $\widehat{\mathcal D}^2$: perfect $=0$, smooth $\approx2.24\times10^{11}$,
+        high-frequency $\approx8.74\times10^{23}$.</p>
+
+      <div class="callout">
+        <strong>Reading the three regimes.</strong>
+        (1) <em>Perfect</em> generator: bias never appears, so more regularization is pure win — risk
+        drops from $1.6\times10^{-3}$ to $3.8\times10^{-7}$ as $\lambda$ goes from $3\times10^{-4}$ to
+        $10$. (2) <em>Smooth bias</em>: variance reduction and growing bias trade off, giving a U-shape
+        with the minimum near $\lambda\approx10^{-2}$ before bias takes over at large $\lambda$.
+        (3) <em>High-frequency bias</em>: the mismatch lives in a direction the RBF kernel barely sees,
+        so bias dominates at every $\lambda$ and the best you can do is keep $\lambda$ tiny and basically
+        ignore the prior. The spectral discrepancy $\mathcal D$ — twelve orders of magnitude larger for
+        the high-frequency generator — is exactly what predicts this ordering.
+      </div>
+
+      <p>
+        The practical lesson: when you design a synthetic generator to regularize a kernel model, getting
+        the <em>smooth</em>, low-frequency behavior right is comparatively forgiving; an error in the
+        hard, high-frequency directions is what really hurts, and the more so the more you trust it.
+      </p>
+
+      <!-- ===================== NOTEBOOK ===================== -->
+      <h2 id="notebook">Reproduce it</h2>
+      <p>
+        The companion notebook re-runs the whole experiment from scratch using only
+        <code>numpy</code> (and <code>matplotlib</code> for the plot). It implements the boxed estimator
+        $\alpha=(K_N+N\lambda I)^{-1}(y+N\lambda\beta)$, the Monte-Carlo bias/variance decomposition, and
+        the spectral-discrepancy proxy, then checks that the reproduced bias$^2$/variance/risk match
+        <code>runs/002/summary.json</code> (they agree to $\sim\!10^{-9}$, i.e. floating-point noise).
+      </p>
+      <div class="tools" style="margin-top:6px;">
+        <a href="resources/synth_krr/synthetic_krr_examples.html">View notebook (rendered)</a>
+        <a href="resources/synth_krr/synthetic_krr_examples.ipynb">Download .ipynb</a>
+      </div>
+
+      <footer>
+        Part of the <a href="../index.html">AISTATS&nbsp;2026 Batch</a> series. The estimator, bias–variance
+        decomposition, and spectral discrepancy follow the method's idea write-up; the figures and tables
+        are from run&nbsp;002 of the accompanying 1-D experiment, reproduced by the linked notebook.
+      </footer>
+    </article>
+  </div>
+</body>
+</html>

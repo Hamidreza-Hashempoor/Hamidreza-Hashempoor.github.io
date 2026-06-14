@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Synthetic-Regularized KRR — Notebook</title>
+  <meta name="description" content="Rendered notebook: minimal numpy reproduction of the synthetic-regularized kernel regression experiment, with computed bias/variance/risk and the spectral discrepancy proxy." />
+  <style>
+    :root {
+      --paper: #fffef8; --ink: #1f2429; --muted: #55606a; --line: #d8d3c9;
+      --accent: #8a2d1f; --accent-soft: #f2ebe2; --maxw: 920px;
+      --code-bg: #f6f8fa; --code-border: #e3e6ea; --out-bg: #fbfbfd;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; color: var(--ink);
+      background:
+        radial-gradient(1200px 520px at 5% -10%, #f3efe5 0%, rgba(243,239,229,0) 65%),
+        radial-gradient(900px 440px at 95% 0%, #efe6dc 0%, rgba(239,230,220,0) 62%),
+        #f8f6f1;
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", serif;
+      line-height: 1.7;
+    }
+    .page { width: min(var(--maxw), 94vw); margin: 0 auto; padding: 42px 0 56px; }
+    .article {
+      background: var(--paper); border: 1px solid var(--line); border-radius: 14px;
+      box-shadow: 0 14px 40px rgba(40,35,26,0.08); padding: clamp(20px, 4vw, 46px);
+    }
+    .meta {
+      color: var(--muted); font-family: "Avenir Next","Segoe UI","Helvetica Neue",sans-serif;
+      letter-spacing: 0.02em; font-size: 0.88rem; text-transform: uppercase; margin-bottom: 12px;
+    }
+    h1 { margin: 0 0 6px; font-size: clamp(1.7rem, 3.6vw, 2.5rem); line-height: 1.15; }
+    h2 {
+      margin: 30px 0 8px; font-size: clamp(1.2rem, 2.6vw, 1.6rem);
+      color: var(--accent); border-bottom: 1px solid var(--line); padding-bottom: 4px;
+    }
+    p { margin: 0 0 13px; font-size: 1.04rem; }
+    p.intro { color: var(--muted); }
+    .tools {
+      margin: 16px 0 6px; display: flex; gap: 10px; flex-wrap: wrap;
+      font-family: "Avenir Next","Segoe UI","Helvetica Neue",sans-serif;
+    }
+    .tools a {
+      color: var(--accent); text-decoration: none; border: 1px solid #d6c6b7;
+      background: #fff; border-radius: 999px; padding: 7px 13px; font-weight: 600; font-size: 0.9rem;
+    }
+    .nb-cell { margin: 16px 0 20px; }
+    .nb-cell.note { background: var(--accent-soft); border-left: 4px solid var(--accent);
+      border-radius: 8px; padding: 10px 14px; }
+    .nb-name { font-weight: 700; font-size: 1.06rem; margin-bottom: 4px; }
+    .nb-eq { margin: 6px 0 8px; padding: 8px 12px; border: 1px solid #e0dbd1;
+      background: #fff; border-radius: 8px; overflow-x: auto; }
+    .nb-in, .nb-out { position: relative; }
+    .nb-in pre, .nb-out pre {
+      margin: 4px 0; padding: 11px 13px 11px 58px; border-radius: 8px; overflow-x: auto;
+      font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 0.86rem; line-height: 1.5;
+    }
+    .nb-in pre { background: var(--code-bg); border: 1px solid var(--code-border); }
+    .nb-out pre {
+      background: var(--out-bg); border: 1px solid var(--code-border);
+      border-left: 3px solid #6f9e6f; color: #243024; white-space: pre-wrap;
+    }
+    .nb-in pre code { font-family: inherit; }
+    .nb-label {
+      position: absolute; left: 10px; top: 11px; font-size: 0.72rem; font-weight: 700;
+      color: #8a93a0; font-family: "SF Mono", Menlo, Consolas, monospace; user-select: none;
+    }
+    .nb-label.out { color: #6f9e6f; }
+    .nb-img { margin: 6px 0; border: 1px solid var(--code-border); border-radius: 8px;
+      background: #fff; padding: 8px; }
+    .nb-img img { display: block; width: auto; height: auto; max-width: 100%; }
+    .nb-note { margin: 4px 0 0; font-size: 0.98rem; }
+    footer {
+      margin-top: 30px; padding-top: 16px; border-top: 1px solid var(--line);
+      color: var(--muted); font-size: 0.92rem;
+      font-family: "Avenir Next","Segoe UI","Helvetica Neue",sans-serif;
+    }
+    @media (max-width: 900px) { p { font-size: 1rem; } }
+  </style>
+  <script>
+    window.MathJax = { tex: { inlineMath: [['$','$'], ['\\(','\\)']] }, svg: { fontCache: 'global' } };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+  <div class="page">
+    <article class="article">
+      <div class="meta">Rendered Notebook • Synthetic-Regularized KRR</div>
+      <h1>Synthetic-Regularized Kernel Regression — Minimal Reproduction</h1>
+      <p>
+        A minimal, <code>numpy</code>-only reproduction of the 1-D experiment from the post. It
+        implements the estimator $\alpha=(K_N+N\lambda I)^{-1}(y+N\lambda\beta)$, the Monte-Carlo
+        bias² / variance / risk decomposition, and the spectral-discrepancy proxy. The printed
+        numbers match <code>runs/002/summary.json</code> to ~$10^{-9}$.
+      </p>
+      <div class="tools">
+        <a href="../../synthetic_regularized_krr.html">&larr; Back to post</a>
+        <a href="synthetic_krr_examples.ipynb">Download .ipynb</a>
+      </div>
+
+      <h2>Setup</h2>
+      <p class="intro">Only <code>numpy</code> is needed (plus <code>matplotlib</code> for the plot).</p>
+      <div class="nb-cell">
+        <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>import numpy as np
+np.set_printoptions(precision=4)</code></pre></div>
+      </div>
+
+      <div class="nb-cell">
+        <div class="nb-name">Configuration (run 002)</div>
+        <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>SEED, N_TRAIN, N_TEST = 42, 64, 1000
+NOISE_STD, REPETITIONS, PROJECTION_RIDGE, LENGTHSCALE = 0.1, 200, 1e-8, 0.15
+LAMBDAS = [0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0]
+GENERATORS = [
+    {&quot;name&quot;: &quot;perfect&quot;, &quot;delta&quot;: 0.0},
+    {&quot;name&quot;: &quot;smooth_bias&quot;, &quot;delta&quot;: 0.3},
+    {&quot;name&quot;: &quot;high_frequency_bias&quot;, &quot;delta&quot;: 0.3, &quot;frequency&quot;: 10},
+]</code></pre></div>
+      </div>
+
+      <h2>Target, data, kernel, generators</h2>
+      <div class="nb-cell">
+        <div class="nb-name">Target $f_\star(x)=\sin(2\pi x)+0.5\cos(4\pi x)$ and data</div>
+        <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>def f_star(x):
+    x = np.asarray(x, dtype=np.float64)
+    return np.sin(2.0 * np.pi * x) + 0.5 * np.cos(4.0 * np.pi * x)
+
+def make_train_inputs(n, seed):
+    rng = np.random.default_rng(seed)
+    return np.sort(rng.uniform(0.0, 1.0, size=n))
+
+def make_test_inputs(n):
+    return np.linspace(0.0, 1.0, n)</code></pre></div>
+      </div>
+
+      <div class="nb-cell">
+        <div class="nb-name">RBF kernel</div>
+        <div class="nb-eq">$$K(x,x')=\exp\!\left(-\frac{\lVert x-x'\rVert^2}{2\ell^2}\right)$$</div>
+        <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>def rbf_kernel(xa, xb, lengthscale):
+    xa = np.asarray(xa, dtype=np.float64).reshape(-1, 1)
+    xb = np.asarray(xb, dtype=np.float64).reshape(1, -1)
+    return np.exp(-((xa - xb) ** 2) / (2.0 * lengthscale ** 2))</code></pre></div>
+      </div>
+
+      <div class="nb-cell">
+        <div class="nb-name">Three synthetic generators</div>
+        <div class="nb-eq">$$g_{\text{perfect}}=f_\star,\quad g_{\text{smooth}}=f_\star+\delta\sin(2\pi x),\quad g_{\text{hf}}=f_\star+\delta\sin(2\pi\cdot 10\,x)$$</div>
+        <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>def evaluate_generator(name, x, delta=0.0, frequency=10):
+    base = f_star(x)
+    if name == &quot;perfect&quot;:
+        return base
+    if name == &quot;smooth_bias&quot;:
+        return base + delta * np.sin(2.0 * np.pi * x)
+    if name == &quot;high_frequency_bias&quot;:
+        return base + delta * np.sin(2.0 * np.pi * frequency * x)
+    raise ValueError(f&quot;Unknown generator: {name}&quot;)</code></pre></div>
+      </div>
+
+      <h2>The estimator</h2>
+      <div class="nb-cell">
+        <div class="nb-name">Project $g$, solve for $\alpha$, predict</div>
+        <div class="nb-eq">$$\beta=(K_N+\eta I)^{-1}g_X,\qquad \alpha=(K_N+N\lambda I)^{-1}(y+N\lambda\beta),\qquad \hat y=K_{\text{test,train}}\alpha$$</div>
+        <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>def project_generator_to_kernel_span(K_train, g_train, ridge):
+    n = K_train.shape[0]
+    return np.linalg.solve(K_train + ridge * np.eye(n), g_train)
+
+def fit_synthetic_krr(K_train, y_train, beta, lam):
+    n = K_train.shape[0]
+    lam_n = n * lam
+    return np.linalg.solve(K_train + lam_n * np.eye(n), y_train + lam_n * beta)
+
+def predict(K_test_train, alpha):
+    return K_test_train @ alpha</code></pre></div>
+      </div>
+
+      <div class="nb-cell">
+        <div class="nb-name">Monte-Carlo bias² / variance / risk</div>
+        <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>def bias_variance_decomposition(predictions, y_true):
+    mean_pred = predictions.mean(axis=0)
+    bias2 = float(np.mean((y_true - mean_pred) ** 2))
+    variance = float(np.mean((predictions - mean_pred[None, :]) ** 2))
+    return bias2, variance, bias2 + variance</code></pre></div>
+      </div>
+
+      <h2>Run the sweep</h2>
+      <p class="intro">Three generators × ten $\lambda$ values, 200 noise repetitions each, training inputs fixed.</p>
+      <div class="nb-cell">
+        <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>x_train = make_train_inputs(N_TRAIN, SEED)
+x_test = make_test_inputs(N_TEST)
+y_true_train, y_true_test = f_star(x_train), f_star(x_test)
+K_train = rbf_kernel(x_train, x_train, LENGTHSCALE)
+K_test_train = rbf_kernel(x_test, x_train, LENGTHSCALE)
+
+rng = np.random.default_rng(SEED + 1000)   # single stream drives all noise draws
+results = {}
+print(f&quot;{'generator':&lt;22}{'lambda':&gt;9}{'bias2':&gt;13}{'variance':&gt;13}{'risk':&gt;13}&quot;)
+print('-' * 70)
+for gen in GENERATORS:
+    g_train = evaluate_generator(x=x_train, **gen)
+    beta = project_generator_to_kernel_span(K_train, g_train, PROJECTION_RIDGE)
+    for lam in LAMBDAS:
+        preds = np.empty((REPETITIONS, N_TEST))
+        for r in range(REPETITIONS):
+            eps = rng.normal(0.0, NOISE_STD, size=N_TRAIN)
+            alpha = fit_synthetic_krr(K_train, y_true_train + eps, beta, lam)
+            preds[r] = predict(K_test_train, alpha)
+        b2, v, risk = bias_variance_decomposition(preds, y_true_test)
+        results[(gen['name'], lam)] = (b2, v, risk)
+        print(f&quot;{gen['name']:&lt;22}{lam:&gt;9.4g}{b2:&gt;13.4e}{v:&gt;13.4e}{risk:&gt;13.4e}&quot;)</code></pre></div>
+        <div class="nb-out"><span class="nb-label out">Out:</span><pre>generator                lambda        bias2     variance         risk
+----------------------------------------------------------------------
+perfect                  0.0003   7.4549e-06   1.5827e-03   1.5901e-03
+perfect                   0.001   4.5299e-06   1.3356e-03   1.3401e-03
+perfect                   0.003   3.5072e-06   1.0557e-03   1.0592e-03
+perfect                    0.01   1.4574e-06   8.8872e-04   8.9018e-04
+perfect                    0.03   4.5421e-06   5.6287e-04   5.6741e-04
+perfect                     0.1   1.5004e-06   2.9375e-04   2.9525e-04
+perfect                     0.3   1.8378e-07   1.0750e-04   1.0769e-04
+perfect                       1   4.4351e-07   2.4887e-05   2.5331e-05
+perfect                       3   3.5098e-08   3.6897e-06   3.7248e-06
+perfect                      10   2.1743e-09   3.8032e-07   3.8249e-07
+smooth_bias              0.0003   6.4654e-06   1.5609e-03   1.5673e-03
+smooth_bias               0.001   2.5725e-05   1.3382e-03   1.3640e-03
+smooth_bias               0.003   5.2263e-05   1.0638e-03   1.1161e-03
+smooth_bias                0.01   1.5727e-04   8.8010e-04   1.0374e-03
+smooth_bias                0.03   7.2752e-04   6.0237e-04   1.3299e-03
+smooth_bias                 0.1   3.7847e-03   2.7488e-04   4.0596e-03
+smooth_bias                 0.3   1.2344e-02   1.1816e-04   1.2462e-02
+smooth_bias                   1   2.7175e-02   2.1489e-05   2.7196e-02
+smooth_bias                   3   3.7439e-02   3.3636e-06   3.7442e-02
+smooth_bias                  10   4.2464e-02   3.7774e-07   4.2465e-02
+high_frequency_bias      0.0003   7.0241e-02   1.5531e-03   7.1794e-02
+high_frequency_bias       0.001   7.6681e-02   1.3240e-03   7.8005e-02
+high_frequency_bias       0.003   8.3342e-02   1.0704e-03   8.4413e-02
+high_frequency_bias        0.01   8.9639e-02   8.8015e-04   9.0519e-02
+high_frequency_bias        0.03   9.3951e-02   5.6589e-04   9.4517e-02
+high_frequency_bias         0.1   9.8418e-02   2.7131e-04   9.8689e-02
+high_frequency_bias         0.3   1.0212e-01   1.0381e-04   1.0222e-01
+high_frequency_bias           1   1.0607e-01   2.2957e-05   1.0609e-01
+high_frequency_bias           3   1.0829e-01   4.0103e-06   1.0829e-01
+high_frequency_bias          10   1.0940e-01   3.5784e-07   1.0940e-01</pre></div>
+      </div>
+
+      <h2>Spectral-discrepancy proxy</h2>
+      <div class="nb-cell">
+        <div class="nb-eq">$$\widehat{\mathcal D}(f_\star,g)^2=\sum_j \frac{(\theta_j-\omega_j)^2}{\mu_j^2},\qquad \widehat T=K_N/N$$</div>
+        <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>def discrepancy_proxy(K_train, f_star_train, g_train, n_train, eps=1e-12):
+    evals, evecs = np.linalg.eigh(K_train / n_train)
+    coeffs = evecs.T @ (f_star_train - g_train)
+    return float(np.sum((coeffs ** 2) / (evals + eps) ** 2))
+
+print('Spectral discrepancy proxy  D_hat(f*, g)^2 :')
+for gen in GENERATORS:
+    g_train = evaluate_generator(x=x_train, **gen)
+    d = discrepancy_proxy(K_train, y_true_train, g_train, N_TRAIN)
+    print(f&quot;  {gen['name']:&lt;22} {d:.4e}&quot;)</code></pre></div>
+        <div class="nb-out"><span class="nb-label out">Out:</span><pre>Spectral discrepancy proxy  D_hat(f*, g)^2 :
+  perfect                0.0000e+00
+  smooth_bias            2.2422e+11
+  high_frequency_bias    8.7433e+23</pre></div>
+      </div>
+      <p class="nb-note">
+        The discrepancy ranks the generators exactly as the risk does: perfect ($0$) &lt; smooth
+        ($\sim10^{11}$) &lt; high-frequency ($\sim10^{23}$). Mismatch in the small-eigenvalue
+        directions is what the $1/\mu_j^2$ weighting punishes.
+      </p>
+
+      <h2>Plot: risk vs. $\lambda$</h2>
+      <div class="nb-cell">
+        <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(6.4, 4.2))
+for gen in GENERATORS:
+    name = gen['name']
+    risks = [results[(name, lam)][2] for lam in LAMBDAS]
+    ax.loglog(LAMBDAS, risks, marker='o', label=name)
+ax.set_xlabel(r'regularization strength $\lambda$')
+ax.set_ylabel('population risk')
+ax.set_title('Risk vs. lambda')
+ax.legend(); ax.grid(True, which='both', alpha=0.3)
+fig.tight_layout(); plt.show()</code></pre></div>
+        <div class="nb-img">
+          <img src="risk_vs_lambda.png" alt="Risk vs lambda for the three synthetic generators (log-log)." />
+        </div>
+      </div>
+      <p class="nb-note">
+        Perfect (monotone down), smooth bias (U-shaped, best near $\lambda\approx10^{-2}$), and
+        high-frequency bias (high and flat) — the three regimes the theory predicts.
+      </p>
+
+      <footer>
+        Companion notebook for <a href="../../synthetic_regularized_krr.html">Synthetic-Regularized
+        Kernel Regression</a> (AISTATS&nbsp;2026 Batch). Outputs shown are from an actual run and match
+        <code>runs/002/summary.json</code>.
+      </footer>
+    </article>
+  </div>
+</body>
+</html>

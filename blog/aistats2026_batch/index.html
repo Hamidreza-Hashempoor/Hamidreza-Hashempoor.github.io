@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AISTATS 2026 Batch — Oral &amp; Spotlight Papers</title>
+  <meta name="description" content="An ongoing series collecting accepted oral and spotlight papers from AISTATS 2026: each paper's idea summarized, with a simple, reproducible experiment and a companion notebook." />
+  <style>
+    :root {
+      --paper: #fffef8;
+      --ink: #1f2429;
+      --muted: #55606a;
+      --line: #d8d3c9;
+      --accent: #8a2d1f;
+      --accent-soft: #f2ebe2;
+      --maxw: 920px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 520px at 5% -10%, #f3efe5 0%, rgba(243, 239, 229, 0) 65%),
+        radial-gradient(900px 440px at 95% 0%, #efe6dc 0%, rgba(239, 230, 220, 0) 62%),
+        #f8f6f1;
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", serif;
+      line-height: 1.7;
+    }
+
+    .page {
+      width: min(var(--maxw), 94vw);
+      margin: 0 auto;
+      padding: 42px 0 56px;
+    }
+
+    .article {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 14px 40px rgba(40, 35, 26, 0.08);
+      padding: clamp(20px, 4vw, 46px);
+    }
+
+    .meta {
+      color: var(--muted);
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      letter-spacing: 0.02em;
+      font-size: 0.88rem;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .post-stats {
+      margin: 6px 0 16px;
+      display: grid;
+      gap: 8px;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      color: #4f5963;
+    }
+
+    .stat {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.02rem;
+      line-height: 1.35;
+    }
+
+    .stat svg {
+      width: 20px; height: 20px;
+      stroke: #5a626c; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .stat strong { color: #343b42; font-weight: 700; }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 4vw, 2.85rem);
+      line-height: 1.15;
+      letter-spacing: -0.015em;
+    }
+
+    .authors {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 1.02rem;
+    }
+
+    .tools {
+      margin-top: 18px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    .tools a {
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid #d6c6b7;
+      background: #fff;
+      border-radius: 999px;
+      padding: 7px 13px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    h2 {
+      margin: 34px 0 10px;
+      font-size: clamp(1.25rem, 2.7vw, 1.75rem);
+      line-height: 1.25;
+    }
+
+    p { margin: 0 0 13px; font-size: 1.04rem; }
+
+    .callout {
+      margin: 16px 0 22px;
+      padding: 14px 16px;
+      border: 1px solid #d5e0ef;
+      border-left: 4px solid var(--accent);
+      background: #f4f7fb;
+      border-radius: 8px;
+      font-size: 1.0rem;
+    }
+
+    .callout strong { color: var(--accent); }
+
+    /* paper list */
+    .paper-list { list-style: none; margin: 14px 0 6px; padding: 0; display: grid; gap: 14px; }
+
+    .paper-card {
+      border: 1px solid #e0dbd1;
+      border-radius: 10px;
+      background: #fff;
+      padding: 16px 18px;
+    }
+
+    .paper-card .pnum {
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      font-size: 0.78rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .paper-card h3 {
+      margin: 4px 0 6px;
+      font-size: 1.18rem;
+      color: var(--ink);
+    }
+
+    .paper-card .venue {
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .paper-card p { margin: 6px 0 10px; font-size: 0.99rem; color: #46505a; }
+
+    .paper-card a.open {
+      display: inline-block;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid #d6c6b7;
+      background: #fffdf8;
+      border-radius: 999px;
+      padding: 6px 13px;
+      font-weight: 600;
+      font-size: 0.88rem;
+    }
+
+    .paper-card.pending {
+      border-style: dashed;
+      background: #fbf9f4;
+      color: var(--muted);
+    }
+
+    footer {
+      margin-top: 30px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    @media (max-width: 900px) {
+      p { font-size: 1rem; }
+    }
+  </style>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+  <div class="page">
+    <article class="article">
+      <div class="meta">AISTATS 2026 Batch • Paper series</div>
+      <div class="post-stats" aria-label="Series metadata">
+        <div class="stat">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 5h16M4 12h16M4 19h10"></path>
+          </svg>
+          <span>Ongoing series</span>
+        </div>
+        <div class="stat">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="4.5" width="18" height="16" rx="2"></rect>
+            <path d="M8 2.5v4M16 2.5v4M3 9.5h18"></path>
+          </svg>
+          <span><strong>Started:</strong> June 2026</span>
+        </div>
+      </div>
+      <h1>AISTATS 2026 Batch — Oral &amp; Spotlight Papers</h1>
+      <p class="authors">Hamidreza Hashempoor • Institute for AI, University of Stuttgart</p>
+
+      <div class="tools">
+        <a href="../index.html">← Back to blog</a>
+        <a href="#papers">Papers</a>
+      </div>
+
+      <p style="margin-top:18px;">
+        In this series I am collecting the accepted <strong>oral</strong> and <strong>spotlight</strong>
+        papers from <em>AISTATS&nbsp;2026</em>. For each paper I summarize the core idea, follow the
+        key equations and theory, and add a small, self-contained experiment that reproduces the
+        main qualitative claim — together with a companion notebook so the numbers can be re-run from
+        scratch. The aim is not an exhaustive survey but a hands-on reading: enough theory to see
+        <em>why</em> a method works, plus minimal code that makes the effect visible.
+      </p>
+
+      <div class="callout">
+        Each entry follows the same shape: <strong>idea → theory → minimal experiment → results →
+        notebook</strong>. Experiments are deliberately tiny (often 1-D, NumPy-only) so they run in
+        seconds and the theory stays in plain view.
+      </div>
+
+      <h2 id="papers">Papers</h2>
+      <ul class="paper-list">
+        <li class="paper-card">
+          <div class="pnum">Paper 1</div>
+          <h3>Synthetic-Regularized Kernel Regression</h3>
+          <div class="venue">Synthetic-data regularization • bias–variance • kernel methods</div>
+          <p>
+            A kernel regressor that trades noisy real labels against a synthetic generator $g$ via a
+            penalty $\lambda\|f-g\|_{\mathcal H_K}^2$. Larger $\lambda$ cuts variance but adds bias when
+            $g\neq f_\star$; the best $\lambda$ depends on how well $g$ matches the target — especially
+            in the hard, high-frequency kernel directions. Verified on a 1-D RBF experiment.
+          </p>
+          <a class="open" href="papers/synthetic_regularized_krr.html">Open paper →</a>
+        </li>
+
+        <!-- Template for future papers — duplicate this block per paper:
+        <li class="paper-card">
+          <div class="pnum">Paper N</div>
+          <h3>Paper title</h3>
+          <div class="venue">tags • topic</div>
+          <p>One-line summary of the idea.</p>
+          <a class="open" href="papers/paper_slug.html">Open paper →</a>
+        </li>
+        -->
+
+        <li class="paper-card pending">
+          <div class="pnum">More to come</div>
+          <h3>Paper y, paper z, …</h3>
+          <p>
+            Additional oral &amp; spotlight papers will be added here as I work through the batch, each
+            with the same idea-summary-plus-experiment treatment.
+          </p>
+        </li>
+      </ul>
+
+      <footer>
+        Part of an ongoing reading series on AISTATS&nbsp;2026 oral &amp; spotlight papers. Summaries
+        and experiments are my own re-derivations for study; see each linked source for the authoritative
+        statements.
+      </footer>
+    </article>
+  </div>
+</body>
+</html>

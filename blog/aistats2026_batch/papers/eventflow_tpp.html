@@ -297,17 +297,14 @@
       </div>
 
       <p style="margin-top:18px;">
-        This second entry in the <a href="../index.html">AISTATS&nbsp;2026 Batch</a> series tackles a
-        different kind of object than Paper&nbsp;1: not a function, but a <em>set of event times</em>. A
-        temporal point process (TPP) sample is a finite, sorted list of timestamps in a window $[0,T]$ —
+        A temporal point process (TPP) sample is a finite, sorted list of timestamps in a window $[0,T]$ —
         when did the trades fire, when did the patient have appointments, when did the server log errors.
         The usual way to model these is autoregressive: predict the next gap, then the next, then the
         next, accumulating error as the horizon grows. <strong>EventFlow</strong> instead learns a single
         <em>flow</em> that transports a simple reference TPP onto the data TPP in one shot — generating the
-        whole future sequence non-autoregressively. The trick that makes flow matching work on
-        variable-length sets is a <strong>balanced coupling</strong>, and the whole story is checked on a
-        tiny clustered synthetic process whose numbers are reproduced by the companion
-        <a href="#notebook">notebook</a>.
+        whole sequence non-autoregressively. The trick that makes flow matching work on variable-length
+        sets is a <strong>balanced coupling</strong>, and the whole story is checked on a tiny clustered
+        synthetic process whose numbers are reproduced by the companion <a href="#notebook">notebook</a>.
       </p>
 
       <!-- ===================== IDEA ===================== -->
@@ -317,7 +314,7 @@
         masses (a counting measure):
       </p>
       <div class="eq">
-        $$ \gamma=\{t^1,\ldots,t^n\},\quad 0\le t^1<\cdots<t^n\le T,
+        $$ \gamma=\{t^1,\ldots,t^n\},\quad 0\le t^1&lt;\cdots&lt;t^n\le T,
         \qquad \gamma=\sum_{k=1}^n \delta[t^k]. $$
       </div>
       <p>
@@ -327,7 +324,7 @@
       </p>
       <div class="eq">
         $$ \mu(n)=\mathbb P_{\gamma\sim\mu}\!\left[N(\gamma)=n\right],
-        \qquad \mu_n(t^1,\ldots,t^n),\;\; t^1<\cdots<t^n. $$
+        \qquad \mu_n(t^1,\ldots,t^n),\;\; t^1&lt;\cdots&lt;t^n. $$
       </div>
       <p>
         Flow matching learns a velocity field that, integrated as an ODE in a <em>flow time</em>
@@ -630,7 +627,7 @@
       </div>
 
       <p>
-        The practical lesson mirrors the paper's headline claim: by committing to a balanced coupling and a
+        The practical lesson: by committing to a balanced coupling and a
         linear noisy interpolant, flow matching extends cleanly to variable-length event sequences, and a
         single non-autoregressive pass transports a trivial reference onto a structured event distribution
         — no next-event loop, no cascading error.
@@ -654,11 +651,8 @@
       </div>
 
       <footer>
-        Part of the <a href="../index.html">AISTATS&nbsp;2026 Batch</a> series, summarizing
-        <a href="https://openreview.net/forum?id=QXqKGOE2JW" target="_blank" rel="noopener">EventFlow:
-        Forecasting Temporal Point Processes with Flow Matching</a>. The balanced coupling, noisy
-        interpolant, and flow-matching objective follow the method's idea write-up; the figures and numbers
-        are from a run of the accompanying clustered-TPP experiment, reproduced by the linked notebook.
+        The figures and numbers are from a run of the clustered-TPP experiment described above,
+        reproduced by the linked notebook.
       </footer>
     </article>
   </div>

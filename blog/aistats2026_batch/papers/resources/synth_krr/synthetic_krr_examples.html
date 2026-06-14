@@ -93,7 +93,7 @@
         A minimal, <code>numpy</code>-only reproduction of the 1-D experiment from the post. It
         implements the estimator $\alpha=(K_N+N\lambda I)^{-1}(y+N\lambda\beta)$, the Monte-Carlo
         bias² / variance / risk decomposition, and the spectral-discrepancy proxy. The printed
-        numbers match <code>runs/002/summary.json</code> to ~$10^{-9}$.
+        numbers match the reference values reported in the post to ~$10^{-9}$.
       </p>
       <div class="tools">
         <a href="../../synthetic_regularized_krr.html">&larr; Back to post</a>
@@ -108,7 +108,7 @@ np.set_printoptions(precision=4)</code></pre></div>
       </div>
 
       <div class="nb-cell">
-        <div class="nb-name">Configuration (run 002)</div>
+        <div class="nb-name">Configuration</div>
         <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>SEED, N_TRAIN, N_TEST = 42, 64, 1000
 NOISE_STD, REPETITIONS, PROJECTION_RIDGE, LENGTHSCALE = 0.1, 200, 1e-8, 0.15
 LAMBDAS = [0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0]
@@ -292,7 +292,7 @@ fig.tight_layout(); plt.show()</code></pre></div>
       <footer>
         Companion notebook for <a href="../../synthetic_regularized_krr.html">Synthetic-Regularized
         Kernel Regression</a> (AISTATS&nbsp;2026 Batch). Outputs shown are from an actual run and match
-        <code>runs/002/summary.json</code>.
+        the reference numbers reported in the post.
       </footer>
     </article>
   </div>

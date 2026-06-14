@@ -279,6 +279,7 @@
 
       <div class="tools">
         <a href="../index.html">← Back to series</a>
+        <a href="https://openreview.net/forum?id=Y6Jm6KMl6B" target="_blank" rel="noopener">Original paper ↗</a>
         <a href="resources/synth_krr/synthetic_krr_examples.html">View notebook</a>
         <a href="resources/synth_krr/synthetic_krr_examples.ipynb">Download .ipynb</a>
         <a href="#experiment">Experiment</a>
@@ -452,7 +453,7 @@
         <li><strong>Smooth bias:</strong> $g_{\text{smooth}}(x)=f_\star(x)+\delta\sin(2\pi x)$ — error in an <em>easy</em>, low-frequency direction.</li>
         <li><strong>High-frequency bias:</strong> $g_{\text{hf}}(x)=f_\star(x)+\delta\sin(2\pi\cdot 10\,x)$ — error in a <em>hard</em>, high-frequency direction the RBF kernel damps.</li>
       </ul>
-      <p>The exact configuration used for the run reported below (<code>runs/002</code>):</p>
+      <p>The exact configuration used for the run reported below:</p>
       <div class="table-wrap">
         <table class="dist-table">
           <thead><tr><th>Setting</th><th>Value</th><th>Setting</th><th>Value</th></tr></thead>
@@ -505,7 +506,7 @@
       </figure>
 
       <h3>Representative numbers</h3>
-      <p>A few rows from <code>summary.json</code> (run&nbsp;002) make the three regimes concrete:</p>
+      <p>A few representative rows make the three regimes concrete:</p>
       <div class="table-wrap">
         <table class="dist-table">
           <thead>
@@ -555,8 +556,8 @@
         The companion notebook re-runs the whole experiment from scratch using only
         <code>numpy</code> (and <code>matplotlib</code> for the plot). It implements the boxed estimator
         $\alpha=(K_N+N\lambda I)^{-1}(y+N\lambda\beta)$, the Monte-Carlo bias/variance decomposition, and
-        the spectral-discrepancy proxy, then checks that the reproduced bias$^2$/variance/risk match
-        <code>runs/002/summary.json</code> (they agree to $\sim\!10^{-9}$, i.e. floating-point noise).
+        the spectral-discrepancy proxy, then checks that the reproduced bias$^2$/variance/risk match the
+        reference numbers reported above (they agree to $\sim\!10^{-9}$, i.e. floating-point noise).
       </p>
       <div class="tools" style="margin-top:6px;">
         <a href="resources/synth_krr/synthetic_krr_examples.html">View notebook (rendered)</a>
@@ -564,9 +565,11 @@
       </div>
 
       <footer>
-        Part of the <a href="../index.html">AISTATS&nbsp;2026 Batch</a> series. The estimator, bias–variance
+        Part of the <a href="../index.html">AISTATS&nbsp;2026 Batch</a> series, summarizing
+        <a href="https://openreview.net/forum?id=Y6Jm6KMl6B" target="_blank" rel="noopener">Beyond Real
+        Data: Synthetic Data through the Lens of Regularization</a>. The estimator, bias–variance
         decomposition, and spectral discrepancy follow the method's idea write-up; the figures and tables
-        are from run&nbsp;002 of the accompanying 1-D experiment, reproduced by the linked notebook.
+        are from a run of the accompanying 1-D experiment, reproduced by the linked notebook.
       </footer>
     </article>
   </div>

@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EventFlow — Flow Matching for Temporal Point Processes</title>
+  <meta name="description" content="A non-autoregressive generative model for temporal point processes: a balanced coupling pairs reference and data event sequences of equal length, a linear noisy interpolant defines the flow, and a vector field trained by masked MSE transports a uniform reference TPP to the data distribution. Verified on a clustered synthetic TPP with a reproducible notebook." />
+  <style>
+    :root {
+      --paper: #fffef8;
+      --ink: #1f2429;
+      --muted: #55606a;
+      --line: #d8d3c9;
+      --accent: #8a2d1f;
+      --accent-soft: #f2ebe2;
+      --maxw: 920px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 520px at 5% -10%, #f3efe5 0%, rgba(243, 239, 229, 0) 65%),
+        radial-gradient(900px 440px at 95% 0%, #efe6dc 0%, rgba(239, 230, 220, 0) 62%),
+        #f8f6f1;
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", serif;
+      line-height: 1.7;
+    }
+
+    .page {
+      width: min(var(--maxw), 94vw);
+      margin: 0 auto;
+      padding: 42px 0 56px;
+    }
+
+    .article {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 14px 40px rgba(40, 35, 26, 0.08);
+      padding: clamp(20px, 4vw, 46px);
+    }
+
+    .meta {
+      color: var(--muted);
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      letter-spacing: 0.02em;
+      font-size: 0.88rem;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .post-stats {
+      margin: 6px 0 16px;
+      display: grid;
+      gap: 8px;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      color: #4f5963;
+    }
+
+    .stat {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.02rem;
+      line-height: 1.35;
+    }
+
+    .stat svg {
+      width: 20px; height: 20px;
+      stroke: #5a626c; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .stat strong { color: #343b42; font-weight: 700; }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 4vw, 2.85rem);
+      line-height: 1.15;
+      letter-spacing: -0.015em;
+    }
+
+    .authors {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 1.02rem;
+    }
+
+    .tools {
+      margin-top: 18px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    .tools a {
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid #d6c6b7;
+      background: #fff;
+      border-radius: 999px;
+      padding: 7px 13px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .toc {
+      margin-top: 20px;
+      padding: 10px 14px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      font-size: 0.92rem;
+    }
+
+    .toc a {
+      color: #203142;
+      text-decoration: none;
+      margin-right: 10px;
+      white-space: nowrap;
+    }
+
+    h2 {
+      margin: 34px 0 10px;
+      font-size: clamp(1.25rem, 2.7vw, 1.75rem);
+      line-height: 1.25;
+    }
+
+    h3 {
+      margin: 22px 0 6px;
+      font-size: clamp(1.05rem, 2vw, 1.3rem);
+      color: var(--accent);
+    }
+
+    p { margin: 0 0 13px; font-size: 1.04rem; }
+
+    .eq {
+      margin: 15px 0;
+      padding: 12px 14px;
+      border: 1px solid #e0dbd1;
+      background: #fff;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+
+    .eq-note {
+      margin-top: -3px;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .figure-full {
+      margin: 20px auto;
+      border: 1px solid #e4dfd6;
+      border-radius: 9px;
+      background: #fff;
+      padding: 8px;
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    .figure-full img { display: block; width: auto; height: auto; max-width: 100%; }
+
+    .figure-full figcaption {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.4;
+    }
+
+    ul { margin-top: 6px; margin-bottom: 14px; padding-left: 20px; }
+    li { margin-bottom: 6px; }
+
+    .callout {
+      margin: 16px 0 22px;
+      padding: 14px 16px;
+      border: 1px solid #d5e0ef;
+      border-left: 4px solid var(--accent);
+      background: #f4f7fb;
+      border-radius: 8px;
+      font-size: 1.0rem;
+    }
+
+    .callout strong { color: var(--accent); }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin: 14px 0 8px;
+      border: 1px solid #e0dbd1;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    table.dist-table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.93rem;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    table.dist-table th {
+      background: var(--accent);
+      color: #fff;
+      text-align: left;
+      padding: 9px 12px;
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+    }
+
+    table.dist-table td {
+      padding: 8px 12px;
+      border-top: 1px solid #ece6dc;
+      vertical-align: top;
+    }
+
+    table.dist-table tr:nth-child(even) td { background: #faf7f0; }
+
+    table.dist-table td.group {
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft) !important;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    table.dist-table td.best { color: #2a6a2a; font-weight: 700; }
+
+    footer {
+      margin-top: 30px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    @media (max-width: 900px) {
+      p { font-size: 1rem; }
+    }
+  </style>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+  <div class="page">
+    <article class="article">
+      <div class="meta">AISTATS 2026 Batch • Paper 2</div>
+      <div class="post-stats" aria-label="Post metadata">
+        <div class="stat">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M12 7v6l4 2"></path>
+          </svg>
+          <span>16 minute read</span>
+        </div>
+        <div class="stat">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="4.5" width="18" height="16" rx="2"></rect>
+            <path d="M8 2.5v4M16 2.5v4M3 9.5h18"></path>
+          </svg>
+          <span><strong>Published:</strong> June 2026</span>
+        </div>
+      </div>
+      <h1>EventFlow: Flow Matching for Temporal Point Processes</h1>
+      <p class="authors">Hamidreza Hashempoor • Institute for AI, University of Stuttgart</p>
+
+      <div class="tools">
+        <a href="../index.html">← Back to series</a>
+        <a href="https://openreview.net/forum?id=QXqKGOE2JW" target="_blank" rel="noopener">Original paper ↗</a>
+        <a href="resources/eventflow_tpp/eventflow_examples.html">View notebook</a>
+        <a href="resources/eventflow_tpp/eventflow_examples.ipynb">Download .ipynb</a>
+        <a href="#experiment">Experiment</a>
+        <a href="#results">Results</a>
+      </div>
+
+      <div class="toc">
+        <a href="#idea">The idea</a>
+        <a href="#coupling">Balanced coupling</a>
+        <a href="#interpolant">Interpolant</a>
+        <a href="#field">Vector field &amp; loss</a>
+        <a href="#experiment">Experiment</a>
+        <a href="#results">Results</a>
+        <a href="#notebook">Notebook</a>
+      </div>
+
+      <p style="margin-top:18px;">
+        This second entry in the <a href="../index.html">AISTATS&nbsp;2026 Batch</a> series tackles a
+        different kind of object than Paper&nbsp;1: not a function, but a <em>set of event times</em>. A
+        temporal point process (TPP) sample is a finite, sorted list of timestamps in a window $[0,T]$ —
+        when did the trades fire, when did the patient have appointments, when did the server log errors.
+        The usual way to model these is autoregressive: predict the next gap, then the next, then the
+        next, accumulating error as the horizon grows. <strong>EventFlow</strong> instead learns a single
+        <em>flow</em> that transports a simple reference TPP onto the data TPP in one shot — generating the
+        whole future sequence non-autoregressively. The trick that makes flow matching work on
+        variable-length sets is a <strong>balanced coupling</strong>, and the whole story is checked on a
+        tiny clustered synthetic process whose numbers are reproduced by the companion
+        <a href="#notebook">notebook</a>.
+      </p>
+
+      <!-- ===================== IDEA ===================== -->
+      <h2 id="idea">The idea: transport a reference TPP onto the data TPP</h2>
+      <p>
+        Represent one event sequence as a finite ordered list of times, or equivalently as a sum of point
+        masses (a counting measure):
+      </p>
+      <div class="eq">
+        $$ \gamma=\{t^1,\ldots,t^n\},\quad 0\le t^1<\cdots<t^n\le T,
+        \qquad \gamma=\sum_{k=1}^n \delta[t^k]. $$
+      </div>
+      <p>
+        The number of events is itself a random quantity, captured by the count functional
+        $N(\gamma)=n$. A TPP <em>distribution</em> $\mu\in\mathcal P(\Gamma)$ therefore has two parts: a
+        distribution over how many events occur, and — given that count — a density over where they land,
+      </p>
+      <div class="eq">
+        $$ \mu(n)=\mathbb P_{\gamma\sim\mu}\!\left[N(\gamma)=n\right],
+        \qquad \mu_n(t^1,\ldots,t^n),\;\; t^1<\cdots<t^n. $$
+      </div>
+      <p>
+        Flow matching learns a velocity field that, integrated as an ODE in a <em>flow time</em>
+        $s\in[0,1]$, carries samples from a simple reference distribution $\mu_0$ to the data distribution
+        $\mu_1$. The complication unique to point processes is that two samples can have <em>different
+        lengths</em>: you cannot linearly interpolate a 2-event sequence into a 3-event one coordinate by
+        coordinate. EventFlow sidesteps this by being careful about how reference and data sequences are
+        paired.
+      </p>
+      <div class="callout">
+        The whole method rests on one design choice: <strong>match counts before you interpolate</strong>.
+        The reference $\mu_0$ is built to share the data's count distribution, $\mu_0(n)=\mu_1(n)$ for all
+        $n$, and every training pair is chosen to have the <em>same</em> number of events. The flow then
+        only ever has to move events around — it never has to create or delete them.
+      </div>
+
+      <!-- ===================== COUPLING ===================== -->
+      <h2 id="coupling">The balanced coupling</h2>
+      <p>
+        A <em>coupling</em> is a joint distribution over source–target pairs $z=(\gamma_0,\gamma_1)\sim\rho$.
+        It is called <strong>balanced</strong> when the two sides always have the same count:
+      </p>
+      <div class="eq">$$ N(\gamma_0)=N(\gamma_1)\quad\text{almost surely}. $$</div>
+      <p>
+        The naive recipe — sample $\gamma_0\sim\mu_0$ and $\gamma_1\sim\mu_1$ independently — breaks this:
+        nothing forces the counts to agree, and a 2-event source paired with a 3-event target has no
+        coordinate-wise interpolant. The fix is to sample the pair <em>conditionally</em>. Draw the data
+        sequence first, read off its count $n=N(\gamma_1)$, then draw exactly $n$ reference times i.i.d.
+        from a simple density $q$ on $[0,T]$ and sort them:
+      </p>
+      <div class="eq">
+        $$ t^1_0,\ldots,t^n_0\stackrel{\text{i.i.d.}}{\sim}q,
+        \qquad \gamma_0=\operatorname{sort}(t^1_0,\ldots,t^n_0). $$
+      </div>
+      <p>
+        For the minimal experiment $q=\operatorname{Uniform}(0,T)$. By construction
+        $N(\gamma_0)=N(\gamma_1)$, so the pair is balanced and the two sorted sequences can be matched
+        event-for-event. In code this is a two-liner:
+      </p>
+      <div class="eq">
+        $$ \texttt{n = len(gamma\_1)};\qquad
+        \texttt{gamma\_0 = sort(rand(n) * T)}. $$
+      </div>
+      <div class="callout">
+        <strong>The pitfall to avoid.</strong> Do <em>not</em> independently sample counts from $\mu_0$ and
+        $\mu_1$ — that can break the balance. And do not average sequences of different counts
+        coordinate-wise: the marginal interpolating law is a <em>mixture</em> over lengths, not a vector
+        average. A minibatch simply holds sequences of different lengths side by side, handled with padding
+        and masks.
+      </div>
+
+      <!-- ===================== INTERPOLANT ===================== -->
+      <h2 id="interpolant">The noisy linear interpolant</h2>
+      <p>
+        Two time variables now live in the model and must not be confused: the <em>event time</em>
+        $t\in[0,T]$ says <em>when</em> an event happens; the <em>flow time</em> $s\in[0,1]$ says how far the
+        sample has travelled from reference toward data. Given a balanced pair, interpolate each matched
+        event linearly in $s$,
+      </p>
+      <div class="eq">
+        $$ t^k_s=(1-s)\,t^k_0+s\,t^k_1,
+        \qquad \gamma^z_s=\sum_{k=1}^n\delta[t^k_s]. $$
+      </div>
+      <p>
+        Training on this deterministic path alone would only ever show the network points exactly on the
+        straight line between source and target. To spread probability mass into a tube around the path —
+        so the learned field is defined off the line too — add small independent Gaussian noise to each
+        interpolated event:
+      </p>
+      <div class="eq">
+        $$ \hat\gamma^z_s=\sum_{k=1}^n\delta\!\left[t^k_s+\epsilon^k\right],
+        \qquad \epsilon^k\sim\mathcal N(0,\sigma^2). $$
+      </div>
+      <p>
+        This conditional law (the small Gaussian cloud around the path of one fixed pair $z$) is written
+        $\eta^z_s$. Averaging it over all balanced pairs gives the global interpolating distribution that
+        training actually targets,
+      </p>
+      <div class="eq">$$ \eta_s=\int \eta^z_s\,d\rho(z). $$</div>
+      <p class="eq-note">
+        The integral is never computed. Each training example is drawn by sampling a pair
+        $z\sim\rho$, a flow time $s\sim\operatorname{Uniform}(0,1)$, and a noisy point
+        $\hat\gamma^z_s\sim\eta^z_s$; across minibatches these approximate the marginal path $\eta_s$.
+      </p>
+      <div class="callout">
+        <strong>A worked example (two events).</strong> Take $\gamma_0=\{1.0,7.0\}$,
+        $\gamma_1=\{2.0,5.0\}$, and draw $s=0.4$. The clean interpolant is
+        $t^1_s=0.6(1.0)+0.4(2.0)=1.4$ and $t^2_s=0.6(7.0)+0.4(5.0)=6.2$, so
+        $\gamma^z_s=\{1.4,6.2\}$. With noise $\epsilon=(0.05,-0.10)$ the network sees
+        $\hat\gamma^z_s=\{1.45,6.10\}$ at $s=0.4$, and must predict the target velocity
+        $\gamma_1-\gamma_0=\{1.0,-2.0\}$.
+      </div>
+
+      <!-- ===================== VECTOR FIELD ===================== -->
+      <h2 id="field">The vector field and the training objective</h2>
+      <p>
+        Because the interpolant is linear in $s$, the velocity of a fixed pair is constant in both $s$ and
+        $\gamma$ — it is just the displacement of each event,
+      </p>
+      <div class="eq">
+        $$ v^z_s=\begin{bmatrix} t^1_1-t^1_0\\ \vdots\\ t^n_1-t^n_0\end{bmatrix}
+        \;=\;\gamma_1-\gamma_0. $$
+      </div>
+      <p>
+        The field we actually want to deploy at generation time is the <em>marginal</em> one: at an
+        intermediate sequence $\gamma$, average the conditional velocities of every pair that could have
+        produced $\gamma$ at flow time $s$,
+      </p>
+      <div class="eq">
+        $$ v_s(\gamma)=\mathbb E_{z\sim\rho}\!\left[\,v^z_s \;\middle|\; \gamma^z_s=\gamma\,\right]. $$
+      </div>
+      <p>
+        That conditional expectation involves unknown density ratios and cannot be evaluated directly. The
+        flow-matching insight is that regressing a network onto the simple <em>conditional</em> targets
+        $v^z_s=\gamma_1-\gamma_0$ recovers the marginal field in expectation, up to a constant independent
+        of the parameters. So the objective is just a masked least-squares fit:
+      </p>
+      <div class="eq">
+        $$ J(\theta)=\mathbb E_{s,\,z,\,\hat\gamma^z_s}
+        \left[\,\bigl\lVert \gamma_1-\gamma_0-v_\theta(\hat\gamma^z_s,\,s)\bigr\rVert^2\,\right]. $$
+      </div>
+      <p>
+        With padded minibatches the loss is evaluated only on valid event positions, so padding never
+        contributes a gradient:
+      </p>
+      <div class="eq">
+        $$ \widehat J=\frac{\sum_{b,k}\bigl(v_\theta-\,(\gamma_1-\gamma_0)\bigr)^2_{b,k}\,m_{b,k}}
+        {\sum_{b,k}m_{b,k}}, $$
+      </div>
+      <p class="eq-note">where $m_{b,k}\in\{0,1\}$ is the mask marking real events versus padding.</p>
+      <p>
+        The network $v_\theta$ is deliberately light: a small MLP applied <em>pointwise</em> to each event,
+        but with enough global context that it knows which sequence it is in. Each event $k$ is described by
+        five features
+      </p>
+      <div class="eq">
+        $$ \bigl[\,t_k,\; s,\; t_k/T,\; N(\gamma)/N_{\max},\; \bar t/T\,\bigr], $$
+      </div>
+      <p>
+        where $\bar t$ is the masked mean event time of the sequence, concatenated with a sinusoidal
+        embedding of the flow time $s$. The MLP outputs one scalar velocity per event, with padding
+        positions zeroed. Generation then integrates the learned ODE with explicit Euler from a uniform
+        reference sequence of the desired count,
+      </p>
+      <div class="eq">
+        $$ \frac{d\gamma_s}{ds}=v_\theta(\gamma_s,s),
+        \qquad \gamma_{s+\Delta s}=\gamma_s+\Delta s\,v_\theta(\gamma_s,s), $$
+      </div>
+      <p class="eq-note">
+        clipping to $[0,T]$ and sorting at the end. Crucially the ODE moves events but never changes the
+        count, so the count is fixed up front by sampling from the (known, here) count distribution — the
+        flow is responsible only for <em>where</em> the events go.
+      </p>
+
+      <!-- ===================== EXPERIMENT ===================== -->
+      <h2 id="experiment">The minimal experiment</h2>
+      <p>
+        The goal is not to beat a benchmark but to verify the method matches the theory: starting from a
+        <em>uniform</em> reference TPP, does the learned flow pull events onto the data clusters while
+        preserving the count distribution? The synthetic data process lives on $[0,T]$ with $T=10$ and a
+        three-mode count distribution
+      </p>
+      <div class="eq">
+        $$ \mu_1(1)=0.2,\qquad \mu_1(2)=0.5,\qquad \mu_1(3)=0.3, $$
+      </div>
+      <p>
+        with the reference sharing it, $\mu_0(n)=\mu_1(n)$. Conditional on the count, each data event is
+        a tight Gaussian around a fixed cluster center (then clipped to $[0,T]$ and sorted),
+      </p>
+      <div class="eq">
+        $$ t^k\sim\mathcal N(c_k,\sigma_{\text{data}}^2),\quad \sigma_{\text{data}}=0.35,\qquad
+        c:\;\{1\!:\![5],\;2\!:\![3,7],\;3\!:\![2,5,8]\}, $$
+      </div>
+      <p>
+        while the reference draws its $n$ times i.i.d. $\operatorname{Uniform}(0,10)$. The exact
+        configuration of the run reported below:
+      </p>
+      <div class="table-wrap">
+        <table class="dist-table">
+          <thead><tr><th>Setting</th><th>Value</th><th>Setting</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td>window $T$</td><td>10.0</td><td>train / val size</td><td>10000 / 1000</td></tr>
+            <tr><td>interpolant noise $\sigma$</td><td>0.05</td><td>batch size</td><td>128</td></tr>
+            <tr><td>model</td><td>pointwise MLP + context</td><td>hidden dim × layers</td><td>128 × 3</td></tr>
+            <tr><td>time-embedding dim</td><td>32</td><td>parameters</td><td>38,017</td></tr>
+            <tr><td>epochs</td><td>200</td><td>learning rate</td><td>$10^{-3}$ (Adam)</td></tr>
+            <tr><td>grad-clip norm</td><td>1.0</td><td>ODE steps (Euler)</td><td>100</td></tr>
+            <tr><td>generated samples</td><td>2000</td><td>data noise $\sigma_{\text{data}}$</td><td>0.35</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Before training, three structural checks confirm the data pipeline implements the theory exactly:
+      </p>
+      <ul>
+        <li><strong>Balanced coupling.</strong> Every pair satisfies $N(\gamma_0)=N(\gamma_1)$ — the
+          assertion passes on all samples.</li>
+        <li><strong>Target velocity.</strong> The regression target equals $\gamma_1-\gamma_0$ to numerical
+          precision.</li>
+        <li><strong>Noise level.</strong> The empirical interpolant noise std is $0.0503$ against the
+          configured $\sigma=0.05$ — a clean match.</li>
+      </ul>
+
+      <!-- ===================== RESULTS ===================== -->
+      <h2 id="results">Results</h2>
+      <p>
+        Training drives the masked MSE down monotonically, and the learned ODE transports the uniform
+        reference onto the three data clusters while leaving the count distribution essentially untouched.
+      </p>
+
+      <figure class="figure-full">
+        <img src="resources/eventflow_tpp/loss_curve.png" alt="Training and validation masked-MSE loss versus epoch on a log scale, both falling from about 4.8 to about 1.3 over 200 epochs." />
+        <figcaption>
+          Figure 1. Masked-MSE loss vs. epoch (log $y$-axis). Train (blue) and validation (orange) both
+          drop sharply in the first ~20 epochs, then settle into a slow decline, ending at $1.354$ /
+          $1.323$. The best validation loss, $1.172$, is reached near epoch&nbsp;157. The loss does not go
+          to zero — and should not: the conditional targets $\gamma_1-\gamma_0$ are intrinsically noisy
+          (many pairs map to the same intermediate sequence), so the irreducible floor is the variance of
+          the conditional velocity around the marginal field.
+        </figcaption>
+      </figure>
+
+      <figure class="figure-full">
+        <img src="resources/eventflow_tpp/count_histogram.png" alt="Bar chart of event-count probabilities for the configured distribution, the training data, and the generated samples; all three nearly coincide at n=1,2,3." />
+        <figcaption>
+          Figure 2. Event-count distribution: configured $\mu(n)$, empirical training data, and generated
+          samples. All three nearly coincide — the count L1 error between generated and data is only
+          $0.048$ — because counts are fixed by sampling before the ODE and the flow preserves them.
+        </figcaption>
+      </figure>
+
+      <figure class="figure-full">
+        <img src="resources/eventflow_tpp/reference_vs_data_vs_generated.png" alt="Overlaid histograms of all event times for the uniform reference, the clustered data, and the generated samples; generated closely tracks the three data peaks." />
+        <figcaption>
+          Figure 3. Pooled event-time histograms. The reference $\mu_0$ (blue) is flat on $[0,10]$; the
+          data $\mu_1$ (orange) has three peaks near $t\approx3,5,8$ (the cluster centers, mixed across
+          counts); the generated samples (green) reproduce those peaks — the flow has learned to pull
+          uniform events onto the data modes.
+        </figcaption>
+      </figure>
+
+      <figure class="figure-full">
+        <img src="resources/eventflow_tpp/flow_trajectories.png" alt="Event-time trajectories as a function of flow time s from 0 to 1, each line starting at a uniform reference position and ending near a data cluster." />
+        <figcaption>
+          Figure 4. Flow trajectories $s\mapsto t^k_s$ for a handful of reference sequences. Each line is a
+          single event being transported from its uniform start ($s=0$) to a learned target ($s=1$); the
+          lines fan toward the cluster centers, the ODE's view of the same transport seen pooled in
+          Figure&nbsp;3.
+        </figcaption>
+      </figure>
+
+      <h3>Headline numbers</h3>
+      <p>Generation quality, averaged over 2000 ODE samples, against the uniform reference baseline:</p>
+      <div class="table-wrap">
+        <table class="dist-table">
+          <thead>
+            <tr><th>Metric</th><th>Generated</th><th>Uniform reference</th><th>Improvement</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>count-distribution L1 error</td><td class="best">0.048</td><td>—</td><td>counts preserved</td></tr>
+            <tr><td>mean event-time error</td><td class="best">0.159</td><td>0.236</td><td>~33% lower</td></tr>
+            <tr><td>1-D Wasserstein (event times)</td><td class="best">0.217</td><td>1.595</td><td>~7.4× lower</td></tr>
+            <tr><td>held-out velocity MSE</td><td>1.393</td><td>—</td><td>—</td></tr>
+            <tr><td>final train / val loss</td><td>1.354 / 1.323</td><td>—</td><td>best val 1.172</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Where the flow works hardest</h3>
+      <p>
+        Breaking the errors down by count $n$ and within-sequence index $k$ shows the transport is nearly
+        exact for short sequences and isolated events, and works hardest on the first event of the
+        three-event sequences — the mode at $t\approx2$ nearest the boundary, where the uniform reference
+        gives the least help.
+      </p>
+      <div class="table-wrap">
+        <table class="dist-table">
+          <thead>
+            <tr><th>$(n,k)$</th><th>target center</th><th>mean-time error</th><th>Wasserstein</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="group">(1, 0)</td><td>5.0</td><td>0.056</td><td>0.066</td></tr>
+            <tr><td class="group">(2, 0)</td><td>3.0</td><td>0.046</td><td>0.062</td></tr>
+            <tr><td class="group">(2, 1)</td><td>7.0</td><td>0.081</td><td>0.146</td></tr>
+            <tr><td class="group">(3, 0)</td><td>2.0</td><td>0.385</td><td>0.400</td></tr>
+            <tr><td class="group">(3, 1)</td><td>5.0</td><td>0.105</td><td>0.285</td></tr>
+            <tr><td class="group">(3, 2)</td><td>8.0</td><td>0.279</td><td>0.341</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <strong>Reading the result.</strong> Three things line up with the theory. (1) The count
+        distribution is reproduced almost exactly ($0.048$ L1) because the ODE only moves events — counts
+        are sampled up front and conserved. (2) Event times move decisively from uniform toward the
+        clusters: a $7.4\times$ drop in Wasserstein distance is the transport doing its job. (3) The
+        residual error concentrates on the hardest mode, $(3,0)$ near $t=2$, where the three events are
+        most crowded and the boundary clips the most mass — exactly where a uniform reference is least
+        informative and the marginal field is hardest to learn.
+      </div>
+
+      <p>
+        The practical lesson mirrors the paper's headline claim: by committing to a balanced coupling and a
+        linear noisy interpolant, flow matching extends cleanly to variable-length event sequences, and a
+        single non-autoregressive pass transports a trivial reference onto a structured event distribution
+        — no next-event loop, no cascading error.
+      </p>
+
+      <!-- ===================== NOTEBOOK ===================== -->
+      <h2 id="notebook">Reproduce it</h2>
+      <p>
+        The companion notebook is a self-contained <code>PyTorch</code> reproduction at lightweight scale —
+        fewer samples and epochs so it runs in seconds on a CPU — and it walks through every piece: the
+        clustered data sampler, the balanced coupling and noisy interpolant, the pointwise vector-field MLP
+        with the masked-MSE loss, the Euler ODE sampler, and the count / mean-time / Wasserstein metrics
+        plus the reproduction plots. At reduced scale it reproduces the qualitative behavior — counts
+        preserved, events pulled from the uniform reference onto the $[5]$, $[3,7]$, $[2,5,8]$ clusters, and
+        generated errors well below the reference; the full configuration in the table above yields the
+        reported numbers.
+      </p>
+      <div class="tools" style="margin-top:6px;">
+        <a href="resources/eventflow_tpp/eventflow_examples.html">View notebook (rendered)</a>
+        <a href="resources/eventflow_tpp/eventflow_examples.ipynb">Download .ipynb</a>
+      </div>
+
+      <footer>
+        Part of the <a href="../index.html">AISTATS&nbsp;2026 Batch</a> series, summarizing
+        <a href="https://openreview.net/forum?id=QXqKGOE2JW" target="_blank" rel="noopener">EventFlow:
+        Forecasting Temporal Point Processes with Flow Matching</a>. The balanced coupling, noisy
+        interpolant, and flow-matching objective follow the method's idea write-up; the figures and numbers
+        are from a run of the accompanying clustered-TPP experiment, reproduced by the linked notebook.
+      </footer>
+    </article>
+  </div>
+</body>
+</html>

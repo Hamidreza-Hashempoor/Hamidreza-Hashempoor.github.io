@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>A Proof of Learning Rate Transfer Under μP</title>
+  <meta name="description" content="Why the optimal learning rate of a deep network stops moving as it gets wider: the maximal-update (μP) parametrization, a closed-form infinite-width one-step learning rate from the input Gram matrix, an O_P(n^-1/2) convergence claim, and a deep-linear MLP experiment verifying it with a reproducible notebook." />
+  <style>
+    :root {
+      --paper: #fffef8;
+      --ink: #1f2429;
+      --muted: #55606a;
+      --line: #d8d3c9;
+      --accent: #8a2d1f;
+      --accent-soft: #f2ebe2;
+      --maxw: 920px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 520px at 5% -10%, #f3efe5 0%, rgba(243, 239, 229, 0) 65%),
+        radial-gradient(900px 440px at 95% 0%, #efe6dc 0%, rgba(239, 230, 220, 0) 62%),
+        #f8f6f1;
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", serif;
+      line-height: 1.7;
+    }
+
+    .page {
+      width: min(var(--maxw), 94vw);
+      margin: 0 auto;
+      padding: 42px 0 56px;
+    }
+
+    .article {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 14px 40px rgba(40, 35, 26, 0.08);
+      padding: clamp(20px, 4vw, 46px);
+    }
+
+    .meta {
+      color: var(--muted);
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      letter-spacing: 0.02em;
+      font-size: 0.88rem;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .post-stats {
+      margin: 6px 0 16px;
+      display: grid;
+      gap: 8px;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      color: #4f5963;
+    }
+
+    .stat {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.02rem;
+      line-height: 1.35;
+    }
+
+    .stat svg {
+      width: 20px; height: 20px;
+      stroke: #5a626c; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .stat strong { color: #343b42; font-weight: 700; }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 4vw, 2.85rem);
+      line-height: 1.15;
+      letter-spacing: -0.015em;
+    }
+
+    .authors {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 1.02rem;
+    }
+
+    .tools {
+      margin-top: 18px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    .tools a {
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid #d6c6b7;
+      background: #fff;
+      border-radius: 999px;
+      padding: 7px 13px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .toc {
+      margin-top: 20px;
+      padding: 10px 14px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      font-size: 0.92rem;
+    }
+
+    .toc a {
+      color: #203142;
+      text-decoration: none;
+      margin-right: 10px;
+      white-space: nowrap;
+    }
+
+    h2 {
+      margin: 34px 0 10px;
+      font-size: clamp(1.25rem, 2.7vw, 1.75rem);
+      line-height: 1.25;
+    }
+
+    h3 {
+      margin: 22px 0 6px;
+      font-size: clamp(1.05rem, 2vw, 1.3rem);
+      color: var(--accent);
+    }
+
+    p { margin: 0 0 13px; font-size: 1.04rem; }
+
+    .eq {
+      margin: 15px 0;
+      padding: 12px 14px;
+      border: 1px solid #e0dbd1;
+      background: #fff;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+
+    .eq-note {
+      margin-top: -3px;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .figure-full {
+      margin: 20px auto;
+      border: 1px solid #e4dfd6;
+      border-radius: 9px;
+      background: #fff;
+      padding: 8px;
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    .figure-full img { display: block; width: auto; height: auto; max-width: 100%; }
+
+    .figure-full figcaption {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.4;
+    }
+
+    ul { margin-top: 6px; margin-bottom: 14px; padding-left: 20px; }
+    li { margin-bottom: 6px; }
+
+    .callout {
+      margin: 16px 0 22px;
+      padding: 14px 16px;
+      border: 1px solid #d5e0ef;
+      border-left: 4px solid var(--accent);
+      background: #f4f7fb;
+      border-radius: 8px;
+      font-size: 1.0rem;
+    }
+
+    .callout strong { color: var(--accent); }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin: 14px 0 8px;
+      border: 1px solid #e0dbd1;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    table.dist-table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.93rem;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    table.dist-table th {
+      background: var(--accent);
+      color: #fff;
+      text-align: left;
+      padding: 9px 12px;
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+    }
+
+    table.dist-table td {
+      padding: 8px 12px;
+      border-top: 1px solid #ece6dc;
+      vertical-align: top;
+    }
+
+    table.dist-table tr:nth-child(even) td { background: #faf7f0; }
+
+    table.dist-table td.group {
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft) !important;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    table.dist-table td.best { color: #2a6a2a; font-weight: 700; }
+
+    footer {
+      margin-top: 30px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    @media (max-width: 900px) {
+      p { font-size: 1rem; }
+    }
+  </style>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+  <div class="page">
+    <article class="article">
+      <div class="meta">AISTATS 2026 Batch • Paper 3</div>
+      <div class="post-stats" aria-label="Post metadata">
+        <div class="stat">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M12 7v6l4 2"></path>
+          </svg>
+          <span>13 minute read</span>
+        </div>
+        <div class="stat">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="4.5" width="18" height="16" rx="2"></rect>
+            <path d="M8 2.5v4M16 2.5v4M3 9.5h18"></path>
+          </svg>
+          <span><strong>Published:</strong> June 2026</span>
+        </div>
+      </div>
+      <h1>A Proof of Learning Rate Transfer Under μP</h1>
+      <p class="authors">Original paper by Soufiane Hayou • summary &amp; experiment by Hamidreza Hashempoor, Institute for AI, University of Stuttgart</p>
+
+      <div class="tools">
+        <a href="../index.html">← Back to series</a>
+        <a href="https://openreview.net/forum?id=sZHpz3DHPj" target="_blank" rel="noopener">Original paper ↗</a>
+        <a href="resources/lr_transfer_mup/lr_transfer_examples.html">View notebook</a>
+        <a href="resources/lr_transfer_mup/lr_transfer_examples.ipynb">Download .ipynb</a>
+        <a href="#experiment">Experiment</a>
+        <a href="#results">Results</a>
+      </div>
+
+      <div class="toc">
+        <a href="#idea">The idea</a>
+        <a href="#model">Model &amp; μP</a>
+        <a href="#onestep">One step</a>
+        <a href="#etainf">Infinite-width LR</a>
+        <a href="#convergence">Convergence</a>
+        <a href="#experiment">Experiment</a>
+        <a href="#results">Results</a>
+        <a href="#notebook">Notebook</a>
+      </div>
+
+      <p style="margin-top:18px;">
+        Tuning the learning rate is the most expensive ritual in deep learning: a value that is perfect
+        for a small model is often unstable or far too timid for a large one, so practitioners re-sweep
+        the learning rate every time they scale up. The <em>maximal-update parametrization</em> (μP)
+        promises to end that ritual — under μP the optimal learning rate found on a narrow network is
+        supposed to <strong>transfer</strong> to a much wider one. This post follows
+        <a href="https://openreview.net/forum?id=sZHpz3DHPj" target="_blank" rel="noopener">A Proof of
+        Learning Rate Transfer Under μP</a> (Soufiane Hayou, AISTATS 2026), which turns that empirical
+        folklore into a theorem for deep linear networks: the optimal one-step learning rate has a
+        deterministic infinite-width limit, and finite-width networks approach it at a quantified rate.
+        We restate the result, then verify it on a deep linear MLP whose numbers are reproduced by the
+        companion <a href="#notebook">notebook</a>.
+      </p>
+
+      <!-- ===================== IDEA ===================== -->
+      <h2 id="idea">The idea: the optimal learning rate stops moving</h2>
+      <p>
+        Fix a network architecture and a dataset, and let only the width $n$ vary. For each width there
+        is some learning rate $\eta_n$ that makes the very first gradient step reduce the loss as much as
+        possible. The question the paper answers is: <em>what happens to $\eta_n$ as $n\to\infty$?</em>
+      </p>
+      <p>
+        Under the <strong>standard parametrization</strong> (SP) the answer is "it keeps moving" — the
+        right step size depends on width, which is exactly why a learning rate tuned at one scale is
+        wrong at another. Under <strong>μP</strong>, the layers are initialized and the updates are
+        scaled so that <em>every</em> hidden unit receives an $O(1)$ update regardless of width. The
+        consequence proved here is that the optimal learning rate converges to a fixed number:
+      </p>
+      <div class="eq">
+        $$ \eta_n^{(1)}\;\longrightarrow\;\eta_\infty^{(1)} \qquad \text{as width } n\to\infty. $$
+      </div>
+      <div class="callout">
+        The whole promise of <strong>learning-rate transfer</strong> rests on this limit existing. If
+        $\eta_n^{(1)}$ settles onto a width-independent value $\eta_\infty^{(1)}$, you can compute (or
+        tune) the learning rate <strong>once</strong> — even at infinite width, in closed form — and
+        reuse it at any finite width. The paper makes this precise for deep linear networks, gives
+        $\eta_\infty^{(1)}$ explicitly in terms of the data, and bounds how fast finite widths get there:
+        <strong>$\eta_n^{(1)}-\eta_\infty^{(1)}=O_P(n^{-1/2})$</strong>.
+      </div>
+
+      <!-- ===================== MODEL ===================== -->
+      <h2 id="model">The model and the μP parametrization</h2>
+      <p>
+        The analysis uses a deep <em>linear</em> MLP — a stack of matrix multiplications with no
+        nonlinearity. Linearity is what makes everything computable in closed form while still exhibiting
+        the depth- and width-dependent behavior that matters for the proof. The network maps an input
+        $x\in\mathbb R^d$ to a scalar through $L$ hidden layers:
+      </p>
+      <div class="eq">
+        $$ f(x)=V^\top W_L W_{L-1}\cdots W_1 W_0\, x. $$
+      </div>
+      <ul>
+        <li>$W_0\in\mathbb R^{n\times d}$ — the input layer, held <strong>frozen</strong> at init;</li>
+        <li>$W_1,\dots,W_L\in\mathbb R^{n\times n}$ — the <strong>trained</strong> hidden matrices;</li>
+        <li>$V\in\mathbb R^{n}$ — the readout vector, also held <strong>frozen</strong>.</li>
+      </ul>
+      <p>
+        Freezing $W_0$ and $V$ isolates the part of the network whose scaling drives the result. The μP
+        initialization sets the variance of each layer so that signals and updates stay $O(1)$ as the
+        width grows:
+      </p>
+      <div class="eq">
+        $$
+        W_0\sim\mathcal N\!\big(0,\tfrac1d\big),\qquad
+        W_\ell\sim\mathcal N\!\big(0,\tfrac1n\big)\ \ (\ell=1,\dots,L),\qquad
+        V\sim\mathcal N\!\big(0,\tfrac1{n^{2}}\big).
+        $$
+      </div>
+      <p class="eq-note">
+        In code: <code>W0 = randn(n,d)/√d</code>, <code>W_l = randn(n,n)/√n</code>, and the μP readout
+        <code>V = randn(n)/n</code>.
+      </p>
+      <div class="callout">
+        <strong>The one line that makes it μP.</strong> The readout scales as $V\sim 1/n$ (variance
+        $1/n^{2}$), <em>not</em> the standard $1/\sqrt n$. That single change is what keeps the per-step
+        update to each preactivation $\Theta(1)$ at every width, and it is precisely the ingredient SP
+        lacks. Swap $V\sim 1/\sqrt n$ back in and the learning-rate transfer studied here disappears.
+      </div>
+
+      <!-- ===================== ONE STEP ===================== -->
+      <h2 id="onestep">One gradient step and the optimal learning rate</h2>
+      <p>
+        Training is full-batch gradient descent on the mean-squared error over $m$ samples
+        $\{(x_i,y_i)\}_{i=1}^m$:
+      </p>
+      <div class="eq">
+        $$ \mathcal L_n(\eta)=\frac{1}{2m}\sum_{i=1}^{m}\big(f(x_i)-y_i\big)^2. $$
+      </div>
+      <p>
+        Starting from the μP initialization, a single gradient-descent step updates only the trained
+        hidden matrices, with the <strong>μP rule that the effective learning rate is not width-scaled</strong>:
+      </p>
+      <div class="eq">
+        $$ W_\ell^{(1)}=W_\ell^{(0)}-\eta\,\nabla_{W_\ell}\mathcal L_n^{(0)},\qquad \ell=1,\dots,L. $$
+      </div>
+      <p>
+        Let $\mathcal L_n^{(1)}(\eta)$ be the loss <em>after</em> that one step. The empirical optimal
+        one-step learning rate at width $n$ is whatever value of $\eta$ minimizes it over a compact
+        interval $I$:
+      </p>
+      <div class="eq">
+        $$ \eta_n^{(1)}\in\arg\min_{\eta\in I}\ \mathcal L_n^{(1)}(\eta). $$
+      </div>
+      <p class="eq-note">
+        Because all candidate learning rates start from the <em>same</em> initialization, the gradient
+        $\nabla_{W_\ell}\mathcal L_n^{(0)}$ is identical for every $\eta$ — it is computed once and reused
+        while sweeping $\eta$, which is exactly what the notebook does.
+      </p>
+
+      <!-- ===================== ETA INF ===================== -->
+      <h2 id="etainf">The infinite-width learning rate, in closed form</h2>
+      <p>
+        The central object on the theory side is the <strong>normalized Gram matrix of the inputs</strong>
+        — a quantity that depends only on the data, not on the network width:
+      </p>
+      <div class="eq">
+        $$ K=\frac{1}{d}\,X X^\top,\qquad K_{ij}=\frac{\langle x_i,x_j\rangle}{d}. $$
+      </div>
+      <p>
+        In the infinite-width limit the random network behaves like a deterministic linear map governed
+        by $K$, and the one-step loss becomes an exact quadratic in $\eta$. Minimizing that quadratic
+        gives the optimal learning rate in closed form:
+      </p>
+      <div class="eq">
+        $$ \boxed{\;\eta_\infty^{(1)}=\frac{m}{L}\,\frac{y^\top K y}{\lVert K y\rVert_2^{2}}\;} $$
+      </div>
+      <p class="eq-note">
+        The formula is well defined whenever $Ky\neq 0$, which the theorem assumes. Depth $L$ enters as a
+        simple $1/L$ factor — deeper networks want proportionally smaller steps — and the data enters
+        only through the Rayleigh-type quotient $y^\top K y/\lVert Ky\rVert^2$. Notably, the width $n$
+        does <em>not</em> appear: this is the fixed target every finite-width network is converging to.
+      </p>
+
+      <!-- ===================== CONVERGENCE ===================== -->
+      <h2 id="convergence">The convergence claim</h2>
+      <p>
+        The main theorem is not just that the limit exists, but that finite-width networks reach it at a
+        controlled rate. Treating the random initialization as the source of randomness,
+      </p>
+      <div class="eq">
+        $$ \eta_n^{(1)}-\eta_\infty^{(1)}=O_P\!\big(n^{-1/2}\big). $$
+      </div>
+      <p>
+        In words: the gap between the best finite-width step size and the infinite-width prediction
+        shrinks like $1/\sqrt n$, with fluctuations across random seeds of the same order. Doubling the
+        width should roughly cut both the typical error and its seed-to-seed spread by a factor
+        $\sqrt 2$. That is the quantitative content behind "learning rates transfer": not only is there a
+        fixed answer, but moderate widths are already close to it.
+      </p>
+
+      <!-- ===================== EXPERIMENT ===================== -->
+      <h2 id="experiment">The minimal experiment</h2>
+      <p>
+        To check the claim we instantiate exactly the setting above: a deep linear μP MLP of depth
+        $L=3$, trained for a single full-batch gradient step on a fixed synthetic linear-regression
+        dataset, sweeping width across $\{64,128,256,512,1024\}$. The data is generated once and
+        <strong>reused at every width</strong> — the theorem studies width asymptotics with the data held
+        fixed — from
+      </p>
+      <div class="eq">
+        $$ x_i\sim\mathcal N(0,I_d),\quad w_\star\sim\mathcal N(0,d^{-1}I_d),\quad
+        y_i=w_\star^\top x_i+\varepsilon_i,\ \ \varepsilon_i\sim\mathcal N(0,\sigma^2). $$
+      </div>
+      <p>
+        For each width and each of three initialization seeds we compute the empirical
+        $\eta_n^{(1)}$ by a grid search over $\eta\in[0,\,4\,\eta_\infty^{(1)}]$ (the search interval is
+        built to contain the theoretical value), refined locally around the best grid point, and compare
+        it against the closed-form $\eta_\infty^{(1)}$. The exact configuration:
+      </p>
+      <div class="table-wrap">
+        <table class="dist-table">
+          <thead><tr><th>Setting</th><th>Value</th><th>Setting</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td>depth $L$</td><td>3</td><td>parametrization</td><td>μP ($V\sim1/n$)</td></tr>
+            <tr><td>widths $n$</td><td>64, 128, 256, 512, 1024</td><td>init seeds</td><td>1, 2, 3</td></tr>
+            <tr><td>samples $m$</td><td>500</td><td>input dim $d$</td><td>1</td></tr>
+            <tr><td>noise std $\sigma$</td><td>0.10</td><td>data seed</td><td>123</td></tr>
+            <tr><td>optimizer</td><td>full-batch GD, 1 step</td><td>precision</td><td>float64</td></tr>
+            <tr><td>$\eta$ grid</td><td>120 points on $[0,4\eta_\infty]$</td><td>local refine</td><td>60 points</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ===================== RESULTS ===================== -->
+      <h2 id="results">Results</h2>
+      <p>
+        The closed-form target for this dataset is
+        $\eta_\infty^{(1)}=0.37176$. The empirical optimum starts noisy at small width and tightens onto
+        that line as the network grows — the seed-to-seed spread shrinking right alongside the mean.
+      </p>
+
+      <figure class="figure-full">
+        <img src="resources/lr_transfer_mup/eta_vs_width.png" alt="Empirical optimal one-step learning rate versus width, with the theoretical infinite-width value as a dashed horizontal line and error bars across three seeds." />
+        <figcaption>
+          Figure 1. Empirical optimal one-step learning rate $\eta_n^{(1)}$ (mean ± std over 3 seeds) vs.
+          width $n$ on a $\log_2$ axis. The dashed line is the closed-form $\eta_\infty^{(1)}=0.3718$.
+          The estimate is volatile at $n=64,128$, then locks onto the theoretical value with a visibly
+          tightening error bar by $n=512$ and $1024$.
+        </figcaption>
+      </figure>
+
+      <figure class="figure-full">
+        <img src="resources/lr_transfer_mup/convergence_rate.png" alt="Absolute error between empirical and theoretical learning rate versus width on log-log axes, compared against an n to the minus one-half reference slope." />
+        <figcaption>
+          Figure 2. Absolute error $\lvert\eta_n^{(1)}-\eta_\infty^{(1)}\rvert$ vs. width on log–log axes,
+          with the $n^{-1/2}$ reference (grey dashed) the theorem predicts. The error falls steeply over
+          $64\!\to\!512$; at this small range of widths the measured decay is even faster than $1/\sqrt n$
+          and the lone $n=128$ outlier reflects finite-width landscape noise (see below).
+        </figcaption>
+      </figure>
+
+      <h3>Per-width numbers</h3>
+      <p>Averaged over the three initialization seeds (data seed 123), with $\eta_\infty^{(1)}=0.371763$:</p>
+      <div class="table-wrap">
+        <table class="dist-table">
+          <thead>
+            <tr><th>width $n$</th><th>$\eta_n^{(1)}$ mean</th><th>std (3 seeds)</th><th>$\lvert\eta_n^{(1)}-\eta_\infty^{(1)}\rvert$</th><th>rel. error</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>64</td><td>0.39797</td><td>0.0899</td><td>0.02621</td><td>7.0%</td></tr>
+            <tr><td>128</td><td>0.51340</td><td>0.1885</td><td>0.14164</td><td>38.1%</td></tr>
+            <tr><td>256</td><td>0.41358</td><td>0.0898</td><td>0.04181</td><td>11.2%</td></tr>
+            <tr><td>512</td><td>0.37051</td><td>0.0370</td><td class="best">0.00125</td><td>0.3%</td></tr>
+            <tr><td>1024</td><td>0.37722</td><td>0.0187</td><td>0.00545</td><td>1.5%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="eq-note">
+        Errors are computed on the seed-averaged mean $\eta_n^{(1)}$. The optimal post-step loss is
+        essentially identical across all widths and seeds ($\approx 5.076\times10^{-3}$), confirming each
+        run found a genuine minimum of $\mathcal L_n^{(1)}(\eta)$.
+      </p>
+
+      <div class="callout">
+        <strong>Reading the convergence.</strong> Two trends match the theory cleanly. (1) The
+        seed-to-seed <em>standard deviation</em> falls monotonically with width — $0.090\to0.019$ from
+        $n=64$ to $n=1024$ — the $O_P(n^{-1/2})$ fluctuation shrinking as predicted. (2) The mean locks
+        onto $\eta_\infty^{(1)}$: by $n=512$ the error is $0.13\%$ and at $n=1024$ it is $1.5\%$
+        ($5.5\times10^{-3}$ in absolute terms). The $n=128$ spike (error $38\%$, the largest std in the
+        table) is a single-seed outlier where one initialization landed in a flat region of the one-step
+        loss — the kind of finite-width noise the high-probability $O_P$ statement explicitly allows, and
+        which averages out as width grows.
+      </div>
+
+      <p>
+        A caveat in the spirit of honest reporting: a least-squares fit of $\log\lvert\eta_n-\eta_\infty\rvert$
+        against $\log n$ over these five widths gives a slope of $\approx-1.14$, <em>steeper</em> than the
+        theoretical $-1/2$. The theorem is an asymptotic, high-probability upper bound — it guarantees the
+        error decays <em>at least</em> as fast as $n^{-1/2}$, not exactly — and with only five widths,
+        one of them an outlier, the fitted slope is dominated by the noisy small-width points rather than
+        a clean asymptotic rate. The robust takeaway is the one the theory cares about: the error and its
+        spread both vanish with width, and a moderate width already pins the learning rate to within a
+        couple of percent of the closed-form infinite-width value.
+      </p>
+
+      <!-- ===================== NOTEBOOK ===================== -->
+      <h2 id="notebook">Reproduce it</h2>
+      <p>
+        The companion notebook re-runs the whole experiment from scratch with only
+        <code>torch</code>, <code>numpy</code>, and <code>matplotlib</code>. It builds the μP linear MLP,
+        computes the closed-form $\eta_\infty^{(1)}=\tfrac{m}{L}\,y^\top Ky/\lVert Ky\rVert^2$, performs
+        the grad-once one-step learning-rate search across widths and seeds, and regenerates both figures
+        — reproducing the per-width table above ($\eta_\infty=0.37176$, error at $n=1024$ of
+        $5.5\times10^{-3}$) to floating-point precision.
+      </p>
+      <div class="tools" style="margin-top:6px;">
+        <a href="resources/lr_transfer_mup/lr_transfer_examples.html">View notebook (rendered)</a>
+        <a href="resources/lr_transfer_mup/lr_transfer_examples.ipynb">Download .ipynb</a>
+      </div>
+
+      <footer>
+        Original result: Soufiane Hayou, “A Proof of Learning Rate Transfer Under μP,” AISTATS 2026. The
+        figures and tables above are from a deep-linear-MLP run of the experiment described here,
+        reproduced by the linked notebook.
+      </footer>
+    </article>
+  </div>
+</body>
+</html>

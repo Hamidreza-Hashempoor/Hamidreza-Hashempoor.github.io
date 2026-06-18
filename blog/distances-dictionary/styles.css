@@ -442,6 +442,28 @@ a.chip:hover { text-decoration: none; border-color: var(--accent); color: var(--
 .chat-sources { font-family: var(--sans); font-size: 0.84rem; color: var(--muted); margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 6px; }
 .chat-error { color: var(--bad); font-family: var(--sans); font-size: 0.9rem; }
 
+/* --------------------- conversational reply (home) ------------------------ */
+
+.ai-reply {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  font-family: var(--sans);
+  box-shadow: 0 6px 18px rgba(40, 35, 26, 0.05);
+}
+.ai-reply.greeting { border-left-color: #6f9e6f; }
+.ai-reply-text { margin: 0 0 10px; font-size: 1rem; }
+.ai-reply .examples { margin-top: 4px; }
+.ai-reply .answer-title { margin-top: 0; }
+.ai-reply-generated { font-size: 1rem; line-height: 1.6; }
+.ai-reply-loading { color: var(--muted); font-style: italic; margin: 8px 0 0; }
+.ai-reply-loading::before { content: "✦ "; }
+.ai-reply-hint { font-size: 0.86rem; margin: 8px 0 0; }
+.ai-reply-meta { font-size: 0.8rem; margin: 8px 0 0; }
+
 /* ------------------------------ misc / states ----------------------------- */
 
 .muted { color: var(--muted); }

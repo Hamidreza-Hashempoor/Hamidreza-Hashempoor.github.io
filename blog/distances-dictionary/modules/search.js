@@ -59,9 +59,9 @@ function scoreMeasure(db, m, queryTokens) {
 }
 
 // Tuning constants for semantic (Layer 2) mode.
-const SEM_THRESHOLD = 0.22; // min cosine for a pure-semantic (no-keyword) result to show
-const SEM_CAP = 18;         // max results to show in semantic mode
-const SEM_FALLBACK = 8;     // if nothing clears the threshold, still show this many nearest
+const SEM_THRESHOLD = 0.22;    // min cosine for a pure-semantic (no-keyword) result to show
+const RELEVANCE_THRESHOLD = 0.30; // below this (and no keyword hit) the query is treated as off-topic
+const SEM_CAP = 18;            // max results to show in semantic mode
 
 /**
  * Run the search. Returns:
@@ -100,9 +100,13 @@ export function search(db, query, opts = {}) {
   // ----- Semantic mode: rank the whole corpus by meaning -----
   if (sims && sims.size) {
     const denom = maxLex || 1;
+    let maxSem = 0;
+    let anyLex = false;
     let scored = db.measures.map((m) => {
       const lx = lex.get(m.id) || 0;
       const sem = sims.get(m.id) || 0;
+      if (sem > maxSem) maxSem = sem;
+      if (lx > 0) anyLex = true;
       let score;
       if (exact && exact.id === m.id) score = 1000;               // exact alias stays on top
       else if (lx > 0) score = 1 + 0.5 * sem + 0.3 * (lx / denom); // keyword hits keep priority
@@ -111,10 +115,15 @@ export function search(db, query, opts = {}) {
     });
     scored.sort((a, b) => b.score - a.score);
 
-    let results = scored.filter((r) => r.lx > 0 || r.sem >= SEM_THRESHOLD || (exact && exact.id === r.measure.id));
-    if (results.length === 0) results = scored.slice(0, SEM_FALLBACK); // never blank
-    results = results.slice(0, SEM_CAP);
-    return { query: q, exact, semantic: true, results };
+    // On-topic gate: an exact/keyword hit, or a sufficiently similar measure.
+    const relevant = !!exact || anyLex || maxSem >= RELEVANCE_THRESHOLD;
+    if (!relevant) {
+      return { query: q, exact, semantic: true, relevant: false, maxSem, results: [] };
+    }
+    const results = scored
+      .filter((r) => r.lx > 0 || r.sem >= SEM_THRESHOLD || (exact && exact.id === r.measure.id))
+      .slice(0, SEM_CAP);
+    return { query: q, exact, semantic: true, relevant: true, maxSem, results };
   }
 
   // ----- Lexical mode (AI off): token match, then fuzzy fallback, then exact boost -----
@@ -142,5 +151,5 @@ export function search(db, query, opts = {}) {
     else scored.unshift({ measure: db.byId.get(exact.id), score: 100 });
   }
   scored.sort((a, b) => b.score - a.score);
-  return { query: q, exact, semantic: false, results: scored };
+  return { query: q, exact, semantic: false, relevant: scored.length > 0, results: scored };
 }

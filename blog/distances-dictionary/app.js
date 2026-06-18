@@ -8,7 +8,8 @@ import {
   filterFromParams, filterToParams, emptyFilterState,
 } from "./modules/filters.js";
 import { answer, renderAnswer } from "./modules/assistant.js";
-import { renderChatPanel } from "./modules/chat.js";
+import { search } from "./modules/search.js";
+import { renderChatPanel, askModel, hasToken, linkify } from "./modules/chat.js";
 import { enableSemantic, ranker, prepareQuery, isReady, isLoading } from "./modules/embeddings.js";
 import { typeset } from "./modules/mathjax.js";
 import { el, debounce } from "./modules/util.js";
@@ -25,6 +26,7 @@ const app = {
     filters: emptyFilterState(),
     compare: new Set(),
     semanticEnabled: false,
+    aiReply: null, // { forQuery, status: 'loading'|'done'|'error', html, model, entries, error }
   },
 
   isHome() {
@@ -32,6 +34,7 @@ const app = {
   },
 
   async setQuery(q) {
+    if (q !== this.state.query) this.state.aiReply = null; // drop a stale generated answer
     this.state.query = q;
     if (searchInput && searchInput.value !== q) searchInput.value = q;
     if (this.state.semanticEnabled) {
@@ -39,6 +42,35 @@ const app = {
     }
     if (this.isHome()) route();
     else location.hash = "#/";
+  },
+
+  // Enter/submit: set the query, then (if AI on, a token is set, and the query is
+  // on-topic) generate a full LLM answer grounded in our measures.
+  async submitQuery(q) {
+    await this.setQuery(q);
+    if (!this.state.semanticEnabled || !hasToken() || !q.trim()) return;
+    const sr = search(this.db, q, { semantic: this.semanticRanker() });
+    if (!sr.relevant) return; // off-topic -> no model call
+    this.state.aiReply = { forQuery: q, status: "loading" };
+    if (this.isHome()) route(); else location.hash = "#/";
+    try {
+      const { text, entries, model } = await askModel(this.db, q, 5);
+      if (this.state.query !== q) return; // query changed while waiting
+      this.state.aiReply = { forQuery: q, status: "done", html: linkify(this.db, text), model, entries };
+    } catch (err) {
+      if (this.state.query !== q) return;
+      this.state.aiReply = { forQuery: q, status: "error", error: String(err && err.message ? err.message : err) };
+    }
+    if (this.isHome()) route();
+  },
+
+  // Safety net: embed a query that reached render unembedded, then re-render once.
+  ensureQueryEmbedded(q) {
+    if (this._embedding === q) return;
+    this._embedding = q;
+    prepareQuery(q)
+      .then(() => { this._embedding = null; if (this.isHome() && this.state.query === q) route(); })
+      .catch(() => { this._embedding = null; });
   },
 
   currentFilters() {
@@ -255,7 +287,7 @@ async function init() {
   if (searchInput) {
     searchInput.addEventListener("input", debounce(() => app.setQuery(searchInput.value), 160));
     searchInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") app.setQuery(searchInput.value);
+      if (e.key === "Enter") app.submitQuery(searchInput.value);
     });
   }
   wireAiButton();

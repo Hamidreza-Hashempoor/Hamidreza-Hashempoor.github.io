@@ -100,9 +100,35 @@ async function callModel(messages, token, model) {
   return data.choices?.[0]?.message?.content || "(empty response)";
 }
 
+/* ----------------------- reusable generation (exported) ------------------- */
+
+/** True if a HuggingFace token is configured (memory or localStorage). */
+export function hasToken() {
+  return !!getToken();
+}
+
+/** The currently selected model id. */
+export function currentModel() {
+  return getModel();
+}
+
+/**
+ * Retrieve grounding entries, build the RAG prompt, and call the model.
+ * @returns {Promise<{text:string, entries:object[], model:string}>}
+ * Throws if no token is set or the request fails.
+ */
+export async function askModel(db, question, k = 5) {
+  const token = getToken();
+  if (!token) throw new Error("No HuggingFace token set.");
+  const entries = await retrieve(db, question, k);
+  const messages = buildMessages(db, question, entries);
+  const text = await callModel(messages, token, getModel());
+  return { text, entries, model: getModel() };
+}
+
 /* ------------------------------- linkify ---------------------------------- */
 
-function linkifyAnswer(db, text) {
+export function linkify(db, text) {
   const map = new Map();
   const names = [];
   for (const m of db.measures) {
@@ -184,8 +210,7 @@ export function renderChatPanel(db) {
   const doAsk = async () => {
     const q = question.value.trim();
     if (!q) return;
-    const token = getToken();
-    if (!token) {
+    if (!hasToken()) {
       status.textContent = "Add a HuggingFace token in AI settings first.";
       settings.open = true;
       return;
@@ -194,11 +219,9 @@ export function renderChatPanel(db) {
     answer.innerHTML = "";
     status.textContent = "Retrieving entries and querying the model…";
     try {
-      const entries = await retrieve(db, q, 5);
-      const messages = buildMessages(db, q, entries);
-      const text = await callModel(messages, token, getModel());
+      const { text, entries } = await askModel(db, q, 5);
       status.textContent = "";
-      answer.innerHTML = linkifyAnswer(db, text);
+      answer.innerHTML = linkify(db, text);
       // Re-typeset any LaTeX the model produced.
       if (window.MathJax && window.MathJax.typesetPromise) {
         window.MathJax.typesetPromise([answer]).catch(() => {});

@@ -179,6 +179,42 @@ export function answer(db, query) {
   };
 }
 
+/* --------------------------- conversational layer ------------------------- */
+
+const GREETING_WORDS = ["hi", "hii", "hello", "hey", "yo", "hiya", "thanks", "thank", "thx", "ok", "okay", "cool", "nice", "bye"];
+const META_PHRASES = ["who are you", "what are you", "what can you do", "what is this", "help", "how do you work", "what do you do"];
+
+function looksLikeGreeting(q) {
+  const toks = tokens(q);
+  if (toks.length <= 3 && toks.some((t) => GREETING_WORDS.includes(t))) return true;
+  return META_PHRASES.some((p) => q.includes(p));
+}
+
+/**
+ * Build the conversational reply object shown under the search bar.
+ *   { mode: "greeting", text } | { mode: "answer", ans }
+ * `relevant` comes from search() (embedding relevance gate); `retrieved` is the
+ * ranked measure list to ground a generic answer.
+ */
+export function converse(db, query, { retrieved = [], relevant = false } = {}) {
+  const q = normalize(query);
+  if (!relevant) {
+    const text = looksLikeGreeting(q)
+      ? "Hi! I'm the distances & divergences assistant. Ask me about a distance, divergence, or metric — for example “which distance for covariance matrices?”, “what is EMD also called?”, or “a bounded symmetric divergence for probability vectors”. I'll explain and show the most relevant ones."
+      : "I only cover distances, divergences, and probability metrics. Try asking about a property (symmetric, bounded, metric), an object type (SPD matrix, probability vector, samples), or a named measure (KL, Wasserstein, Hellinger) — and I'll show the most relevant entries.";
+    return { mode: "greeting", text };
+  }
+  const ans = answer(db, query);
+  // If the intent rules fell through to the generic branch, ground the answer in
+  // the semantic retrieval so the prose matches the displayed results.
+  if ((ans.title === "Closest matches" || ans.title === "No direct match") && retrieved.length) {
+    ans.title = "Here's what I found";
+    ans.lead = "These measures look most relevant to your question:";
+    ans.items = retrieved.slice(0, 5).map((m) => ({ measure: m, reason: m.short_description }));
+  }
+  return { mode: "answer", ans };
+}
+
 /** Render a structured answer to DOM (links to detail pages). */
 export function renderAnswer(db, ans) {
   const root = el("div", { class: "answer" });

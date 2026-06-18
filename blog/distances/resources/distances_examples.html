@@ -223,11 +223,27 @@ KL(q||p) nats: 0.3680642071684971</pre></div>
 </div>
 
 <div class="nb-cell">
+  <div class="nb-name">Reverse Kullback–Leibler ($f(t)=t\log t$)</div>
+  <div class="nb-eq">$$\mathrm{KL}(q\|p)=\int q\,\log\frac{q}{p}\,d\mu$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.5, 0.5]); q = np.array([0.9, 0.1])
+print(&quot;Reverse KL = KL(q||p) nats:&quot;, (q * np.log(q / p)).sum())</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Reverse KL = KL(q||p) nats: 0.3680642071684971</pre></div>
+</div>
+
+<div class="nb-cell">
   <div class="nb-name">Pearson $\chi^2$ divergence ($f(t)=(t-1)^2$)</div>
   <div class="nb-eq">$$\chi^2(p\|q)=\int \frac{(q-p)^2}{p}\,d\mu$$</div>
   <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.5, 0.5]); q = np.array([0.9, 0.1])
 print(&quot;Pearson chi2:&quot;, (((q - p) ** 2) / p).sum())</code></pre></div>
   <div class="nb-out"><span class="nb-label out">Out:</span><pre>Pearson chi2: 0.6400000000000001</pre></div>
+</div>
+
+<div class="nb-cell">
+  <div class="nb-name">Neyman $\chi^2$ divergence ($f(t)=(1-t)^2/t$)</div>
+  <div class="nb-eq">$$\chi^2_N(p\|q)=\int \frac{(p-q)^2}{q}\,d\mu$$</div>
+  <div class="nb-in"><span class="nb-label">In&nbsp;[&nbsp;]:</span><pre><code>p = np.array([0.5, 0.5]); q = np.array([0.9, 0.1])
+print(&quot;Neyman chi2:&quot;, (((p - q) ** 2) / q).sum())</code></pre></div>
+  <div class="nb-out"><span class="nb-label out">Out:</span><pre>Neyman chi2: 1.7777777777777781</pre></div>
 </div>
 
 <div class="nb-cell">

@@ -398,6 +398,7 @@
         <a href="resources/distances.pdf">Detailed PDF</a>
         <a href="resources/distances_table.pdf">Table PDF</a>
         <a href="resources/distances_examples.html">View notebook</a>
+        <a href="https://franknielsen.github.io/Divergence/Poster-Distances.pdf" target="_blank" rel="noopener">Nielsen's chart</a>
         <a href="#summary">Summary table</a>
         <a href="#detailed">Detailed</a>
       </div>
@@ -412,7 +413,7 @@
 
       <p style="margin-top:18px;">
         This note reorganizes the classical &ldquo;distances and divergences&rdquo; landscape
-        (after Frank Nielsen&rsquo;s taxonomy chart) into clean families. It comes in two views:
+        (after <a href="https://franknielsen.github.io/Divergence/Poster-Distances.pdf" target="_blank" rel="noopener">Frank Nielsen&rsquo;s taxonomy chart</a>) into clean families. It comes in two views:
         a compact <a href="#summary">quick-reference table</a>, and a
         <a href="#detailed">detailed reference</a> where every entry carries its defining
         equation, where it is used, <em>and</em> a small worked numeric example. The numbers in
@@ -626,10 +627,24 @@
       </div>
 
       <div class="entry">
+        <div class="name">Reverse Kullback–Leibler ($f(t)=t\log t$)</div>
+        <div class="eq">$$\mathrm{KL}(q\|p)=\int q\,\log\frac{q}{p}\,d\mu$$</div>
+        <div class="appl"><b>Application:</b> the other KL direction; minimizing it is <em>mode-seeking</em> (zero-forcing), used in variational inference / expectation propagation where the approximation sits inside the target.</div>
+        <div class="example"><b>Example:</b> same $p,q$: $0.9\log\tfrac{0.9}{0.5}+0.1\log\tfrac{0.1}{0.5}\approx\mathbf{0.368}$ nats.</div>
+      </div>
+
+      <div class="entry">
         <div class="name">Pearson $\chi^2$ divergence ($f(t)=(t-1)^2$)</div>
         <div class="eq">$$\chi^2(p\|q)=\int \frac{(q-p)^2}{p}\,d\mu$$</div>
         <div class="appl"><b>Application:</b> goodness-of-fit testing; local (second-order) approximation to KL.</div>
         <div class="example"><b>Example:</b> $\tfrac{(0.4)^2}{0.5}+\tfrac{(-0.4)^2}{0.5}=\mathbf{0.64}$.</div>
+      </div>
+
+      <div class="entry">
+        <div class="name">Neyman $\chi^2$ divergence ($f(t)=(1-t)^2/t$)</div>
+        <div class="eq">$$\chi^2_N(p\|q)=\int \frac{(p-q)^2}{q}\,d\mu$$</div>
+        <div class="appl"><b>Application:</b> the &ldquo;reverse&rdquo; Pearson $\chi^2$ (roles of $p,q$ swapped); goodness-of-fit and importance-sampling variance diagnostics.</div>
+        <div class="example"><b>Example:</b> same $p,q$: $\tfrac{(0.4)^2}{0.9}+\tfrac{(0.4)^2}{0.1}\approx\mathbf{1.778}$.</div>
       </div>
 
       <div class="entry">
@@ -652,6 +667,38 @@
         <div class="appl"><b>Application:</b> one dial spanning KL ($\alpha{=}1$), reverse-KL ($\alpha{=}{-}1$) and Hellinger ($\alpha{=}0$); core of information geometry.</div>
         <div class="example"><b>Example:</b> at $\alpha=0$, $D=4\big(1-\int\sqrt{pq}\big)\approx\mathbf{0.422}$ on the same $p,q$.</div>
       </div>
+
+      <p style="margin-top:18px;">
+        Each $f$-divergence is fixed by its convex generator $f$ (with $f(1)=0$). The table below
+        collects the common ones, after Nielsen &amp; Nock,
+        <a href="https://arxiv.org/abs/1309.3029" target="_blank" rel="noopener">arXiv:1309.3029</a>, Table&nbsp;1. We write them in this post's
+        convention $D_f(p\|q)=\int p\,f(q/p)\,d\mu$, so the argument is $t=q/p$ (some sources use
+        $t=p/q$, which swaps a generator with its conjugate $f^\ast(t)=t\,f(1/t)$).
+      </p>
+      <div class="table-wrap">
+        <table class="dist-table">
+          <thead>
+            <tr><th>$f$-divergence</th><th>Generator $f(t)$, $\ f(1)=0,\ t=q/p$</th><th>In this post</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="name">Kullback–Leibler</td><td class="eqcol">$-\log t$</td><td>§3a above</td></tr>
+            <tr><td class="name">Reverse KL</td><td class="eqcol">$t\log t$</td><td>§3a above</td></tr>
+            <tr><td class="name">Pearson $\chi^2$</td><td class="eqcol">$(t-1)^2$</td><td>§3a above</td></tr>
+            <tr><td class="name">Neyman $\chi^2$</td><td class="eqcol">$(1-t)^2/t$</td><td>§3a above</td></tr>
+            <tr><td class="name">Squared Hellinger</td><td class="eqcol">$(\sqrt t-1)^2$</td><td>§3a (Hellinger)</td></tr>
+            <tr><td class="name">Total variation</td><td class="eqcol">$\tfrac12|t-1|$</td><td>§3a above</td></tr>
+            <tr><td class="name">Amari $\alpha$-divergence</td><td class="eqcol">$\tfrac{4}{1-\alpha^2}\big(1-t^{\frac{1+\alpha}{2}}\big)$</td><td>§3a above</td></tr>
+            <tr><td class="name">Pearson–Vajda $\chi^k$</td><td class="eqcol">$(t-1)^k$</td><td>generalizes $\chi^2$ ($k{=}2$)</td></tr>
+            <tr><td class="name">Pearson–Vajda $|\chi|^k$</td><td class="eqcol">$|t-1|^k$</td><td>generalizes TV ($k{=}1$)</td></tr>
+            <tr><td class="name">Jensen–Shannon</td><td class="eqcol">$-(t+1)\log\tfrac{1+t}{2}+t\log t$</td><td>§3d (symmetrized)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="eq-note">
+        Except total variation, $f$-divergences are not metrics. KL and reverse-KL are the
+        $\alpha{=}\mp1$ limits of the $\alpha$-divergence; $\chi^2$/Neyman and TV are the $k{=}2$/$k{=}1$
+        cases of the Pearson–Vajda families.
+      </p>
 
       <h3>3b. Bregman divergences (1967)</h3>
       <p>Generated by a strictly convex potential $F$: the gap between $F$ and its tangent plane at $\theta_2$.</p>
@@ -683,6 +730,64 @@
         <div class="appl"><b>Application:</b> a Bregman divergence on positive-definite matrices; covariance comparison, metric learning (ITML).</div>
         <div class="example"><b>Example:</b> $\mathbf P=\mathrm{diag}(2,1)$, $\mathbf Q=I$: $\mathrm{tr}(\mathbf P)-\log\det\mathbf P-2\approx\mathbf{0.307}$.</div>
       </div>
+
+      <p style="margin-top:18px;">
+        Like $f$-divergences, every Bregman divergence is fixed by one convex seed $F$. The common
+        vector generators (Banerjee et&nbsp;al., 2005) are collected below.
+      </p>
+      <div class="table-wrap">
+        <table class="dist-table">
+          <thead>
+            <tr><th>Bregman divergence</th><th>Seed $F(x)$</th><th>$B_F(x\|y)$</th><th>Domain</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="name">Squared Euclidean</td><td class="eqcol">$\|x\|^2$</td><td class="eqcol">$\|x-y\|^2$</td><td>$\mathbb R^d$</td></tr>
+            <tr><td class="name">Generalized KL (I-divergence)</td><td class="eqcol">$\sum_i x_i\log x_i$</td><td class="eqcol">$\sum_i\big(x_i\log\tfrac{x_i}{y_i}-x_i+y_i\big)$</td><td>$\mathbb R_{+}^d$</td></tr>
+            <tr><td class="name">Itakura–Saito</td><td class="eqcol">$-\sum_i\log x_i$</td><td class="eqcol">$\sum_i\big(\tfrac{x_i}{y_i}-\log\tfrac{x_i}{y_i}-1\big)$</td><td>$\mathbb R_{++}^d$</td></tr>
+            <tr><td class="name">Mahalanobis</td><td class="eqcol">$x^{\top}A\,x$</td><td class="eqcol">$(x-y)^{\top}A\,(x-y)$</td><td>$\mathbb R^d,\ A\succ0$</td></tr>
+            <tr><td class="name">Exponential</td><td class="eqcol">$\sum_i e^{x_i}$</td><td class="eqcol">$\sum_i\big(e^{x_i}-e^{y_i}-(x_i-y_i)e^{y_i}\big)$</td><td>$\mathbb R^d$</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>3e. Matrix Bregman divergences</h3>
+      <p>
+        A <b>Bregman divergence (BD)</b> is the gap between a convex seed and its tangent plane.
+        <em>Matrix</em> BDs lift this from vectors to matrices: take a strictly convex
+        <em>spectral</em> seed $\phi$ (a function of the eigenvalues) and the trace inner product
+        $\langle X,Y\rangle=\mathrm{tr}(X^{\top}Y)$,
+      </p>
+      <div class="eq">
+        $$B_\phi(\mathbf X\|\mathbf Y)=\phi(\mathbf X)-\phi(\mathbf Y)-\big\langle \mathbf X-\mathbf Y,\ \nabla\phi(\mathbf Y)\big\rangle .$$
+      </div>
+      <p>
+        They measure dissimilarity between matrices — covariance, kernel, or density matrices — and
+        the von Neumann and Log-Det divergences seen above are simply the matrix BDs of the entropy
+        and Burg seeds. Nock et&nbsp;al.,
+        <a href="https://www.academia.edu/52103295/Mining_Matrix_Data_with_Bregman_Matrix_Divergences_for_Portfolio_Selection" target="_blank" rel="noopener">&ldquo;Mining Matrix Data with Bregman Matrix Divergences for Portfolio Selection&rdquo;</a>,
+        use them in a <em>mean-divergence</em> framework that generalizes Markowitz mean-variance:
+        the risk premium of an allocation $\mathbf A$ relative to the market $\boldsymbol\Theta$ is
+        $p_\phi(\mathbf A;\boldsymbol\Theta)=\tfrac{1}{a}\,B_\phi(\boldsymbol\Theta-a\mathbf A\,\|\,\boldsymbol\Theta)$.
+      </p>
+      <div class="table-wrap">
+        <table class="dist-table">
+          <thead>
+            <tr><th>Matrix BD</th><th>Seed $\phi(\mathbf X)$</th><th>$B_\phi(\mathbf X\|\mathbf Y)$</th><th>Where used</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="name">Squared Frobenius</td><td class="eqcol">$\|\mathbf X\|_F^2=\mathrm{tr}(\mathbf X^2)$</td><td class="eqcol">$\|\mathbf X-\mathbf Y\|_F^2$</td><td>baseline matrix distance (matrix Mahalanobis)</td></tr>
+            <tr><td class="name">Von Neumann</td><td class="eqcol">$\mathrm{tr}(\mathbf X\log\mathbf X-\mathbf X)$</td><td class="eqcol">$\mathrm{tr}\big(\mathbf X(\log\mathbf X-\log\mathbf Y)-\mathbf X+\mathbf Y\big)$</td><td>density/covariance matrices; quantum relative entropy</td></tr>
+            <tr><td class="name">Log-Det / Burg</td><td class="eqcol">$-\log\det\mathbf X$</td><td class="eqcol">$\mathrm{tr}(\mathbf X\mathbf Y^{-1})-\log\det(\mathbf X\mathbf Y^{-1})-n$</td><td>covariance comparison, metric learning (ITML)</td></tr>
+            <tr><td class="name">Bregman–Schatten-$p$</td><td class="eqcol">$\|\mathbf X\|_p^p\ \ (p>1)$</td><td class="eqcol">$\tfrac12\,\mathrm{tr}\big(\mathbf X^{2p}-2\mathbf X\mathbf Y^{p-1}+(p-1)\mathbf Y^p\big)$</td><td>tunable spectral family</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="eq-note">
+        These are the matrix analogues of squared-Euclidean, generalized-KL, and the Log-Det
+        Bregman from §3b; the von Neumann divergence and Log-Det divergence elsewhere in this post
+        (§7 and §3b) are exactly these matrix BDs. Numeric examples for the von Neumann and Log-Det
+        cases are in §3b and §7.
+      </p>
 
       <h3>3c. Overlap / $\alpha$-power family</h3>
       <p>All built from the affinity integral $\int p^{\alpha}q^{\,1-\alpha}\,d\mu$ (same $p,q$ pmfs).</p>
@@ -864,14 +969,21 @@
           <li><b>Wasserstein, MMD, Stein, Kolmogorov</b> are <b>IPMs</b>; <b>EMD</b> $=$ Wasserstein-1.</li>
           <li><b>Fisher–Rao</b> is the Riemannian (geodesic) distance; locally it agrees with $\sqrt{2\,\mathrm{KL}}$.</li>
           <li><b>Von Neumann</b> &amp; <b>Log-Det</b> are the quantum / matrix counterparts of KL and a Bregman divergence.</li>
+          <li><b>Matrix Bregman divergences</b> (Frobenius, von Neumann, Log-Det, Schatten-$p$) lift the vector Bregman family to matrices via a spectral seed and the trace inner product.</li>
         </ul>
       </div>
 
       <footer>
-        Compiled as a clean reorganization of the &ldquo;Taxonomy of principal distances and
-        divergences&rdquo; chart by Frank Nielsen. Generators ($f$, $F$) and constants follow
-        standard conventions; some sources differ on the argument order of $D(p\|q)$. Worked
-        examples and the companion notebook are original to this post.
+        Compiled as a clean reorganization of the
+        <a href="https://franknielsen.github.io/Divergence/Poster-Distances.pdf" target="_blank" rel="noopener">&ldquo;Taxonomy of principal distances and divergences&rdquo; chart by Frank Nielsen</a>
+        (see also his <a href="https://franknielsen.github.io/Divergence/index.html" target="_blank" rel="noopener">divergence resources page</a>). The $f$-divergence
+        generator table follows Nielsen &amp; Nock,
+        <a href="https://arxiv.org/abs/1309.3029" target="_blank" rel="noopener">arXiv:1309.3029</a> (Table&nbsp;1), and the matrix
+        Bregman divergences follow Nock et&nbsp;al.,
+        <a href="https://www.academia.edu/52103295/Mining_Matrix_Data_with_Bregman_Matrix_Divergences_for_Portfolio_Selection" target="_blank" rel="noopener">&ldquo;Mining Matrix Data with Bregman Matrix Divergences for Portfolio Selection&rdquo;</a>.
+        Generators ($f$, $F$) and constants follow standard conventions; some sources differ on
+        the argument order of $D(p\|q)$. Worked examples and the companion notebook are original
+        to this post.
       </footer>
     </article>
   </div>

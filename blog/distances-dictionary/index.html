@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Distances &amp; Divergences Dictionary</title>
+  <meta name="description" content="An interactive, searchable dictionary of distances, divergences and probability metrics: search by name, alias, property or use case; compare measures; generate safe NumPy/PyTorch/JAX code; and ask questions with in-browser or bring-your-own-token AI." />
+  <link rel="stylesheet" href="styles.css" />
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+  <div class="page">
+    <!-- Themed post intro (matches the rest of the blog) -->
+    <header class="intro">
+      <div class="meta">Interactive Tool • Distances &amp; Divergences</div>
+      <h1 class="intro-title">Distances &amp; Divergences Dictionary</h1>
+      <p class="authors">Hamidreza Hashempoor • Institute for AI, University of Stuttgart</p>
+      <p class="intro-lead">
+        An interactive companion to the
+        <a href="../distances/distances.html">Taxonomy of Principal Distances &amp; Divergences</a>:
+        the same curated measures, now searchable and linkable. Look up a measure by name, alias,
+        property, object type, or application; read its formula, properties, and worked example;
+        compare measures side by side; generate audited NumPy / PyTorch / JAX code; and — optionally —
+        ask questions using a free in-browser model or your own HuggingFace token.
+      </p>
+      <div class="intro-tools">
+        <a href="../distances/distances.html">Read the taxonomy post</a>
+        <a href="#/ask">Ask the dictionary</a>
+        <a href="../index.html">All blog posts</a>
+      </div>
+    </header>
+
+    <!-- Sticky toolbar: search + nav + AI toggle -->
+    <div class="toolbar" role="search">
+      <input
+        id="global-search"
+        type="search"
+        class="search-input"
+        placeholder="Search by name, alias, formula idea, object type, property, or use case…"
+        autocomplete="off"
+        aria-label="Search distances and divergences"
+      />
+      <nav class="toolbar-nav" aria-label="Sections">
+        <a href="#/" data-route="home">Search</a>
+        <a href="#/ask" data-route="ask">Ask AI</a>
+      </nav>
+      <div class="ai-toggle">
+        <button id="ai-enable" type="button" class="ai-btn" title="Load a small free model in your browser for semantic search">
+          Enable AI search
+        </button>
+        <span id="ai-status" class="ai-status" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <main id="app" aria-live="polite">
+      <p class="loading">Loading dictionary…</p>
+    </main>
+
+    <footer class="site-footer">
+      Built as an interactive companion to the taxonomy post. Runs entirely in your browser — no
+      backend. Optional AI uses a free in-browser model (Transformers.js) or your own HuggingFace
+      token; no secrets are stored on the server.
+      <a href="../distances/distances.html">Taxonomy</a> ·
+      <a href="../index.html">Blog</a>
+    </footer>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

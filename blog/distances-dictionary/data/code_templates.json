@@ -1,0 +1,814 @@
+{
+  "euclidean": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["For large arrays np.linalg.norm is fastest."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def euclidean(p, q):",
+      "    p = np.asarray(p, dtype=float)",
+      "    q = np.asarray(q, dtype=float)",
+      "    return float(np.linalg.norm(p - q))",
+      "",
+      "print(euclidean([0, 0], [3, 4]))  # 5.0"
+    ],
+    "pytorch": [
+      "import torch",
+      "",
+      "def euclidean(p, q):",
+      "    return torch.linalg.norm(p - q)"
+    ],
+    "jax": [
+      "import jax.numpy as jnp",
+      "",
+      "def euclidean(p, q):",
+      "    return jnp.linalg.norm(p - q)"
+    ]
+  },
+  "manhattan": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": [],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def manhattan(p, q):",
+      "    p = np.asarray(p, dtype=float)",
+      "    q = np.asarray(q, dtype=float)",
+      "    return float(np.sum(np.abs(p - q)))",
+      "",
+      "print(manhattan([0, 0], [3, 4]))  # 7.0"
+    ],
+    "pytorch": [
+      "import torch",
+      "",
+      "def manhattan(p, q):",
+      "    return torch.sum(torch.abs(p - q))"
+    ],
+    "jax": [
+      "import jax.numpy as jnp",
+      "",
+      "def manhattan(p, q):",
+      "    return jnp.sum(jnp.abs(p - q))"
+    ]
+  },
+  "minkowski": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["k >= 1 gives a true metric."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def minkowski(p, q, k=2):",
+      "    d = np.abs(np.asarray(p, float) - np.asarray(q, float))",
+      "    return float(np.sum(d ** k) ** (1.0 / k))",
+      "",
+      "print(minkowski([0, 0], [3, 4], k=3))  # ~4.498"
+    ],
+    "pytorch": [
+      "import torch",
+      "",
+      "def minkowski(p, q, k=2):",
+      "    return torch.sum(torch.abs(p - q) ** k) ** (1.0 / k)"
+    ]
+  },
+  "chebyshev": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": [],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def chebyshev(p, q):",
+      "    return float(np.max(np.abs(np.asarray(p, float) - np.asarray(q, float))))",
+      "",
+      "print(chebyshev([0, 0], [3, 4]))  # 4.0"
+    ],
+    "pytorch": [
+      "import torch",
+      "",
+      "def chebyshev(p, q):",
+      "    return torch.max(torch.abs(p - q))"
+    ]
+  },
+  "quadratic": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["Q must be symmetric PSD (PD for a true metric)."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def quadratic(p, q, Q):",
+      "    d = np.asarray(p, float) - np.asarray(q, float)",
+      "    return float(np.sqrt(d @ np.asarray(Q, float) @ d))",
+      "",
+      "Q = [[2, 0.5], [0.5, 1]]",
+      "print(quadratic([0, 0], [3, 4], Q))  # ~6.782"
+    ]
+  },
+  "mahalanobis": {
+    "requires_probability": false,
+    "requires_spd": true,
+    "notes": ["Solve against Sigma instead of inverting it."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def mahalanobis(p, q, Sigma):",
+      "    d = np.asarray(p, float) - np.asarray(q, float)",
+      "    return float(np.sqrt(d @ np.linalg.solve(np.asarray(Sigma, float), d)))",
+      "",
+      "Sigma = [[2, 0.5], [0.5, 1]]",
+      "print(mahalanobis([2, 1], [0, 0], Sigma))  # ~1.512"
+    ],
+    "pytorch": [
+      "import torch",
+      "",
+      "def mahalanobis(p, q, Sigma):",
+      "    d = (p - q).unsqueeze(-1)",
+      "    sol = torch.linalg.solve(Sigma, d)",
+      "    return torch.sqrt((d.transpose(-1, -2) @ sol).squeeze())"
+    ]
+  },
+  "hamming": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["Sequences must have equal length."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def hamming(a, b):",
+      "    a = np.asarray(list(a)); b = np.asarray(list(b))",
+      "    return int(np.sum(a != b))",
+      "",
+      "print(hamming('10110', '10011'))  # 2"
+    ]
+  },
+  "levenshtein": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["Classic O(mn) dynamic program; pure Python (no numpy needed)."],
+    "numpy": [
+      "def levenshtein(a, b):",
+      "    n, m = len(a), len(b)",
+      "    dp = list(range(m + 1))",
+      "    for i in range(1, n + 1):",
+      "        prev, dp[0] = dp[0], i",
+      "        for j in range(1, m + 1):",
+      "            cur = dp[j]",
+      "            cost = 0 if a[i - 1] == b[j - 1] else 1",
+      "            dp[j] = min(dp[j] + 1, dp[j - 1] + 1, prev + cost)",
+      "            prev = cur",
+      "    return dp[m]",
+      "",
+      "print(levenshtein('kitten', 'sitting'))  # 3"
+    ]
+  },
+  "dtw": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["Add a Sakoe-Chiba band for speed; DTW is not a metric."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def dtw(a, b):",
+      "    a = np.asarray(a, float); b = np.asarray(b, float)",
+      "    n, m = len(a), len(b)",
+      "    D = np.full((n + 1, m + 1), np.inf)",
+      "    D[0, 0] = 0.0",
+      "    for i in range(1, n + 1):",
+      "        for j in range(1, m + 1):",
+      "            cost = abs(a[i - 1] - b[j - 1])",
+      "            D[i, j] = cost + min(D[i - 1, j], D[i, j - 1], D[i - 1, j - 1])",
+      "    return float(D[n, m])",
+      "",
+      "print(dtw([1, 2, 3], [1, 2, 2, 3]))  # 0.0"
+    ]
+  },
+  "kullback_leibler": {
+    "requires_probability": true,
+    "requires_spd": false,
+    "notes": ["Clip with eps and renormalize.", "Infinite if q=0 where p>0."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def kl_divergence(p, q, eps=1e-12):",
+      "    '''KL(p||q) for probability vectors.'''",
+      "    p = np.asarray(p, dtype=float); p = p / p.sum()",
+      "    q = np.asarray(q, dtype=float); q = q / q.sum()",
+      "    p = np.clip(p, eps, 1.0); q = np.clip(q, eps, 1.0)",
+      "    return float(np.sum(p * np.log(p / q)))",
+      "",
+      "print(kl_divergence([0.5, 0.5], [0.9, 0.1]))  # ~0.511 nats"
+    ],
+    "pytorch": [
+      "import torch",
+      "",
+      "def kl_divergence(p, q, eps=1e-12):",
+      "    p = p / p.sum(); q = q / q.sum()",
+      "    p = p.clamp_min(eps); q = q.clamp_min(eps)",
+      "    return torch.sum(p * torch.log(p / q))"
+    ],
+    "jax": [
+      "import jax.numpy as jnp",
+      "",
+      "def kl_divergence(p, q, eps=1e-12):",
+      "    p = p / p.sum(); q = q / q.sum()",
+      "    p = jnp.clip(p, eps, 1.0); q = jnp.clip(q, eps, 1.0)",
+      "    return jnp.sum(p * jnp.log(p / q))"
+    ]
+  },
+  "reverse_kl": {
+    "requires_probability": true,
+    "requires_spd": false,
+    "notes": ["Just KL with the arguments swapped."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def reverse_kl(p, q, eps=1e-12):",
+      "    '''KL(q||p).'''",
+      "    p = np.asarray(p, float); p = p / p.sum()",
+      "    q = np.asarray(q, float); q = q / q.sum()",
+      "    p = np.clip(p, eps, 1.0); q = np.clip(q, eps, 1.0)",
+      "    return float(np.sum(q * np.log(q / p)))",
+      "",
+      "print(reverse_kl([0.5, 0.5], [0.9, 0.1]))  # ~0.368"
+    ],
+    "pytorch": [
+      "import torch",
+      "",
+      "def reverse_kl(p, q, eps=1e-12):",
+      "    p = (p / p.sum()).clamp_min(eps)",
+      "    q = (q / q.sum()).clamp_min(eps)",
+      "    return torch.sum(q * torch.log(q / p))"
+    ]
+  },
+  "pearson_chi2": {
+    "requires_probability": true,
+    "requires_spd": false,
+    "notes": ["Sensitive to small p_i; clip the denominator."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def pearson_chi2(p, q, eps=1e-12):",
+      "    p = np.asarray(p, float); p = p / p.sum()",
+      "    q = np.asarray(q, float); q = q / q.sum()",
+      "    p = np.clip(p, eps, 1.0)",
+      "    return float(np.sum((q - p) ** 2 / p))",
+      "",
+      "print(pearson_chi2([0.5, 0.5], [0.9, 0.1]))  # 0.64"
+    ]
+  },
+  "neyman_chi2": {
+    "requires_probability": true,
+    "requires_spd": false,
+    "notes": ["Clip q to avoid dividing by tiny values."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def neyman_chi2(p, q, eps=1e-12):",
+      "    p = np.asarray(p, float); p = p / p.sum()",
+      "    q = np.asarray(q, float); q = q / q.sum()",
+      "    q = np.clip(q, eps, 1.0)",
+      "    return float(np.sum((p - q) ** 2 / q))",
+      "",
+      "print(neyman_chi2([0.5, 0.5], [0.9, 0.1]))  # ~1.778"
+    ]
+  },
+  "hellinger": {
+    "requires_probability": true,
+    "requires_spd": false,
+    "notes": ["Numerically stable (no logs); bounded in [0, 1]."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def hellinger(p, q):",
+      "    p = np.asarray(p, float); p = p / p.sum()",
+      "    q = np.asarray(q, float); q = q / q.sum()",
+      "    return float(np.sqrt(0.5 * np.sum((np.sqrt(p) - np.sqrt(q)) ** 2)))",
+      "",
+      "print(hellinger([0.5, 0.5], [0.9, 0.1]))  # ~0.325"
+    ],
+    "pytorch": [
+      "import torch",
+      "",
+      "def hellinger(p, q):",
+      "    p = p / p.sum(); q = q / q.sum()",
+      "    return torch.sqrt(0.5 * torch.sum((torch.sqrt(p) - torch.sqrt(q)) ** 2))"
+    ],
+    "jax": [
+      "import jax.numpy as jnp",
+      "",
+      "def hellinger(p, q):",
+      "    p = p / p.sum(); q = q / q.sum()",
+      "    return jnp.sqrt(0.5 * jnp.sum((jnp.sqrt(p) - jnp.sqrt(q)) ** 2))"
+    ]
+  },
+  "total_variation": {
+    "requires_probability": true,
+    "requires_spd": false,
+    "notes": ["Pinsker: TV <= sqrt(KL / 2)."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def total_variation(p, q):",
+      "    p = np.asarray(p, float); p = p / p.sum()",
+      "    q = np.asarray(q, float); q = q / q.sum()",
+      "    return float(0.5 * np.sum(np.abs(p - q)))",
+      "",
+      "print(total_variation([0.5, 0.5], [0.9, 0.1]))  # 0.4"
+    ],
+    "pytorch": [
+      "import torch",
+      "",
+      "def total_variation(p, q):",
+      "    p = p / p.sum(); q = q / q.sum()",
+      "    return 0.5 * torch.sum(torch.abs(p - q))"
+    ]
+  },
+  "amari_alpha": {
+    "requires_probability": true,
+    "requires_spd": false,
+    "notes": ["alpha->+-1 are the KL / reverse-KL limits."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def amari_alpha(p, q, alpha=0.0, eps=1e-12):",
+      "    p = np.asarray(p, float); p = p / p.sum()",
+      "    q = np.asarray(q, float); q = q / q.sum()",
+      "    p = np.clip(p, eps, 1.0); q = np.clip(q, eps, 1.0)",
+      "    if abs(alpha - 1.0) < 1e-8:",
+      "        return float(np.sum(p * np.log(p / q)))",
+      "    if abs(alpha + 1.0) < 1e-8:",
+      "        return float(np.sum(q * np.log(q / p)))",
+      "    c = 4.0 / (1.0 - alpha ** 2)",
+      "    aff = np.sum(p ** ((1 - alpha) / 2) * q ** ((1 + alpha) / 2))",
+      "    return float(c * (1.0 - aff))",
+      "",
+      "print(amari_alpha([0.5, 0.5], [0.9, 0.1], alpha=0.0))  # ~0.422"
+    ]
+  },
+  "squared_euclidean_bregman": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["Square root is the Euclidean metric."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def squared_euclidean(x, y):",
+      "    x = np.asarray(x, float); y = np.asarray(y, float)",
+      "    return float(np.sum((x - y) ** 2))",
+      "",
+      "print(squared_euclidean([1, 2], [0, 0]))  # 5.0"
+    ],
+    "pytorch": [
+      "import torch",
+      "",
+      "def squared_euclidean(x, y):",
+      "    return torch.sum((x - y) ** 2)"
+    ]
+  },
+  "generalized_kl": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["For nonnegative (possibly unnormalized) vectors."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def generalized_kl(x, y, eps=1e-12):",
+      "    x = np.asarray(x, float); y = np.asarray(y, float)",
+      "    xc = np.clip(x, eps, None); yc = np.clip(y, eps, None)",
+      "    return float(np.sum(xc * np.log(xc / yc) - x + y))"
+    ]
+  },
+  "itakura_saito": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["Scale-invariant: IS(c*p || c*q) == IS(p || q). Inputs must be positive."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def itakura_saito(p, q, eps=1e-12):",
+      "    p = np.clip(np.asarray(p, float), eps, None)",
+      "    q = np.clip(np.asarray(q, float), eps, None)",
+      "    r = p / q",
+      "    return float(np.sum(r - np.log(r) - 1.0))",
+      "",
+      "print(itakura_saito([1, 2, 3], [1, 1, 4]))  # ~0.345"
+    ]
+  },
+  "logdet_bregman": {
+    "requires_probability": false,
+    "requires_spd": true,
+    "notes": ["Use solve, not an explicit inverse.", "slogdet sign check guards against non-SPD inputs."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def logdet_bregman(P, Q):",
+      "    '''D(P||Q) = tr(P Q^-1) - log det(P Q^-1) - n; P, Q SPD.'''",
+      "    P = np.asarray(P, dtype=float); Q = np.asarray(Q, dtype=float)",
+      "    n = P.shape[0]",
+      "    X = np.linalg.solve(Q, P)            # Q^-1 P",
+      "    sign, logdet = np.linalg.slogdet(X)",
+      "    if sign <= 0:",
+      "        raise ValueError('P Q^-1 must have positive determinant; check SPD inputs.')",
+      "    return float(np.trace(X) - logdet - n)",
+      "",
+      "print(logdet_bregman([[2, 0], [0, 1]], [[1, 0], [0, 1]]))  # ~0.307"
+    ],
+    "pytorch": [
+      "import torch",
+      "",
+      "def logdet_bregman(P, Q):",
+      "    n = P.shape[0]",
+      "    X = torch.linalg.solve(Q, P)",
+      "    sign, logabsdet = torch.linalg.slogdet(X)",
+      "    if sign <= 0:",
+      "        raise ValueError('P Q^-1 must have positive determinant; check SPD inputs.')",
+      "    return torch.trace(X) - logabsdet - n"
+    ],
+    "jax": [
+      "import jax.numpy as jnp",
+      "",
+      "def logdet_bregman(P, Q):",
+      "    n = P.shape[0]",
+      "    X = jnp.linalg.solve(Q, P)",
+      "    sign, logdet = jnp.linalg.slogdet(X)",
+      "    return jnp.trace(X) - logdet - n"
+    ]
+  },
+  "frobenius": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["Squared version is the Frobenius matrix Bregman divergence."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def frobenius(X, Y):",
+      "    return float(np.linalg.norm(np.asarray(X, float) - np.asarray(Y, float), 'fro'))",
+      "",
+      "print(frobenius([[2, 0], [0, 1]], [[1, 0], [0, 1]]))  # 1.0"
+    ],
+    "pytorch": [
+      "import torch",
+      "",
+      "def frobenius(X, Y):",
+      "    return torch.linalg.norm(X - Y, ord='fro')"
+    ]
+  },
+  "von_neumann_divergence": {
+    "requires_probability": false,
+    "requires_spd": true,
+    "notes": ["Matrix log via eigendecomposition; inputs must be SPD."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def _logm(M, eps=1e-12):",
+      "    w, V = np.linalg.eigh(M)",
+      "    w = np.clip(w, eps, None)",
+      "    return (V * np.log(w)) @ V.T",
+      "",
+      "def von_neumann_divergence(P, Q):",
+      "    P = np.asarray(P, float); Q = np.asarray(Q, float)",
+      "    return float(np.trace(P @ (_logm(P) - _logm(Q)) - P + Q))",
+      "",
+      "print(von_neumann_divergence([[0.7, 0], [0, 0.3]], [[0.5, 0], [0, 0.5]]))  # ~0.082"
+    ]
+  },
+  "bhattacharyya": {
+    "requires_probability": true,
+    "requires_spd": false,
+    "notes": ["BC = sum sqrt(p*q); distance = -log(BC)."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def bhattacharyya(p, q):",
+      "    p = np.asarray(p, float); p = p / p.sum()",
+      "    q = np.asarray(q, float); q = q / q.sum()",
+      "    bc = np.sum(np.sqrt(p * q))",
+      "    return float(-np.log(bc))",
+      "",
+      "print(bhattacharyya([0.5, 0.5], [0.9, 0.1]))  # ~0.112"
+    ]
+  },
+  "chernoff": {
+    "requires_probability": true,
+    "requires_spd": false,
+    "notes": ["Grid-search alpha in (0, 1)."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def chernoff(p, q, grid=None):",
+      "    p = np.asarray(p, float); p = p / p.sum()",
+      "    q = np.asarray(q, float); q = q / q.sum()",
+      "    if grid is None:",
+      "        grid = np.linspace(0.01, 0.99, 99)",
+      "    vals = [-np.log(np.sum(p ** a * q ** (1 - a))) for a in grid]",
+      "    return float(np.max(vals))",
+      "",
+      "print(chernoff([0.5, 0.5], [0.9, 0.1]))  # ~0.112"
+    ]
+  },
+  "renyi_divergence": {
+    "requires_probability": true,
+    "requires_spd": false,
+    "notes": ["At alpha=1 this returns the KL limit."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def renyi_divergence(p, q, alpha=0.5, eps=1e-12):",
+      "    p = np.asarray(p, float); p = p / p.sum()",
+      "    q = np.asarray(q, float); q = q / q.sum()",
+      "    p = np.clip(p, eps, 1.0); q = np.clip(q, eps, 1.0)",
+      "    if abs(alpha - 1.0) < 1e-8:",
+      "        return float(np.sum(p * np.log(p / q)))",
+      "    return float(1.0 / (alpha - 1.0) * np.log(np.sum(p ** alpha * q ** (1 - alpha))))",
+      "",
+      "print(renyi_divergence([0.5, 0.5], [0.9, 0.1], alpha=0.5))  # ~0.223"
+    ]
+  },
+  "jeffreys": {
+    "requires_probability": true,
+    "requires_spd": false,
+    "notes": ["Symmetric but unbounded."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def jeffreys(p, q, eps=1e-12):",
+      "    p = np.asarray(p, float); p = p / p.sum()",
+      "    q = np.asarray(q, float); q = q / q.sum()",
+      "    p = np.clip(p, eps, 1.0); q = np.clip(q, eps, 1.0)",
+      "    return float(np.sum(p * np.log(p / q)) + np.sum(q * np.log(q / p)))",
+      "",
+      "print(jeffreys([0.5, 0.5], [0.9, 0.1]))  # ~0.879"
+    ],
+    "pytorch": [
+      "import torch",
+      "",
+      "def jeffreys(p, q, eps=1e-12):",
+      "    p = (p / p.sum()).clamp_min(eps)",
+      "    q = (q / q.sum()).clamp_min(eps)",
+      "    return torch.sum(p * torch.log(p / q)) + torch.sum(q * torch.log(q / p))"
+    ]
+  },
+  "jensen_shannon": {
+    "requires_probability": true,
+    "requires_spd": false,
+    "notes": ["Always finite (bounded by log 2); sqrt(JS) is a metric."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def _kl(p, q, eps=1e-12):",
+      "    p = np.clip(p, eps, 1.0); q = np.clip(q, eps, 1.0)",
+      "    return np.sum(p * np.log(p / q))",
+      "",
+      "def js_divergence(p, q, eps=1e-12):",
+      "    p = np.asarray(p, float); p = p / p.sum()",
+      "    q = np.asarray(q, float); q = q / q.sum()",
+      "    m = 0.5 * (p + q)",
+      "    return float(0.5 * _kl(p, m, eps) + 0.5 * _kl(q, m, eps))",
+      "",
+      "print(js_divergence([0.5, 0.5], [0.9, 0.1]))  # ~0.102 nats"
+    ],
+    "pytorch": [
+      "import torch",
+      "",
+      "def _kl(p, q, eps=1e-12):",
+      "    p = p.clamp_min(eps); q = q.clamp_min(eps)",
+      "    return torch.sum(p * torch.log(p / q))",
+      "",
+      "def js_divergence(p, q, eps=1e-12):",
+      "    p = p / p.sum(); q = q / q.sum()",
+      "    m = 0.5 * (p + q)",
+      "    return 0.5 * _kl(p, m, eps) + 0.5 * _kl(q, m, eps)"
+    ],
+    "jax": [
+      "import jax.numpy as jnp",
+      "",
+      "def _kl(p, q, eps=1e-12):",
+      "    p = jnp.clip(p, eps, 1.0); q = jnp.clip(q, eps, 1.0)",
+      "    return jnp.sum(p * jnp.log(p / q))",
+      "",
+      "def js_divergence(p, q, eps=1e-12):",
+      "    p = p / p.sum(); q = q / q.sum()",
+      "    m = 0.5 * (p + q)",
+      "    return 0.5 * _kl(p, m, eps) + 0.5 * _kl(q, m, eps)"
+    ]
+  },
+  "shannon_entropy": {
+    "requires_probability": true,
+    "requires_spd": false,
+    "notes": ["Use base=2 for bits, base=e for nats."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def shannon_entropy(p, base=np.e, eps=1e-12):",
+      "    p = np.asarray(p, float); p = p / p.sum()",
+      "    p = np.clip(p, eps, 1.0)",
+      "    return float(-np.sum(p * np.log(p)) / np.log(base))",
+      "",
+      "print(shannon_entropy([0.5, 0.25, 0.25]))         # ~1.040 nats",
+      "print(shannon_entropy([0.5, 0.25, 0.25], base=2)) # 1.5 bits"
+    ]
+  },
+  "renyi_entropy": {
+    "requires_probability": true,
+    "requires_spd": false,
+    "notes": ["alpha=2 collision entropy; alpha->inf min-entropy."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def renyi_entropy(p, alpha=2.0, eps=1e-12):",
+      "    p = np.asarray(p, float); p = p / p.sum()",
+      "    p = np.clip(p, eps, 1.0)",
+      "    if abs(alpha - 1.0) < 1e-8:",
+      "        return float(-np.sum(p * np.log(p)))",
+      "    return float(1.0 / (1.0 - alpha) * np.log(np.sum(p ** alpha)))",
+      "",
+      "print(renyi_entropy([0.5, 0.25, 0.25], alpha=2))  # ~0.981 nats"
+    ]
+  },
+  "tsallis_entropy": {
+    "requires_probability": true,
+    "requires_spd": false,
+    "notes": ["T_2 = 1 - sum p_i^2 (Gini-Simpson index)."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def tsallis_entropy(p, alpha=2.0):",
+      "    p = np.asarray(p, float); p = p / p.sum()",
+      "    return float(1.0 / (1.0 - alpha) * (np.sum(p ** alpha) - 1.0))",
+      "",
+      "print(tsallis_entropy([0.5, 0.25, 0.25], alpha=2))  # 0.625"
+    ]
+  },
+  "sharma_mittal_entropy": {
+    "requires_probability": true,
+    "requires_spd": false,
+    "notes": ["Handle alpha=1 and beta=1 limits separately."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def sharma_mittal_entropy(p, alpha=2.0, beta=3.0):",
+      "    p = np.asarray(p, float); p = p / p.sum()",
+      "    s = np.sum(p ** alpha)",
+      "    return float(1.0 / (1.0 - beta) * (s ** ((1.0 - beta) / (1.0 - alpha)) - 1.0))",
+      "",
+      "print(sharma_mittal_entropy([0.5, 0.25, 0.25], 2, 3))  # ~0.430"
+    ]
+  },
+  "von_neumann_entropy": {
+    "requires_probability": false,
+    "requires_spd": true,
+    "notes": ["Computed on the eigenvalues of the density matrix."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def von_neumann_entropy(rho, eps=1e-12):",
+      "    w = np.linalg.eigvalsh(np.asarray(rho, float))",
+      "    w = np.clip(w, eps, None)",
+      "    return float(-np.sum(w * np.log(w)))",
+      "",
+      "print(von_neumann_entropy([[0.7, 0], [0, 0.3]]))  # ~0.611 nats"
+    ]
+  },
+  "hausdorff": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["Sensitive to outliers; consider a quantile (modified) variant."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def hausdorff(X, Y):",
+      "    X = np.asarray(X, float); Y = np.asarray(Y, float)",
+      "    d = np.sqrt(((X[:, None, :] - Y[None, :, :]) ** 2).sum(-1))",
+      "    return float(max(d.min(axis=1).max(), d.min(axis=0).max()))",
+      "",
+      "X = [[0, 0], [1, 0], [0, 1]]; Y = [[0, 0], [1, 1]]",
+      "print(hausdorff(X, Y))  # 1.0"
+    ]
+  },
+  "wasserstein": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["1-D closed form for equal-size samples.", "For general cases use scipy.stats.wasserstein_distance or POT (ot.emd2)."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def wasserstein1_1d(u, v):",
+      "    '''1-D Wasserstein-1 (EMD) for equal-size samples.'''",
+      "    u = np.sort(np.asarray(u, float))",
+      "    v = np.sort(np.asarray(v, float))",
+      "    if len(u) != len(v):",
+      "        raise ValueError('Equal sizes assumed; else use scipy.stats.wasserstein_distance.')",
+      "    return float(np.mean(np.abs(u - v)))",
+      "",
+      "print(wasserstein1_1d([0, 1, 2, 3], [1, 2, 3, 4]))  # 1.0"
+    ],
+    "pytorch": [
+      "import torch",
+      "",
+      "def wasserstein1_1d(u, v):",
+      "    u, _ = torch.sort(u); v, _ = torch.sort(v)",
+      "    return torch.mean(torch.abs(u - v))"
+    ]
+  },
+  "mmd": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["Biased MMD^2 estimate; tune the RBF bandwidth (median heuristic)."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def _rbf(X, Y, gamma):",
+      "    X = np.asarray(X, float).reshape(len(X), -1)",
+      "    Y = np.asarray(Y, float).reshape(len(Y), -1)",
+      "    sq = ((X[:, None, :] - Y[None, :, :]) ** 2).sum(-1)",
+      "    return np.exp(-gamma * sq)",
+      "",
+      "def mmd2(X, Y, gamma=0.5):",
+      "    Kxx = _rbf(X, X, gamma); Kyy = _rbf(Y, Y, gamma); Kxy = _rbf(X, Y, gamma)",
+      "    return float(Kxx.mean() + Kyy.mean() - 2.0 * Kxy.mean())",
+      "",
+      "print(mmd2([0, 1, 2], [3, 4, 5], gamma=0.5))  # ~1.063"
+    ],
+    "pytorch": [
+      "import torch",
+      "",
+      "def _rbf(X, Y, gamma):",
+      "    sq = torch.cdist(X, Y) ** 2",
+      "    return torch.exp(-gamma * sq)",
+      "",
+      "def mmd2(X, Y, gamma=0.5):",
+      "    Kxx = _rbf(X, X, gamma); Kyy = _rbf(Y, Y, gamma); Kxy = _rbf(X, Y, gamma)",
+      "    return Kxx.mean() + Kyy.mean() - 2.0 * Kxy.mean()"
+    ]
+  },
+  "kolmogorov_smirnov": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["scipy.stats.ks_2samp also returns a p-value."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def ks_distance(u, v):",
+      "    u = np.sort(np.asarray(u, float))",
+      "    v = np.sort(np.asarray(v, float))",
+      "    grid = np.concatenate([u, v])",
+      "    Fu = np.searchsorted(u, grid, side='right') / len(u)",
+      "    Fv = np.searchsorted(v, grid, side='right') / len(v)",
+      "    return float(np.max(np.abs(Fu - Fv)))",
+      "",
+      "print(ks_distance([0, 1, 2, 3], [1, 2, 3, 4]))  # 0.25"
+    ]
+  },
+  "affine_invariant_riemannian": {
+    "requires_probability": false,
+    "requires_spd": true,
+    "notes": ["Generalized eigenvalues of (P, Q); both inputs must be SPD."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def airm(P, Q):",
+      "    '''Affine-invariant Riemannian distance between SPD matrices.'''",
+      "    P = np.asarray(P, float); Q = np.asarray(Q, float)",
+      "    w = np.linalg.eigvals(np.linalg.solve(P, Q)).real",
+      "    w = np.clip(w, 1e-12, None)",
+      "    return float(np.sqrt(np.sum(np.log(w) ** 2)))",
+      "",
+      "print(airm([[4, 0], [0, 1]], [[1, 0], [0, 1]]))  # ~1.386"
+    ]
+  },
+  "bures_wasserstein": {
+    "requires_probability": false,
+    "requires_spd": true,
+    "notes": ["Uses scipy.linalg.sqrtm; clip tiny negatives from round-off."],
+    "numpy": [
+      "import numpy as np",
+      "from scipy.linalg import sqrtm",
+      "",
+      "def bures_wasserstein(P, Q):",
+      "    '''W2 distance between zero-mean Gaussians N(0,P), N(0,Q).'''",
+      "    P = np.asarray(P, float); Q = np.asarray(Q, float)",
+      "    Ps = sqrtm(P).real",
+      "    cross = sqrtm(Ps @ Q @ Ps).real",
+      "    d2 = np.trace(P) + np.trace(Q) - 2.0 * np.trace(cross)",
+      "    return float(np.sqrt(max(d2, 0.0)))",
+      "",
+      "print(bures_wasserstein([[4, 0], [0, 1]], [[1, 0], [0, 1]]))  # 1.0"
+    ]
+  },
+  "spectral_norm": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["Largest singular value of the difference."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def spectral_norm_distance(X, Y):",
+      "    return float(np.linalg.norm(np.asarray(X, float) - np.asarray(Y, float), 2))",
+      "",
+      "print(spectral_norm_distance([[4, 0], [0, 1]], [[1, 0], [0, 1]]))  # 3.0"
+    ]
+  }
+}

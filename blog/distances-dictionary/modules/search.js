@@ -58,10 +58,19 @@ function scoreMeasure(db, m, queryTokens) {
   return { score: total, matchedAll };
 }
 
+// Tuning constants for semantic (Layer 2) mode.
+const SEM_THRESHOLD = 0.22; // min cosine for a pure-semantic (no-keyword) result to show
+const SEM_CAP = 18;         // max results to show in semantic mode
+const SEM_FALLBACK = 8;     // if nothing clears the threshold, still show this many nearest
+
 /**
  * Run the search. Returns:
- *   { query, exact, results: [{ measure, score }] }
+ *   { query, exact, semantic, results: [{ measure, score }] }
  * `opts.semantic`: optional (queryStr, candidateMeasures) => Map(id -> cosine in [0,1]).
+ * When that ranker returns scores, results are ranked over the WHOLE corpus by
+ * meaning, so natural-language queries surface related measures even with no
+ * keyword overlap. Otherwise the lexical cascade (exact -> token match -> fuzzy)
+ * is used unchanged.
  */
 export function search(db, query, opts = {}) {
   const q = normalize(query);
@@ -69,20 +78,50 @@ export function search(db, query, opts = {}) {
     const results = [...db.measures]
       .sort((a, b) => a.canonical_name.localeCompare(b.canonical_name))
       .map((measure) => ({ measure, score: 0 }));
-    return { query: "", exact: null, results };
+    return { query: "", exact: null, semantic: false, results };
   }
 
   const exact = resolveExact(db, query);
   const queryTokens = tokens(query);
 
-  // Field-weighted token scoring (multi-word AND).
-  let scored = [];
+  // Lexical score for every measure (matchedAll flags a genuine keyword hit).
+  const lex = new Map();
+  let maxLex = 0;
   for (const m of db.measures) {
     const { score, matchedAll } = scoreMeasure(db, m, queryTokens);
-    if (matchedAll && score > 0) scored.push({ measure: m, score });
+    const s = matchedAll && score > 0 ? score : 0;
+    lex.set(m.id, s);
+    if (s > maxLex) maxLex = s;
   }
 
-  // Fuzzy fallback when nothing matched cleanly (typos, near-misses).
+  // Semantic similarities over the FULL corpus (empty if AI off or query not embedded yet).
+  const sims = opts.semantic ? opts.semantic(query, db.measures) : null;
+
+  // ----- Semantic mode: rank the whole corpus by meaning -----
+  if (sims && sims.size) {
+    const denom = maxLex || 1;
+    let scored = db.measures.map((m) => {
+      const lx = lex.get(m.id) || 0;
+      const sem = sims.get(m.id) || 0;
+      let score;
+      if (exact && exact.id === m.id) score = 1000;               // exact alias stays on top
+      else if (lx > 0) score = 1 + 0.5 * sem + 0.3 * (lx / denom); // keyword hits keep priority
+      else score = sem;                                            // pure semantic recall
+      return { measure: m, score, sem, lx };
+    });
+    scored.sort((a, b) => b.score - a.score);
+
+    let results = scored.filter((r) => r.lx > 0 || r.sem >= SEM_THRESHOLD || (exact && exact.id === r.measure.id));
+    if (results.length === 0) results = scored.slice(0, SEM_FALLBACK); // never blank
+    results = results.slice(0, SEM_CAP);
+    return { query: q, exact, semantic: true, results };
+  }
+
+  // ----- Lexical mode (AI off): token match, then fuzzy fallback, then exact boost -----
+  let scored = [];
+  for (const m of db.measures) {
+    if (lex.get(m.id) > 0) scored.push({ measure: m, score: lex.get(m.id) });
+  }
   if (scored.length === 0) {
     const fuzzy = resolveFuzzy(db, query);
     const seen = new Set();
@@ -97,27 +136,11 @@ export function search(db, query, opts = {}) {
     }
     scored = out;
   }
-
-  // Boost an exact alias hit to the top.
   if (exact) {
     const hit = scored.find((r) => r.measure.id === exact.id);
     if (hit) hit.score += 100;
     else scored.unshift({ measure: db.byId.get(exact.id), score: 100 });
   }
-
-  // Optional semantic blend (Layer 2).
-  if (opts.semantic && scored.length > 1) {
-    const sims = opts.semantic(query, scored.map((r) => r.measure));
-    if (sims && sims.size) {
-      const maxLex = Math.max(...scored.map((r) => r.score)) || 1;
-      for (const r of scored) {
-        const lex = r.score / maxLex;
-        const sem = sims.get(r.measure.id) || 0;
-        r.score = r.measure.id === (exact && exact.id) ? r.score : 0.6 * lex + 0.4 * sem;
-      }
-    }
-  }
-
   scored.sort((a, b) => b.score - a.score);
-  return { query: q, exact, results: scored };
+  return { query: q, exact, semantic: false, results: scored };
 }

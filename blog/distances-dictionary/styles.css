@@ -202,6 +202,9 @@ a:hover { text-decoration: underline; }
 .exact-note { color: var(--ink); }
 .ai-on { color: var(--good); font-weight: 600; }
 .empty { color: var(--muted); font-style: italic; }
+.empty-state { font-style: normal; }
+.empty-state p { margin: 0 0 6px; }
+.empty-state .ai-btn { margin-top: 8px; }
 
 .card-grid {
   display: grid;

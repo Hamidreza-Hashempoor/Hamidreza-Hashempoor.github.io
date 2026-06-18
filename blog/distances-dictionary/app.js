@@ -78,6 +78,29 @@ const app = {
   semanticRanker() {
     return ranker();
   },
+
+  // Load the in-browser embedding model and switch search into semantic mode.
+  // Idempotent; reused by the toolbar button and the empty-state prompt.
+  async enableSemanticSearch() {
+    if (this.state.semanticEnabled || isLoading()) return;
+    if (aiBtn) aiBtn.disabled = true;
+    try {
+      await enableSemantic(this.db, (info) => {
+        if (!aiStatus) return;
+        if (info.status === "ready") aiStatus.textContent = "";
+        else if (info.progress) aiStatus.textContent = `${info.status} ${Math.round(info.progress)}%`;
+        else aiStatus.textContent = info.status;
+      });
+      this.state.semanticEnabled = true;
+      if (aiBtn) { aiBtn.textContent = "AI search on"; aiBtn.classList.add("on"); aiBtn.disabled = true; }
+      if (aiStatus) aiStatus.textContent = "";
+      if (this.state.query) { try { await prepareQuery(this.state.query); } catch (_) { /* ignore */ } }
+      route();
+    } catch (_) {
+      if (aiBtn) aiBtn.disabled = false;
+      if (aiStatus) aiStatus.textContent = "AI unavailable (offline?) — lexical search still works.";
+    }
+  },
 };
 
 /* ------------------------------- compare bar ------------------------------ */
@@ -208,27 +231,7 @@ function route() {
 
 function wireAiButton() {
   if (!aiBtn) return;
-  aiBtn.addEventListener("click", async () => {
-    if (app.state.semanticEnabled || isLoading()) return;
-    aiBtn.disabled = true;
-    try {
-      await enableSemantic(app.db, (info) => {
-        if (!aiStatus) return;
-        if (info.status === "ready") aiStatus.textContent = "";
-        else if (info.progress) aiStatus.textContent = `${info.status} ${Math.round(info.progress)}%`;
-        else aiStatus.textContent = info.status;
-      });
-      app.state.semanticEnabled = true;
-      aiBtn.textContent = "AI search on";
-      aiBtn.classList.add("on");
-      if (aiStatus) aiStatus.textContent = "";
-      if (app.state.query) await prepareQuery(app.state.query);
-      route();
-    } catch (_) {
-      aiBtn.disabled = false;
-      if (aiStatus) aiStatus.textContent = "AI unavailable (offline?) — lexical search still works.";
-    }
-  });
+  aiBtn.addEventListener("click", () => app.enableSemanticSearch());
 }
 
 /* ----------------------------------- init --------------------------------- */

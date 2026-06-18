@@ -131,6 +131,26 @@ function renderFilterRail(db, app) {
   return rail;
 }
 
+function renderEmptyState(app) {
+  const wrap = el("div", { class: "empty empty-state" });
+  const hasQuery = !!app.state.query;
+  const filtered = isFilterActive(app.state.filters);
+  if (hasQuery && !app.state.semanticEnabled) {
+    wrap.appendChild(el("p", {}, [`No keyword match for “${app.state.query}”.`]));
+    wrap.appendChild(el("p", { class: "muted" }, [
+      "Turn on AI search to find measures by meaning — it understands natural-language questions, not just keywords.",
+    ]));
+    const btn = el("button", { type: "button", class: "ai-btn" }, ["Enable AI search"]);
+    btn.addEventListener("click", () => app.enableSemanticSearch());
+    wrap.appendChild(btn);
+  } else if (filtered) {
+    wrap.appendChild(el("p", {}, ["No measures match the current filters. Try removing some."]));
+  } else {
+    wrap.appendChild(el("p", {}, ["No measures match. Try a different term."]));
+  }
+  return wrap;
+}
+
 export function renderHome(db, app) {
   const root = el("div", { class: "home" });
 
@@ -155,7 +175,7 @@ export function renderHome(db, app) {
   const main = el("section", { class: "results-col", "aria-label": "Results" });
 
   // Run search + filters.
-  const { exact, results } = search(db, app.state.query, {
+  const { exact, results, semantic } = search(db, app.state.query, {
     semantic: app.state.semanticEnabled ? app.semanticRanker() : null,
   });
   let measures = results.map((r) => r.measure);
@@ -175,13 +195,15 @@ export function renderHome(db, app) {
   } else {
     status.appendChild(el("span", {}, [`${measures.length} measures`]));
   }
-  if (app.state.semanticEnabled) {
-    status.appendChild(el("span", { class: "ai-on" }, [" · AI semantic ranking on"]));
+  if (semantic) {
+    status.appendChild(el("span", { class: "ai-on" }, [" · ranked by meaning (AI)"]));
+  } else if (app.state.semanticEnabled) {
+    status.appendChild(el("span", { class: "ai-on" }, [" · AI search on"]));
   }
   main.appendChild(status);
 
   if (measures.length === 0) {
-    main.appendChild(el("p", { class: "empty" }, ["No measures match. Try fewer filters or a different term."]));
+    main.appendChild(renderEmptyState(app));
   } else {
     const grid = el("div", { class: "card-grid" });
     measures.forEach((m) => grid.appendChild(renderResultCard(db, app, m)));

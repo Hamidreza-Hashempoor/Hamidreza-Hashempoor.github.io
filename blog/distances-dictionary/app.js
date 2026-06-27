@@ -10,6 +10,7 @@ import {
 import { answer, renderAnswer } from "./modules/assistant.js";
 import { search } from "./modules/search.js";
 import { renderChatPanel, askModel, hasToken, linkify } from "./modules/chat.js";
+import { renderLinker } from "./modules/linkerView.js";
 import { enableSemantic, ranker, prepareQuery, isReady, isLoading } from "./modules/embeddings.js";
 import { typeset } from "./modules/mathjax.js";
 import { el, debounce } from "./modules/util.js";
@@ -231,7 +232,8 @@ function route() {
   if (parts.length === 0) {
     app.state.filters = filterFromParams(params);
     view = renderHome(app.db, app);
-  } else if (parts[0] === "measure") {
+  } else if (parts[0] === "measure" || parts[0] === "m") {
+    // "#/m/:id" is the stable permalink (used by the linker); "#/measure/:id" kept.
     const m = app.db.byId.get(parts[1]);
     view = m ? renderDetail(app.db, app, m) : renderNotFound(`No measure with id “${parts[1] || ""}”.`);
     active = "";
@@ -243,6 +245,9 @@ function route() {
   } else if (parts[0] === "ask") {
     view = renderAsk();
     active = "ask";
+  } else if (parts[0] === "linker") {
+    view = renderLinker(app.db, app);
+    active = "linker";
   } else {
     view = renderNotFound();
     active = "";

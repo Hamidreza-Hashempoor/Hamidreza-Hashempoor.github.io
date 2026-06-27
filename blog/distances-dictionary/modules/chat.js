@@ -1,43 +1,11 @@
-// Layer 3 (optional): natural-language Q&A using a user-provided HuggingFace
-// Inference token. The static site cannot hold secrets, so the token is BYO:
-// entered in the browser, kept in memory by default, and only written to
-// localStorage with explicit consent. Answers are grounded by retrieval (RAG)
-// over the local database and link back to detail pages.
+// Grounded natural-language Q&A using the user's own AI provider (see llm.js).
+// The answer is grounded by retrieval (RAG) over the local dictionary and links
+// back to detail pages. Shared by the Ask page and the home "Press Enter" reply.
 
-import { el, escapeHTML, normalize } from "./util.js";
+import { el, escapeHTML } from "./util.js";
 import { search } from "./search.js";
 import { isReady as semanticReady, nearest } from "./embeddings.js";
-
-const ENDPOINT = "https://router.huggingface.co/v1/chat/completions";
-const TOKEN_KEY = "dd_hf_token";
-const MODEL_KEY = "dd_hf_model";
-const DEFAULT_MODEL = "meta-llama/Llama-3.2-3B-Instruct";
-
-let memToken = null;
-
-/* ------------------------------ token storage ----------------------------- */
-
-function safeLocal(get) {
-  try { return get(localStorage); } catch (_) { return null; }
-}
-export function getToken() {
-  return memToken || safeLocal((ls) => ls.getItem(TOKEN_KEY)) || "";
-}
-export function setToken(token, persist) {
-  memToken = token || null;
-  if (persist && token) safeLocal((ls) => ls.setItem(TOKEN_KEY, token));
-  else safeLocal((ls) => ls.removeItem(TOKEN_KEY));
-}
-export function clearToken() {
-  memToken = null;
-  safeLocal((ls) => ls.removeItem(TOKEN_KEY));
-}
-function getModel() {
-  return safeLocal((ls) => ls.getItem(MODEL_KEY)) || DEFAULT_MODEL;
-}
-function setModel(m) {
-  if (m) safeLocal((ls) => ls.setItem(MODEL_KEY, m));
-}
+import { callLLM, hasCreds, getModel, renderProviderSettings } from "./llm.js";
 
 /* -------------------------------- retrieval ------------------------------- */
 
@@ -66,7 +34,7 @@ function serializeEntry(db, m) {
   ].filter(Boolean).join("\n");
 }
 
-function buildMessages(db, question, entries) {
+function buildPrompt(db, question, entries) {
   const context = entries.map((m) => serializeEntry(db, m)).join("\n\n");
   const system =
     "You are an assistant for an interactive dictionary of distances and divergences. " +
@@ -75,54 +43,30 @@ function buildMessages(db, question, entries) {
     "Refer to measures by their exact canonical name so they can be linked. " +
     "Structure your answer as: 1) direct recommendation, 2) reason, 3) caveats, 4) related measures.";
   const user = `User question:\n${question}\n\nRelevant dictionary entries:\n${context}`;
-  return [
-    { role: "system", content: system },
-    { role: "user", content: user },
-  ];
-}
-
-/* ---------------------------------- call ---------------------------------- */
-
-async function callModel(messages, token, model) {
-  const res = await fetch(ENDPOINT, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, messages, max_tokens: 700, temperature: 0.2, stream: false }),
-  });
-  if (!res.ok) {
-    let detail = "";
-    try { detail = (await res.json()).error?.message || ""; } catch (_) { detail = await res.text().catch(() => ""); }
-    if (res.status === 401) throw new Error("Invalid or missing token (401). Check your HuggingFace access token.");
-    if (res.status === 402 || res.status === 403) throw new Error(`Access denied for this model (${res.status}). Try a different model or check provider access. ${detail}`);
-    throw new Error(`Request failed (${res.status}). ${detail}`);
-  }
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || "(empty response)";
+  return { system, user };
 }
 
 /* ----------------------- reusable generation (exported) ------------------- */
 
-/** True if a HuggingFace token is configured (memory or localStorage). */
+/** True if the selected provider has a key configured. */
 export function hasToken() {
-  return !!getToken();
+  return hasCreds();
 }
 
-/** The currently selected model id. */
+/** The current model id of the selected provider. */
 export function currentModel() {
   return getModel();
 }
 
 /**
- * Retrieve grounding entries, build the RAG prompt, and call the model.
+ * Retrieve grounding entries, build the RAG prompt, and call the user's provider.
  * @returns {Promise<{text:string, entries:object[], model:string}>}
- * Throws if no token is set or the request fails.
  */
 export async function askModel(db, question, k = 5) {
-  const token = getToken();
-  if (!token) throw new Error("No HuggingFace token set.");
+  if (!hasCreds()) throw new Error("No API key set. Add your provider key in AI settings.");
   const entries = await retrieve(db, question, k);
-  const messages = buildMessages(db, question, entries);
-  const text = await callModel(messages, token, getModel());
+  const { system, user } = buildPrompt(db, question, entries);
+  const text = await callLLM({ system, user, maxTokens: 800, temperature: 0.2 });
   return { text, entries, model: getModel() };
 }
 
@@ -148,7 +92,7 @@ export function linkify(db, text) {
     const re = new RegExp("(" + pattern + ")", "gi");
     html = html.replace(re, (match) => {
       const id = map.get(match.toLowerCase());
-      return id ? `<a href="#/measure/${id}">${match}</a>` : match;
+      return id ? `<a href="#/m/${id}">${match}</a>` : match;
     });
   }
   return html.replace(/\n/g, "<br>");
@@ -157,51 +101,14 @@ export function linkify(db, text) {
 /* --------------------------------- panel ---------------------------------- */
 
 export function renderChatPanel(db) {
-  const panel = el("section", { class: "chat-panel", "aria-label": "Ask the dictionary (BYO token)" });
+  const panel = el("section", { class: "chat-panel", "aria-label": "Ask the dictionary" });
   panel.appendChild(el("h2", {}, ["Ask with AI (optional)"]));
   panel.appendChild(el("p", { class: "muted" }, [
-    "Bring your own free HuggingFace token to ask in natural language. Answers are grounded in this dictionary and link to the relevant pages.",
+    "Connect your own AI provider (Claude, OpenRouter, Gemini, or Hugging Face). Answers are grounded in this dictionary and link to the relevant pages.",
   ]));
 
-  // Settings (token).
-  const settings = el("details", { class: "chat-settings" });
-  settings.appendChild(el("summary", {}, [getToken() ? "AI settings (token saved)" : "AI settings — add token"]));
-  const warn = el("p", { class: "chat-warn" }, [
-    "⚠ A static site cannot protect secrets. Use a free, low-scope token, never a production key. ",
-    "The token is kept only in this browser.",
-  ]);
-  const tokenInput = el("input", { type: "password", class: "chat-input-field", placeholder: "hf_… access token", autocomplete: "off" });
-  tokenInput.value = getToken();
-  const persist = el("input", { type: "checkbox", id: "chat-persist" });
-  const persistLabel = el("label", { for: "chat-persist", class: "chat-consent" }, [persist, el("span", {}, [" Remember on this device (localStorage)"])]);
-  const modelInput = el("input", { type: "text", class: "chat-input-field", placeholder: "model id" });
-  modelInput.value = getModel();
+  panel.appendChild(renderProviderSettings());
 
-  const saveBtn = el("button", { type: "button", class: "chat-btn" }, ["Save"]);
-  const clearBtn = el("button", { type: "button", class: "link-btn" }, ["Clear token"]);
-  const settingsStatus = el("span", { class: "chat-status" });
-  saveBtn.addEventListener("click", () => {
-    setToken(tokenInput.value.trim(), persist.checked);
-    setModel(modelInput.value.trim() || DEFAULT_MODEL);
-    settingsStatus.textContent = persist.checked ? "Saved (remembered on this device)." : "Saved for this session.";
-    settings.querySelector("summary").textContent = "AI settings (token saved)";
-  });
-  clearBtn.addEventListener("click", () => {
-    clearToken();
-    tokenInput.value = "";
-    settingsStatus.textContent = "Token cleared.";
-  });
-
-  settings.appendChild(warn);
-  settings.appendChild(el("label", { class: "field-label" }, ["HuggingFace token"]));
-  settings.appendChild(tokenInput);
-  settings.appendChild(persistLabel);
-  settings.appendChild(el("label", { class: "field-label" }, ["Model id (HF Inference)"]));
-  settings.appendChild(modelInput);
-  settings.appendChild(el("div", { class: "chat-actions" }, [saveBtn, clearBtn, settingsStatus]));
-  panel.appendChild(settings);
-
-  // Question box.
   const question = el("textarea", { class: "chat-question", rows: "3", placeholder: "e.g. What's the difference between Wasserstein and MMD?" });
   const askBtn = el("button", { type: "button", class: "chat-btn primary" }, ["Ask"]);
   const status = el("div", { class: "chat-status" });
@@ -210,30 +117,22 @@ export function renderChatPanel(db) {
   const doAsk = async () => {
     const q = question.value.trim();
     if (!q) return;
-    if (!hasToken()) {
-      status.textContent = "Add a HuggingFace token in AI settings first.";
-      settings.open = true;
-      return;
-    }
+    if (!hasCreds()) { status.textContent = "Add your provider API key in AI settings above."; return; }
     askBtn.disabled = true;
     answer.innerHTML = "";
-    status.textContent = "Retrieving entries and querying the model…";
+    status.textContent = "Querying your AI provider…";
     try {
       const { text, entries } = await askModel(db, q, 5);
       status.textContent = "";
       answer.innerHTML = linkify(db, text);
-      // Re-typeset any LaTeX the model produced.
-      if (window.MathJax && window.MathJax.typesetPromise) {
-        window.MathJax.typesetPromise([answer]).catch(() => {});
-      }
-      const src = el("p", { class: "chat-sources" }, [
+      if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise([answer]).catch(() => {});
+      answer.appendChild(el("p", { class: "chat-sources" }, [
         "Grounded in: ",
         ...entries.flatMap((m, i) => [
           i ? document.createTextNode(", ") : null,
-          el("a", { href: `#/measure/${m.id}` }, [m.canonical_name]),
+          el("a", { href: `#/m/${m.id}` }, [m.canonical_name]),
         ].filter(Boolean)),
-      ]);
-      answer.appendChild(src);
+      ]));
     } catch (err) {
       status.textContent = "";
       answer.appendChild(el("p", { class: "chat-error" }, [String(err.message || err)]));

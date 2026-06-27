@@ -1,0 +1,70 @@
+name: Validate dictionary data
+
+# Stage-7 growth-loop gate: when a PR changes the dictionary data, validate the
+# JSON so no broken/unreviewed entry reaches the live site. CI-only — this does
+# not change how GitHub Pages serves the site.
+
+on:
+  pull_request:
+    paths:
+      - "blog/distances-dictionary/data/**"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate measures.json
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          base = "blog/distances-dictionary/data"
+          M = json.load(open(f"{base}/measures.json"))
+          A = json.load(open(f"{base}/aliases.json"))
+          C = json.load(open(f"{base}/code_templates.json"))
+
+          KNOWN_TYPES = {"scalar","vector","matrix","spd_matrix","probability_vector",
+            "probability_density","probability_distribution","empirical_samples","function",
+            "set","metric_space","graph","string","time_series"}
+          KNOWN_PROPS = {"nonnegative","symmetric","bounded","metric","sqrt_metric","differentiable",
+            "convex_in_first_argument","finite_requires_absolute_continuity","requires_same_support",
+            "closed_form_gaussian"}
+
+          ids = {m.get("id") for m in M}
+          errors, seen, names = [], set(), set()
+          for m in M:
+              i = m.get("id")
+              if not i:
+                  errors.append("entry with missing id"); continue
+              if i in seen: errors.append(f"duplicate id: {i}")
+              seen.add(i)
+              nk = (m.get("canonical_name") or "").lower()
+              if nk in names: errors.append(f"duplicate canonical name: {m.get('canonical_name')}")
+              names.add(nk)
+              if not m.get("formula_latex") and not m.get("code_templates"):
+                  errors.append(f"{i}: empty formula and no code templates")
+              for r in m.get("related", []):
+                  if r not in ids: errors.append(f"{i}: related -> unknown id '{r}'")
+              for t in m.get("input_types", []):
+                  if t not in KNOWN_TYPES: errors.append(f"{i}: unknown input type '{t}'")
+              for k in (m.get("properties") or {}):
+                  if k not in KNOWN_PROPS: errors.append(f"{i}: unknown property '{k}'")
+              for t in m.get("code_templates", []):
+                  tpl = C.get(i)
+                  if not tpl or t not in tpl: errors.append(f"{i}: declared code template '{t}' not found")
+          for term, target in A.items():
+              if target not in ids: errors.append(f"alias '{term}' -> unknown id '{target}'")
+          for cid in C:
+              if cid not in ids: errors.append(f"code_templates has unknown measure id '{cid}'")
+
+          print(f"measures={len(M)} families/aliases={len(A)} code-templated={len(C)}")
+          if errors:
+              print(f"\nFAILED with {len(errors)} error(s):")
+              for e in errors: print("  -", e)
+              sys.exit(1)
+          print("OK: all dictionary data checks passed.")
+          PY

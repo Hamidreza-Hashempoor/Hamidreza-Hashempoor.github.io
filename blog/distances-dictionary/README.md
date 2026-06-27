@@ -22,12 +22,22 @@ https://hamidreza-hashempoor.github.io/blog/distances-dictionary/
 - **Compare** 2–4 measures side by side.
 - **Safe code generation** — audited NumPy / PyTorch / JAX templates only
   (never AI-generated code).
-- **Three optional AI layers**:
+- **Optional AI layers**:
   1. *Rule-based assistant* — deterministic, no model, always on.
   2. *In-browser semantic search* — free MiniLM embeddings via Transformers.js
      (loaded on demand, no API key).
-  3. *BYO-token chat* — natural-language Q&A grounded in the local entries using
-     your own HuggingFace Inference token (kept only in your browser).
+  3. *BYOK chat* — natural-language Q&A grounded in the local entries using **your
+     own** AI provider (Anthropic / OpenRouter / Gemini / Hugging Face). The key
+     stays in your browser (sessionStorage by default), billed to you — never the
+     site owner's. See `modules/llm.js`.
+- **PDF → Dictionary Linker** (`#/linker`) — upload a PDF (parsed client-side with
+  pdf.js) or paste text; your BYOK LLM detects the measures it uses (even under
+  different names), links each to a canonical entry with audited code, and drafts
+  schema-valid entries for missing ones (download for review). Optional &
+  experimental: Mathpix equation OCR (BYO key), Pyodide code verification, and an
+  annotated-PDF export (pdf-lib). Deep links use the stable `#/m/:id` permalink.
+  Unnamed-formula detection is the least reliable step — low-confidence and
+  unmatched items are flagged, never silently trusted.
 
 ## Local development
 
@@ -122,9 +132,21 @@ modules/
   graph.js              related-measure SVG graph
   codegen.js            code panel from audited templates
   mathjax.js            serialized MathJax re-typeset
-  assistant.js          Layer 1 rule-based assistant
+  assistant.js          Layer 1 rule-based assistant + converse()
   embeddings.js         Layer 2 Transformers.js semantic search (lazy)
-  chat.js               Layer 3 BYO-token RAG chat
+  chat.js               grounded RAG chat (uses llm.js)
+  llm.js                multi-provider BYOK client + key store + settings UI
   util.js               DOM/string helpers
+  # PDF → Dictionary Linker
+  pdf.js                pdf.js text extraction (lazy CDN) + page geometry
+  linker.js             catalog + chunk + detect/link (grounded) + draft entry
+  linkerView.js         the #/linker page (input, results, draft, exports)
+  verify.js             optional Pyodide check of a drafted reference impl (lazy)
+  mathpix.js            optional BYO equation OCR (experimental, lazy)
+  annotate.js           optional annotated-PDF export via pdf-lib (experimental, lazy)
 data/                   measures.json, aliases.json, families.json, code_templates.json
 ```
+
+Permalinks: every measure is reachable at `#/m/:id` (used by the linker);
+`#/measure/:id` still works. CI: `.github/workflows/validate-measures.yml`
+validates the data on PRs that touch `data/`.

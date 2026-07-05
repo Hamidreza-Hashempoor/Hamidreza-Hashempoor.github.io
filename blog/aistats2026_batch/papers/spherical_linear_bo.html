@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spherical Linear Gaussian Process for High-Dimensional Bayesian Optimization</title>
+  <meta name="description" content="A low-capacity Gaussian-process surrogate for high-dimensional Bayesian optimization: the standard linear kernel's boundary-seeking pathology, an inverse-stereographic spherical projection that makes prior variance constant, and a D=100 sparse-sine experiment with a reproducible notebook." />
+  <style>
+    :root {
+      --paper: #fffef8;
+      --ink: #1f2429;
+      --muted: #55606a;
+      --line: #d8d3c9;
+      --accent: #8a2d1f;
+      --accent-soft: #f2ebe2;
+      --maxw: 920px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 520px at 5% -10%, #f3efe5 0%, rgba(243, 239, 229, 0) 65%),
+        radial-gradient(900px 440px at 95% 0%, #efe6dc 0%, rgba(239, 230, 220, 0) 62%),
+        #f8f6f1;
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", serif;
+      line-height: 1.7;
+    }
+
+    .page {
+      width: min(var(--maxw), 94vw);
+      margin: 0 auto;
+      padding: 42px 0 56px;
+    }
+
+    .article {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 14px 40px rgba(40, 35, 26, 0.08);
+      padding: clamp(20px, 4vw, 46px);
+    }
+
+    .meta {
+      color: var(--muted);
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      letter-spacing: 0.02em;
+      font-size: 0.88rem;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .post-stats {
+      margin: 6px 0 16px;
+      display: grid;
+      gap: 8px;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      color: #4f5963;
+    }
+
+    .stat {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.02rem;
+      line-height: 1.35;
+    }
+
+    .stat svg {
+      width: 20px; height: 20px;
+      stroke: #5a626c; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .stat strong { color: #343b42; font-weight: 700; }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 4vw, 2.85rem);
+      line-height: 1.15;
+      letter-spacing: -0.015em;
+    }
+
+    .authors {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 1.02rem;
+    }
+
+    .tools {
+      margin-top: 18px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    .tools a {
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid #d6c6b7;
+      background: #fff;
+      border-radius: 999px;
+      padding: 7px 13px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .toc {
+      margin-top: 20px;
+      padding: 10px 14px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      font-size: 0.92rem;
+    }
+
+    .toc a {
+      color: #203142;
+      text-decoration: none;
+      margin-right: 10px;
+      white-space: nowrap;
+    }
+
+    h2 {
+      margin: 34px 0 10px;
+      font-size: clamp(1.25rem, 2.7vw, 1.75rem);
+      line-height: 1.25;
+    }
+
+    h3 {
+      margin: 22px 0 6px;
+      font-size: clamp(1.05rem, 2vw, 1.3rem);
+      color: var(--accent);
+    }
+
+    p { margin: 0 0 13px; font-size: 1.04rem; }
+
+    .eq {
+      margin: 15px 0;
+      padding: 12px 14px;
+      border: 1px solid #e0dbd1;
+      background: #fff;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+
+    .eq-note {
+      margin-top: -3px;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .figure-full {
+      margin: 20px auto;
+      border: 1px solid #e4dfd6;
+      border-radius: 9px;
+      background: #fff;
+      padding: 8px;
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    .figure-full img { display: block; width: auto; height: auto; max-width: 100%; }
+
+    .figure-full figcaption {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.4;
+    }
+
+    ul { margin-top: 6px; margin-bottom: 14px; padding-left: 20px; }
+    li { margin-bottom: 6px; }
+
+    .callout {
+      margin: 16px 0 22px;
+      padding: 14px 16px;
+      border: 1px solid #d5e0ef;
+      border-left: 4px solid var(--accent);
+      background: #f4f7fb;
+      border-radius: 8px;
+      font-size: 1.0rem;
+    }
+
+    .callout strong { color: var(--accent); }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin: 14px 0 8px;
+      border: 1px solid #e0dbd1;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    table.dist-table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.93rem;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    table.dist-table th {
+      background: var(--accent);
+      color: #fff;
+      text-align: left;
+      padding: 9px 12px;
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+    }
+
+    table.dist-table td {
+      padding: 8px 12px;
+      border-top: 1px solid #ece6dc;
+      vertical-align: top;
+    }
+
+    table.dist-table tr:nth-child(even) td { background: #faf7f0; }
+
+    table.dist-table td.group {
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft) !important;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    table.dist-table td.best { color: #2a6a2a; font-weight: 700; }
+
+    footer {
+      margin-top: 30px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    @media (max-width: 900px) {
+      p { font-size: 1rem; }
+    }
+  </style>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+  <div class="page">
+    <article class="article">
+      <div class="meta">AISTATS 2026 Batch • Paper 4</div>
+      <div class="post-stats" aria-label="Post metadata">
+        <div class="stat">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M12 7v6l4 2"></path>
+          </svg>
+          <span>15 minute read</span>
+        </div>
+        <div class="stat">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="4.5" width="18" height="16" rx="2"></rect>
+            <path d="M8 2.5v4M16 2.5v4M3 9.5h18"></path>
+          </svg>
+          <span><strong>Published:</strong> July 2026</span>
+        </div>
+      </div>
+      <h1>Spherical Linear Gaussian Process for High-Dimensional Bayesian Optimization</h1>
+      <p class="authors">Hamidreza Hashempoor • Institute for AI, University of Stuttgart</p>
+
+      <div class="tools">
+        <a href="../index.html">← Back to series</a>
+        <a href="https://openreview.net/forum?id=EvjTyCbBZX" target="_blank" rel="noopener">Original paper ↗</a>
+        <a href="resources/spherical_linear_bo/spherical_linear_bo_examples.html">View notebook</a>
+        <a href="resources/spherical_linear_bo/spherical_linear_bo_examples.ipynb">Download .ipynb</a>
+        <a href="#experiment">Experiment</a>
+        <a href="#results">Results</a>
+      </div>
+
+      <div class="toc">
+        <a href="#idea">The idea</a>
+        <a href="#rbf">RBF fragility</a>
+        <a href="#linear">Linear pathology</a>
+        <a href="#spherical">Spherical kernel</a>
+        <a href="#experiment">Experiment</a>
+        <a href="#results">Results</a>
+        <a href="#notebook">Notebook</a>
+      </div>
+
+      <p style="margin-top:18px;">
+        Bayesian optimization (BO) shines when you have a handful of expensive evaluations and a
+        surrogate that turns them into good next-query decisions. In <em>high</em> dimensions with
+        <em>few</em> data, though, the usual surrogates get fragile: flexible nonlinear kernels are
+        starved for data, and the simplest fix — a linear kernel — has a subtle geometric defect that
+        drags every query to the boundary of the box. This post follows the method of
+        <a href="https://openreview.net/forum?id=EvjTyCbBZX" target="_blank" rel="noopener">Spherical
+        Linear Gaussian Process for High-Dimensional Bayesian Optimization</a>, which keeps the
+        low-capacity linear model but reshapes its geometry with an inverse-stereographic projection so
+        that <em>every point has the same prior variance</em>. We rederive the theory, then verify its
+        three core claims on a $D=100$ sparse-sine problem, reproduced end-to-end by the companion
+        <a href="#notebook">notebook</a>.
+      </p>
+
+      <!-- ===================== IDEA ===================== -->
+      <h2 id="idea">The idea: a low-capacity surrogate with the right geometry</h2>
+      <p>
+        We want to maximize an expensive black box over a box,
+      </p>
+      <div class="eq">
+        $$ x^\star=\arg\max_{x\in\mathcal X} f(x),\qquad \mathcal X=[-1,1]^D, $$
+      </div>
+      <p>
+        in the regime that makes high-dimensional BO hard: many dimensions, little data,
+      </p>
+      <div class="eq">$$ D\gg 1,\qquad N\approx D \quad\text{or even}\quad N<D. $$</div>
+      <p>The BO loop is standard — fit a Gaussian-process surrogate to the data so far, maximize an
+        acquisition function (UCB or expected improvement), evaluate the chosen point, repeat. The
+        surrogate exists to make good <em>decisions</em>, not to approximate $f$ everywhere. That
+        reframing is what licenses a deliberately low-capacity model. The paper's argument is a chain:
+      </p>
+      <ul>
+        <li>Nonlinear kernels (RBF/Matérn) are <strong>data-hungry</strong> and their Euclidean
+          geometry <strong>degenerates</strong> in high dimension;</li>
+        <li>a Bayesian <strong>linear</strong> model is the natural low-capacity alternative — zero
+          curvature, the smoothest non-constant family — but its kernel is
+          <strong>boundary-seeking</strong>;</li>
+        <li>projecting inputs onto a sphere before the linear kernel <strong>removes</strong> that
+          pathology while keeping the model cheap and stable.</li>
+      </ul>
+
+      <!-- ===================== RBF ===================== -->
+      <h2 id="rbf">Why RBF geometry degenerates in high dimension</h2>
+      <p>The RBF kernel</p>
+      <div class="eq">$$ k_{\mathrm{RBF}}(x,x')=\exp\!\left(-\frac{\lVert x-x'\rVert^2}{2\ell^2}\right) $$</div>
+      <p>depends only on Euclidean distance, and for random points in $[-1,1]^D$ that distance
+        concentrates:</p>
+      <div class="eq">$$ \mathbb E\lVert x-x'\rVert^2\approx \frac{2D}{3}. $$</div>
+      <p>
+        No single lengthscale is safe: $\ell=O(1)$ makes $k\to 0$ (every point looks unrelated),
+        $\ell=O(D)$ makes $k\to 1$ (a near-constant prior), and even the balanced $\ell=O(\sqrt D)$
+        leaves distances dominated by <em>irrelevant</em> coordinates. Concretely, take
+        $f(x)=\sin(3x_1)$ on $[-1,1]^{100}$ and three points
+        $x=(0.5,0,\dots)$, $x'=(0.52,r_2,\dots)$, $x''=(-0.5,r_2,\dots)$ with the same random tail
+        $r_i\sim\mathrm{Unif}[-1,1]$. Functionally $x\!\approx\! x'$ (first coordinates close) and
+        $x\!\not\approx\! x''$ — but the full-distance RBF at $\ell=\sqrt{100}=10$ barely notices:
+      </p>
+      <div class="eq">
+        $$ k(x,x')\approx e^{-33/200}\approx 0.85,\qquad k(x,x'')\approx e^{-34/200}\approx 0.84. $$
+      </div>
+      <p>The 97 distractor dimensions swamp the one that matters. This is the fragility a lower-capacity
+        surrogate is meant to sidestep.</p>
+
+      <!-- ===================== LINEAR ===================== -->
+      <h2 id="linear">The linear GP: attractive, but boundary-seeking</h2>
+      <p>A Bayesian linear model $f(x)=w^\top x+b$ with a Gaussian prior on $w$ is a GP with the linear
+        kernel</p>
+      <div class="eq">$$ k_{\mathrm{lin}}(x,x')=x^\top x',\qquad \nabla^2 f(x)=0. $$</div>
+      <p>
+        Zero curvature is exactly the kind of strong, cheap prior that suits high-dimensional low-data
+        BO. The trouble is the <em>prior variance</em> it induces:
+      </p>
+      <div class="eq">$$ k_{\mathrm{lin}}(x,x)=\lVert x\rVert^2. $$</div>
+      <p>
+        On $[-1,1]^D$ this ranges from $0$ at the origin to $D$ at a corner (e.g. $k=100$ at
+        $(1,\dots,1)$ in $D=100$). Any acquisition function that increases in posterior variance —
+        UCB, EI — is therefore pulled toward high-norm points. The paper makes this exact: for such
+        acquisitions the linear-GP optimum always lands on the boundary,
+      </p>
+      <div class="eq">
+        $$ x_{t+1}=\arg\max_{x\in[-1,1]^D}\alpha_t(x)\;\Longrightarrow\;\lVert x_{t+1}\rVert_\infty=1. $$
+      </div>
+      <p>At least one coordinate is pinned to $\pm 1$, regardless of the objective. That is the
+        <strong>boundary-seeking pathology</strong>.</p>
+
+      <!-- ===================== SPHERICAL ===================== -->
+      <h2 id="spherical">The spherical linear kernel</h2>
+      <p>
+        The fix keeps the linear model but maps inputs onto a unit hypersphere first, so the magnitude
+        geometry disappears. The kernel is
+      </p>
+      <div class="eq">
+        $$ k_{\mathrm{sph}}(x,x')=b_0+b_1\,P(z)^\top P(z'),\qquad b_0,b_1>0,\;\; b_0+b_1=1, $$
+      </div>
+      <p>on scaled inputs $z_i=x_i/(a\,\ell_i)$, where $a>0$ is a global lengthscale (initialized
+        $O(\sqrt D)$) and $\ell_i>0$ are per-dimension (ARD) lengthscales. The map $P$ is the inverse
+        stereographic projection</p>
+      <div class="eq">
+        $$ P(z)=\frac{1}{\lVert z\rVert^2+1}\bigl[\,2z_1,\dots,2z_D,\;\lVert z\rVert^2-1\,\bigr],
+        \qquad P:\mathbb R^D\to\mathbb S^D\subset\mathbb R^{D+1}. $$
+      </div>
+      <p>Its defining property is that everything lands on the unit sphere, $\lVert P(z)\rVert=1$, which
+        collapses the prior variance to a constant:</p>
+      <div class="eq">$$ k_{\mathrm{sph}}(x,x)=b_0+b_1=1\quad\text{for every }x. $$</div>
+      <p>
+        No point gets an artificial uncertainty bonus for being near a corner — the boundary bias is
+        gone. Yet the model is <em>not</em> a constant prior, because cross-terms still vary: since both
+        projected points sit on the sphere,
+      </p>
+      <div class="eq">$$ P(z)^\top P(z')=\cos\theta, $$</div>
+      <p>the angle between them, so similarity is measured by <em>direction</em> rather than magnitude.
+        A useful identity for implementation and testing rewrites this without forming $P$ explicitly:</p>
+      <div class="eq">
+        $$ P(z)^\top P(z')=1-\frac{2\lVert z-z'\rVert^2}{(1+\lVert z\rVert^2)(1+\lVert z'\rVert^2)}. $$
+      </div>
+      <p>
+        The model is linear in the spherical features, $f(x)=w^\top P(z)+c$, hence a compact rational
+        nonlinear family in the original coordinates while staying only $D\!+\!1$-dimensional in feature
+        space. One caveat the paper is careful about: the projection alone fixes <em>variance</em>
+        geometry, not <em>relevance</em>. Distinguishing active from inactive dimensions still needs the
+        per-dimension $\ell_i$ (ARD) — the sphere does not identify the active subspace by itself.
+      </p>
+      <div class="callout">
+        <strong>The one-line summary.</strong> The spherical linear GP combines a low-capacity, smooth
+        global model with a <strong>normalized prior variance</strong>. It removes the boundary-seeking
+        pathology of the ordinary linear kernel and reduces reliance on fragile high-dimensional
+        Euclidean distance — making it a better <em>acquisition</em> surrogate in high-dimensional
+        low-data BO, not a universally better function approximator.
+      </div>
+
+      <!-- ===================== EXPERIMENT ===================== -->
+      <h2 id="experiment">The minimal experiment</h2>
+      <p>
+        A high-dimensional objective with a known, tiny active subspace makes every claim checkable.
+        Only the first three of $100$ coordinates matter:
+      </p>
+      <div class="eq">
+        $$ f(x)=\sin(3x_1)+0.5\cos(4x_2)+0.25\,x_3,\qquad x\in[-1,1]^{100}. $$
+      </div>
+      <p>
+        Three surrogates run the same BO loop with UCB, $\alpha(x)=\mu(x)+\beta\,\sigma(x)$, maximized
+        by random search over a shared candidate pool: an <strong>RBF</strong> GP (global lengthscale),
+        the <strong>standard linear</strong> GP, and the <strong>spherical linear</strong> GP. To probe
+        the theory cleanly, the spherical kernel uses <em>oracle</em> ARD — short lengthscales
+        ($\ell=1$) on the three active dimensions, long ones ($\ell=100$) on the rest — with global
+        scale $a=\sqrt{D}$ and mixture weights $b_0=0.1,\,b_1=0.9$. The exact configuration:
+      </p>
+      <div class="table-wrap">
+        <table class="dist-table">
+          <thead><tr><th>Setting</th><th>Value</th><th>Setting</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td>dimension $D$</td><td>100</td><td>active dims</td><td>$\{0,1,2\}$</td></tr>
+            <tr><td>init design $N_{\text{init}}$</td><td>10</td><td>BO iterations $N_{\text{iter}}$</td><td>40</td></tr>
+            <tr><td>acquisition</td><td>UCB, $\beta=2$</td><td>candidate pool</td><td>20,000 (random search)</td></tr>
+            <tr><td>RBF lengthscale $\ell$</td><td>10.0</td><td>observation noise</td><td>$10^{-6}$ (noiseless)</td></tr>
+            <tr><td>spherical $a$</td><td>$\sqrt{D}=10$</td><td>spherical $(b_0,b_1)$</td><td>$(0.1,\,0.9)$</td></tr>
+            <tr><td>oracle ARD (active)</td><td>$\ell_i=1$</td><td>oracle ARD (inactive)</td><td>$\ell_i=100$</td></tr>
+            <tr><td>seed</td><td>0</td><td>RNG per model</td><td>re-seeded (shared init &amp; pools)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="eq-note">Re-seeding the RNG per surrogate means all three see the identical initial
+        design and identical candidate pools, so any difference is attributable to the kernel alone.</p>
+
+      <!-- ===================== RESULTS ===================== -->
+      <h2 id="results">Results</h2>
+      <p>
+        The experiment splits into two questions: does the <em>kernel geometry</em> behave as the theory
+        predicts, and does that translate into <em>better BO behavior</em>?
+      </p>
+
+      <h3>Kernel geometry — verifying the theory</h3>
+      <figure class="figure-full">
+        <img src="resources/spherical_linear_bo/kernel_geometry.png" alt="Left: prior standard deviation versus norm of x for the three kernels; the linear kernel rises linearly while RBF and spherical stay flat. Right: kernel response as one coordinate is perturbed, showing the spherical kernel reacts to an active dimension but not an inactive one, while RBF treats both identically." />
+        <figcaption>
+          Figure 1. <strong>(A)</strong> Prior std $\sqrt{k(x,x)}$ vs. $\lVert x\rVert$: the standard
+          linear kernel grows straight up with the norm (boundary-seeking), while RBF and spherical are
+          <em>flat</em> — spherical exactly at $1$. <strong>(B)</strong> Kernel response as a single
+          coordinate is perturbed: with oracle ARD the spherical kernel drops sharply along an
+          <em>active</em> dimension (solid green) but is unmoved along an <em>inactive</em> one (dashed
+          green at $1$); the RBF curves for active and inactive dimensions essentially overlap.
+        </figcaption>
+      </figure>
+      <p>The direct kernel diagnostics put numbers on all three claims:</p>
+      <div class="table-wrap">
+        <table class="dist-table">
+          <thead><tr><th>Diagnostic</th><th>Quantity</th><th>Value</th><th>Verdict</th></tr></thead>
+          <tbody>
+            <tr><td class="group" rowspan="2">Claim 1 · linear variance</td>
+                <td>corr$\bigl(k_{\mathrm{lin}}(x,x),\,\lVert x\rVert\bigr)$</td><td>0.9995</td>
+                <td>variance ∝ norm</td></tr>
+            <tr><td>variance range (min → max)</td><td>23.83 → 46.80</td><td>grows to boundary</td></tr>
+            <tr><td class="group">Claim 2 · spherical variance</td>
+                <td>$\max_x\lvert k_{\mathrm{sph}}(x,x)-1\rvert$</td><td>$4.4\times10^{-16}$</td>
+                <td class="best">constant $\equiv 1$</td></tr>
+            <tr><td class="group">RBF concentration</td>
+                <td>mean $\lVert x-x'\rVert^2$ (expect $2D/3=66.7$)</td><td>66.45</td>
+                <td>distances concentrate</td></tr>
+            <tr><td class="group" rowspan="2">Claim 3 · active-dim sanity</td>
+                <td>RBF: $k(x,x')$ vs $k(x,x'')$</td><td>0.8435 vs 0.8393</td>
+                <td>cannot distinguish</td></tr>
+            <tr><td>spherical: $k(x,x')$ vs $k(x,x'')$</td><td>0.9900 vs 0.9722</td>
+                <td class="best">distinguishes</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="eq-note">$x'$ differs from $x$ only slightly on the active coordinate ($0.50\to0.52$);
+        $x''$ flips it ($0.50\to-0.5$) but shares $x'$'s random tail. The spherical kernel with ARD
+        rates $x'$ as more similar than $x''$; the RBF kernel rates them essentially equal.</p>
+
+      <h3>Bayesian optimization behavior</h3>
+      <figure class="figure-full">
+        <img src="resources/spherical_linear_bo/bo_results.png" alt="Left: best objective found so far versus BO iteration for the three surrogates. Right: mean boundary fraction as bars and mean norm of selected points as diamonds, for each surrogate." />
+        <figcaption>
+          Figure 2. <strong>(C)</strong> Best objective vs. iteration. Spherical linear improves earliest
+          (climbing by iteration 6) and plateaus stably; RBF reaches the highest value late; standard
+          linear lags until a boundary point finally pays off. <strong>(D)</strong> Boundary-seeking of
+          the selected points: spherical linear has both the <em>lowest</em> boundary fraction (0.057)
+          and the <em>smallest</em> mean $\lVert x\rVert$ (5.90) — the opposite corner of the plot from
+          the standard linear surrogate (0.085, 6.41).
+        </figcaption>
+      </figure>
+      <div class="table-wrap">
+        <table class="dist-table">
+          <thead>
+            <tr><th>Surrogate</th><th>best $y$</th><th>mean $\lVert x\rVert$</th><th>mean $\lVert x\rVert_\infty$</th><th>boundary fraction</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="group">RBF</td><td class="best">1.7129</td><td>6.0465</td><td>0.9907</td><td>0.0635</td></tr>
+            <tr><td class="group">Standard linear</td><td>1.5497</td><td>6.4120</td><td>0.9938</td><td>0.0850</td></tr>
+            <tr><td class="group">Spherical linear (ours)</td><td>1.5674</td><td class="best">5.8965</td><td class="best">0.9907</td><td class="best">0.0570</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="eq-note">Best value per column highlighted. Boundary fraction = mean share of coordinates
+        with $\lvert x_i\rvert>0.95$ among the selected points.</p>
+
+      <div class="callout">
+        <strong>Reading the results honestly.</strong> This is a minimal <em>sanity</em> experiment, not
+        a claim that spherical linear GPs beat RBF everywhere. Two things do hold cleanly. First, the
+        <strong>geometry</strong> behaves exactly as derived: linear variance tracks $\lVert x\rVert$
+        with correlation $0.9995$, spherical variance is constant to machine precision, and only the
+        spherical kernel (with ARD) separates active-coordinate changes from the high-dimensional noise.
+        Second, spherical linear is the <strong>least boundary-seeking</strong> surrogate — lowest
+        boundary fraction and smallest mean $\lVert x\rVert$ — precisely the pathology it targets. On
+        raw <code>best_y</code> the RBF wins here, which is unsurprising: the objective is smooth and
+        low-frequency, the friendliest possible case for RBF, and the setup uses oracle ARD rather than
+        learned lengthscales. The value of the spherical construction is the fixed variance geometry it
+        buys at essentially linear-model cost.
+      </div>
+
+      <!-- ===================== NOTEBOOK ===================== -->
+      <h2 id="notebook">Reproduce it</h2>
+      <p>
+        The companion notebook re-runs the whole experiment from scratch using only <code>numpy</code>,
+        <code>scipy</code>, and <code>matplotlib</code>. It implements the three kernels (including the
+        inverse-stereographic projection with a $\lVert P(z)\rVert=1$ check), an exact Cholesky GP
+        posterior, UCB with random-search acquisition, and the per-model BO loop, then recomputes the
+        summary table and the kernel diagnostics and regenerates both figures. Re-seeding the RNG per
+        model reproduces the reference run <em>exactly</em> — the summary statistics match to
+        $0$ (bit-for-bit) and the diagnostics to floating-point noise.
+      </p>
+      <div class="tools" style="margin-top:6px;">
+        <a href="resources/spherical_linear_bo/spherical_linear_bo_examples.html">View notebook (rendered)</a>
+        <a href="resources/spherical_linear_bo/spherical_linear_bo_examples.ipynb">Download .ipynb</a>
+      </div>
+
+      <footer>
+        The figures and tables are from the $D=100$ sparse-sine run described above, reproduced by the
+        linked notebook. Summaries are my own re-derivation for study; see the linked paper for the
+        authoritative statements.
+      </footer>
+    </article>
+  </div>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "rbf": {
+    "best_y": 1.7128616242021557,
+    "mean_x_next_norm": 6.046470398219557,
+    "mean_x_next_linf": 0.9907268225213572,
+    "mean_boundary_fraction": 0.0635
+  },
+  "linear": {
+    "best_y": 1.5496833149528992,
+    "mean_x_next_norm": 6.412045754123835,
+    "mean_x_next_linf": 0.9938224104440465,
+    "mean_boundary_fraction": 0.08499999999999999
+  },
+  "spherical_linear": {
+    "best_y": 1.5674391800766312,
+    "mean_x_next_norm": 5.896504720137484,
+    "mean_x_next_linf": 0.9907231787673773,
+    "mean_boundary_fraction": 0.05700000000000001
+  }
+}

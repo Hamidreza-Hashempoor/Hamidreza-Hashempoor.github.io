@@ -36,7 +36,8 @@ const DETECT_SYSTEM =
   "You analyze an academic text CHUNK and identify every MENTION of a distance, divergence, " +
   "similarity, or metric MEASURE between mathematical objects (vectors, matrices, probability " +
   "distributions, functions, strings, quantum states). Include measures referred to by an alias or " +
-  "abbreviation, and measures DEFINED by a formula even if unnamed. " +
+  "abbreviation, and measures DEFINED by a formula even if unnamed — including equations that state a " +
+  "measure's definition, an identity, or an inequality between measures (use the equation text as the surface). " +
   "Link each mention to AT MOST ONE entry from the provided CATALOG, matching by name, alias, symbol, " +
   "operand type, or an adjacent formula. If it is genuinely a measure but no catalog entry fits, set " +
   "\"id\": null (a possible new entry). " +

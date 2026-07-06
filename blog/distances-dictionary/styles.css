@@ -308,6 +308,11 @@ a.chip:hover { text-decoration: none; border-color: var(--accent); color: var(--
   font-size: 0.96rem;
 }
 
+.relations { display: grid; gap: 14px; }
+.relation .eq { margin: 0 0 4px; }
+.relation-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-family: var(--sans); font-size: 0.85rem; }
+.relation-note { color: var(--muted); font-style: italic; }
+
 .prop-table { border-collapse: collapse; width: 100%; margin-top: 8px; font-family: var(--sans); font-size: 0.92rem; }
 .prop-table td { padding: 6px 10px; border-top: 1px solid #ece6dc; }
 .prop-name { color: var(--muted); width: 60%; }
@@ -522,6 +527,13 @@ a.chip:hover { text-decoration: none; border-color: var(--accent); color: var(--
 .lk-checks { margin: 4px 0; padding-left: 18px; }
 .lk-pass { color: var(--good); }
 .lk-fail { color: var(--bad); }
+
+/* ------------------------------ browse by type ---------------------------- */
+
+.types-nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 18px; }
+.types-nav .chip { cursor: pointer; font-family: var(--sans); border-color: #d6c6b7; }
+.types-nav .chip:hover { background: var(--accent-soft); color: var(--accent); }
+.types-view .lk-section h2 { scroll-margin-top: 80px; }
 
 /* ------------------------------ misc / states ----------------------------- */
 

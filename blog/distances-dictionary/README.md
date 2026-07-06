@@ -17,8 +17,11 @@ https://hamidreza-hashempoor.github.io/blog/distances-dictionary/
 - **Search** by name, alias, formula idea, object type, property, or use case
   (lexical cascade: exact alias → fuzzy → field-weighted token match).
 - **Filter** by object type, mathematical property, family, and application.
-- **Detail pages** with KaTeX-style MathJax formulas, properties, worked
-  examples, parameters, related measures, and a relation graph.
+- **Detail pages** with MathJax formulas, properties, worked examples, parameters,
+  **cross-linked identities & inequalities** (e.g. Pinsker, √JS is a metric,
+  W₂(Gaussians)=Bures), related measures, and a relation graph.
+- **Browse by object type** (`#/types`) — flash cards grouped by vector / matrix /
+  SPD / distribution / point cloud / graph / …
 - **Compare** 2–4 measures side by side.
 - **Safe code generation** — audited NumPy / PyTorch / JAX templates only
   (never AI-generated code).
@@ -74,10 +77,13 @@ All content lives in `data/`:
   "aliases": ["JS divergence", "JSD"],
   "short_description": "…",
   "family": ["symmetrized", "f-divergence"],   // family slugs (see families.json)
-  "input_types": ["probability_vector"],        // see KNOWN_OBJECT_TYPES in modules/data.js
+  "input_types": ["probability_vector"],        // object types; see KNOWN_OBJECT_TYPES in modules/data.js
+  "symbols": ["\\mathrm{JS}(p,q)"],             // optional LaTeX symbol forms
   "formula_latex": "\\mathrm{JS}(p,q)=…",       // raw LaTeX (no surrounding $$)
   "formula_plaintext": "JS(p,q) = …",           // for code/AI context
   "properties": { "symmetric": true, "bounded": true, "metric": false },
+  "identities":   [{ "latex": "…", "refs": ["kullback_leibler"], "note": "…" }],  // cross-linked
+  "inequalities": [{ "latex": "…", "refs": ["total_variation"],  "note": "Pinsker" }],
   "range": "[0, log 2]",
   "parameters": [{ "name": "alpha", "description": "…", "default": "0" }],
   "assumptions": ["…"],
@@ -136,6 +142,7 @@ modules/
   embeddings.js         Layer 2 Transformers.js semantic search (lazy)
   chat.js               grounded RAG chat (uses llm.js)
   llm.js                multi-provider BYOK client + key store + settings UI
+  config.js             repo config + GitHub edit/issue link helpers
   util.js               DOM/string helpers
   # PDF → Dictionary Linker
   pdf.js                pdf.js text extraction (lazy CDN) + page geometry
@@ -150,3 +157,20 @@ data/                   measures.json, aliases.json, families.json, code_templat
 Permalinks: every measure is reachable at `#/m/:id` (used by the linker);
 `#/measure/:id` still works. CI: `.github/workflows/validate-measures.yml`
 validates the data on PRs that touch `data/`.
+
+## Contributing (dynamic flash cards)
+
+The cards are **data-driven**, so collaborators keep them current without touching
+code — and because links (in the app and in annotated PDFs) point to the stable
+`#/m/:id` permalink, a merged change shows through everywhere automatically.
+
+- **Edit an existing card:** open a measure → *Contribute* → **Edit data on GitHub**
+  (edits `data/measures.json` and opens a PR) or **Suggest an edit** (prefilled issue).
+- **Add a missing measure:** in the PDF Linker, an unmatched measure can be
+  **drafted** by the AI → **Download JSON** or **Propose via GitHub issue**.
+- Add the entry to `data/measures.json` (schema above); reference other measures by
+  `id` in `related`, `identities[].refs`, `inequalities[].refs`.
+- Open a PR. **CI** (`validate-measures.yml`) checks ids/aliases/types/property keys
+  and that every `refs` resolves. Merge → GitHub Pages rebuilds → the card is live.
+
+No unreviewed math reaches the site: human review + CI gate every contribution.

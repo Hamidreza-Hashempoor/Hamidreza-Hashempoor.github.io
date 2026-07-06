@@ -16,6 +16,7 @@ export const KNOWN_OBJECT_TYPES = new Set([
   "scalar", "vector", "matrix", "spd_matrix", "probability_vector",
   "probability_density", "probability_distribution", "empirical_samples",
   "function", "set", "metric_space", "graph", "string", "time_series",
+  "point_cloud", "tensor", "sequence",
 ]);
 
 export const OBJECT_TYPE_LABELS = {
@@ -33,6 +34,9 @@ export const OBJECT_TYPE_LABELS = {
   graph: "Graph",
   string: "String",
   time_series: "Time series",
+  point_cloud: "Point cloud",
+  tensor: "Tensor",
+  sequence: "Sequence",
 };
 
 export const KNOWN_PROPERTY_KEYS = new Set([
@@ -174,6 +178,14 @@ function validate(db) {
     for (const t of m.code_templates || []) {
       const tpl = db.codeTemplates[m.id];
       if (!tpl || !tpl[t]) warnings.push(`${m.id}: declared code template "${t}" not found`);
+    }
+    for (const kind of ["identities", "inequalities"]) {
+      for (const rel of m[kind] || []) {
+        if (!rel || !rel.latex) warnings.push(`${m.id}: ${kind} entry missing latex`);
+        for (const r of (rel && rel.refs) || []) {
+          if (!db.byId.has(r)) warnings.push(`${m.id}: ${kind} ref -> unknown id "${r}"`);
+        }
+      }
     }
   }
   for (const [term, id] of db.aliasIndex) {

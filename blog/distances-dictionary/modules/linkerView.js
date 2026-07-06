@@ -9,6 +9,7 @@ import { detectAndLink, draftEntry } from "./linker.js";
 import { verifyDraft } from "./verify.js";
 import { renderMathpixSettings, hasMathpix, ocrDocument } from "./mathpix.js";
 import { annotatePdf } from "./annotate.js";
+import { newCardIssueUrl } from "./config.js";
 import { renderCodePanel } from "./codegen.js";
 import { typeset } from "./mathjax.js";
 
@@ -101,9 +102,10 @@ export function renderLinker(db) {
       output.appendChild(el("p", { class: "chat-error" }, [`Some chunks failed: ${res.errors[0]}`]));
     }
 
-    // Optional: annotated-PDF export (only on the pdf.js text path; experimental).
+    // Annotated-PDF export (available on the pdf.js text path). Each detected
+    // measure becomes a clickable link to its live #/m/:id dictionary card.
     if (pdfState && matched.length) {
-      const annBtn = el("button", { type: "button", class: "chat-btn" }, ["Download annotated PDF (experimental)"]);
+      const annBtn = el("button", { type: "button", class: "chat-btn primary" }, ["Download annotated PDF"]);
       const annStatus = el("span", { class: "chat-status" });
       annBtn.addEventListener("click", async () => {
         annBtn.disabled = true;
@@ -173,6 +175,7 @@ export function renderLinker(db) {
             out.appendChild(el("pre", { class: "code-block" }, [el("code", {}, [JSON.stringify(entry, null, 2)])]));
             const dl = el("button", { type: "button", class: "chat-btn" }, ["Download JSON"]);
             dl.addEventListener("click", () => downloadJSON(entry, `${entry.id || "draft-entry"}.json`));
+            const propose = el("a", { class: "chat-btn", href: newCardIssueUrl(entry), target: "_blank", rel: "noopener" }, ["Propose via GitHub issue"]);
             // Optional: verify the drafted reference code in Pyodide (lazy).
             const verifyBtn = el("button", { type: "button", class: "chat-btn" }, ["Verify code"]);
             const verifyOut = el("div", { class: "lk-verify" });
@@ -194,7 +197,7 @@ export function renderLinker(db) {
               }
               verifyBtn.disabled = false;
             });
-            out.appendChild(el("div", { class: "chat-actions" }, [dl, verifyBtn]));
+            out.appendChild(el("div", { class: "chat-actions" }, [dl, propose, verifyBtn]));
             out.appendChild(verifyOut);
           } catch (e) {
             out.textContent = "Draft failed: " + (e && e.message ? e.message : e);

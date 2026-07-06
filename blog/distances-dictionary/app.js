@@ -3,7 +3,7 @@
 
 import { loadData } from "./modules/data.js";
 import { parseHash, onRoute } from "./modules/router.js";
-import { renderHome, renderDetail, renderCompare, renderNotFound } from "./modules/render.js";
+import { renderHome, renderDetail, renderCompare, renderNotFound, renderTypesView } from "./modules/render.js";
 import {
   filterFromParams, filterToParams, emptyFilterState,
 } from "./modules/filters.js";
@@ -242,6 +242,9 @@ function route() {
     ids.forEach((id) => app.state.compare.add(id));
     view = renderCompare(app.db, app, ids);
     active = "";
+  } else if (parts[0] === "types") {
+    view = renderTypesView(app.db, app);
+    active = "types";
   } else if (parts[0] === "ask") {
     view = renderAsk();
     active = "ask";

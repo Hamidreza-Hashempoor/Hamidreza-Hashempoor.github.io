@@ -50,5 +50,13 @@
   "quantum": {
     "label": "Quantum geometry",
     "blurb": "Density-matrix analogues where integrals become traces: von Neumann entropy and the von Neumann (quantum relative) divergence."
+  },
+  "kernel-representation": {
+    "label": "Kernel & representation similarity",
+    "blurb": "Similarities between kernel/Gram matrices or learned representations, e.g. Centered Kernel Alignment (CKA)."
+  },
+  "graph-distance": {
+    "label": "Graph distances",
+    "blurb": "Distances between graphs: structural (graph edit distance) or spectral (comparing Laplacian eigenvalues)."
   }
 }

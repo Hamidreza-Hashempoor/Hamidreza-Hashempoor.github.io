@@ -317,6 +317,16 @@
   },
   {
     "id": "kullback_leibler",
+    "symbols": ["D_{KL}(p\\|q)", "KL(p\\|q)", "D(p\\|q)"],
+    "identities": [
+      { "latex": "\\mathrm{KL}(p\\|q)=H(p,q)-H(p)", "refs": ["cross_entropy", "shannon_entropy"], "note": "cross-entropy minus entropy" },
+      { "latex": "J(p,q)=\\mathrm{KL}(p\\|q)+\\mathrm{KL}(q\\|p)", "refs": ["jeffreys", "reverse_kl"], "note": "symmetrizes to Jeffreys" },
+      { "latex": "\\lim_{\\alpha\\to 1} R_\\alpha(p\\|q)=\\mathrm{KL}(p\\|q)", "refs": ["renyi_divergence"], "note": "Rényi limit at α=1" }
+    ],
+    "inequalities": [
+      { "latex": "\\mathrm{TV}(p,q)\\le\\sqrt{\\tfrac12\\,\\mathrm{KL}(p\\|q)}", "refs": ["total_variation"], "note": "Pinsker's inequality" },
+      { "latex": "\\mathrm{KL}(p\\|q)\\ge 0,\\ \\ =0\\iff p=q", "refs": [], "note": "Gibbs' inequality" }
+    ],
     "canonical_name": "Kullback-Leibler divergence",
     "aliases": ["KL divergence", "relative entropy", "KL distance", "I-divergence", "information gain"],
     "short_description": "Expected log-ratio of p to q; the canonical asymmetric divergence and the only one that is both an f-divergence and a Bregman divergence.",
@@ -341,6 +351,11 @@
   },
   {
     "id": "reverse_kl",
+    "symbols": ["\\mathrm{KL}(q\\|p)", "D_{KL}(q\\|p)"],
+    "identities": [
+      { "latex": "\\mathrm{KL}(q\\|p)=H(q,p)-H(q)", "refs": ["cross_entropy", "shannon_entropy"], "note": "cross-entropy form" },
+      { "latex": "J(p,q)=\\mathrm{KL}(p\\|q)+\\mathrm{KL}(q\\|p)", "refs": ["jeffreys", "kullback_leibler"], "note": "sums to Jeffreys" }
+    ],
     "canonical_name": "Reverse KL divergence",
     "aliases": ["reverse Kullback-Leibler", "mode-seeking KL", "exclusive KL"],
     "short_description": "KL with arguments swapped, KL(q||p); minimizing it is mode-seeking (zero-forcing).",
@@ -365,6 +380,14 @@
   },
   {
     "id": "pearson_chi2",
+    "symbols": ["\\chi^2(p\\|q)"],
+    "identities": [
+      { "latex": "\\chi^2(p\\|q)=\\int\\frac{(q-p)^2}{p}\\,d\\mu=\\int\\frac{q^2}{p}\\,d\\mu-1", "refs": [], "note": "equivalent forms" },
+      { "latex": "\\chi^2(p\\|q)=\\chi^2_N(q\\|p)", "refs": ["neyman_chi2"], "note": "Neyman is the swapped version" }
+    ],
+    "inequalities": [
+      { "latex": "\\chi^2\\ \\text{is the 2nd-order (local) approximation of }2\\,\\mathrm{KL}", "refs": ["kullback_leibler"], "note": "near p≈q" }
+    ],
     "canonical_name": "Pearson chi-square divergence",
     "aliases": ["Pearson chi^2", "chi-square divergence"],
     "short_description": "An f-divergence that locally approximates KL to second order; basis of the chi-square goodness-of-fit test.",
@@ -389,6 +412,10 @@
   },
   {
     "id": "neyman_chi2",
+    "symbols": ["\\chi^2_N(p\\|q)"],
+    "identities": [
+      { "latex": "\\chi^2_N(p\\|q)=\\chi^2(q\\|p)", "refs": ["pearson_chi2"], "note": "Pearson with p, q swapped" }
+    ],
     "canonical_name": "Neyman chi-square divergence",
     "aliases": ["Neyman chi^2", "reverse Pearson chi-square"],
     "short_description": "The Pearson chi-square with the roles of p and q swapped.",
@@ -413,6 +440,13 @@
   },
   {
     "id": "hellinger",
+    "symbols": ["H(p,q)"],
+    "identities": [
+      { "latex": "H^2(p,q)=1-\\mathrm{BC}(p,q),\\ \\ \\mathrm{BC}=\\int\\sqrt{pq}\\,d\\mu", "refs": ["bhattacharyya"], "note": "BC = Bhattacharyya coefficient" }
+    ],
+    "inequalities": [
+      { "latex": "H^2(p,q)\\le \\mathrm{TV}(p,q)\\le \\sqrt{2}\\,H(p,q)", "refs": ["total_variation"], "note": "relates to total variation" }
+    ],
     "canonical_name": "Hellinger distance",
     "aliases": ["Hellinger metric", "Matusita distance"],
     "short_description": "A symmetric, bounded, true metric between distributions; the L2 distance between square-root densities.",
@@ -437,6 +471,14 @@
   },
   {
     "id": "total_variation",
+    "symbols": ["\\mathrm{TV}(p,q)", "\\delta(p,q)", "\\tfrac12\\|p-q\\|_1"],
+    "identities": [
+      { "latex": "\\mathrm{TV}(p,q)=\\tfrac12\\|p-q\\|_1=\\sup_{A}\\,|p(A)-q(A)|", "refs": [], "note": "half the L1 distance = largest event gap" }
+    ],
+    "inequalities": [
+      { "latex": "\\mathrm{TV}(p,q)\\le\\sqrt{\\tfrac12\\,\\mathrm{KL}(p\\|q)}", "refs": ["kullback_leibler"], "note": "Pinsker" },
+      { "latex": "H^2(p,q)\\le \\mathrm{TV}(p,q)\\le \\sqrt{2}\\,H(p,q)", "refs": ["hellinger"], "note": "Hellinger sandwich" }
+    ],
     "canonical_name": "Total variation distance",
     "aliases": ["TV distance", "statistical distance", "L1 distance between distributions"],
     "short_description": "Half the L1 distance between distributions; the largest possible difference in probability assigned to any event. The only f-divergence that is a metric.",
@@ -583,6 +625,11 @@
   },
   {
     "id": "logdet_bregman",
+    "symbols": ["D_{LD}(P\\|Q)", "D_{\\ell d}(P,Q)"],
+    "identities": [
+      { "latex": "D_{LD}(P\\|Q)=\\mathrm{tr}(PQ^{-1})-\\log\\det(PQ^{-1})-n", "refs": [], "note": "Bregman divergence of the Burg entropy" },
+      { "latex": "\\text{von Neumann divergence is the Bregman divergence of }-S(\\rho)", "refs": ["von_neumann_divergence"], "note": "matrix-Bregman siblings" }
+    ],
     "canonical_name": "Log-Det / Burg matrix divergence",
     "aliases": ["LogDet divergence", "Burg divergence", "Burg matrix divergence", "Stein loss"],
     "short_description": "Bregman divergence on SPD matrices from F(X)=-log det X; compares covariance/kernel matrices.",
@@ -655,6 +702,15 @@
   },
   {
     "id": "bhattacharyya",
+    "symbols": ["d_B(p,q)", "\\mathrm{BC}(p,q)"],
+    "identities": [
+      { "latex": "d_B(p,q)=-\\log\\mathrm{BC},\\ \\ \\mathrm{BC}=\\int\\sqrt{pq}\\,d\\mu", "refs": [], "note": "minus log of the affinity" },
+      { "latex": "H^2(p,q)=1-\\mathrm{BC}(p,q)", "refs": ["hellinger"], "note": "Hellinger via the coefficient" },
+      { "latex": "R_{1/2}(p\\|q)=2\\,d_B(p,q)", "refs": ["renyi_divergence"], "note": "Rényi of order 1/2" }
+    ],
+    "inequalities": [
+      { "latex": "d_B(p,q)\\le C(p,q)", "refs": ["chernoff"], "note": "Chernoff optimizes the order α" }
+    ],
     "canonical_name": "Bhattacharyya distance",
     "aliases": ["Bhattacharyya divergence"],
     "short_description": "Minus log of the Bhattacharyya coefficient (the overlap integral of sqrt(p) and sqrt(q)); a symmetric class-separability measure.",
@@ -679,6 +735,13 @@
   },
   {
     "id": "chernoff",
+    "symbols": ["C(p,q)"],
+    "identities": [
+      { "latex": "C(p,q)=\\max_{\\alpha\\in(0,1)}\\Big(-\\log\\int p^{\\alpha}q^{1-\\alpha}d\\mu\\Big)", "refs": ["renyi_divergence"], "note": "optimized α-affinity" }
+    ],
+    "inequalities": [
+      { "latex": "C(p,q)\\ge d_B(p,q)", "refs": ["bhattacharyya"], "note": "Bhattacharyya fixes α=1/2" }
+    ],
     "canonical_name": "Chernoff information",
     "aliases": ["Chernoff divergence", "Chernoff distance"],
     "short_description": "The best achievable error exponent in binary hypothesis testing; an optimized alpha-power overlap.",
@@ -704,6 +767,14 @@
   },
   {
     "id": "renyi_divergence",
+    "symbols": ["R_\\alpha(p\\|q)", "D_\\alpha(p\\|q)"],
+    "identities": [
+      { "latex": "\\lim_{\\alpha\\to 1} R_\\alpha(p\\|q)=\\mathrm{KL}(p\\|q)", "refs": ["kullback_leibler"], "note": "KL is the α→1 limit" },
+      { "latex": "R_{1/2}(p\\|q)=-2\\log\\int\\sqrt{pq}=2\\,d_B(p,q)", "refs": ["bhattacharyya"], "note": "order 1/2 = twice Bhattacharyya" }
+    ],
+    "inequalities": [
+      { "latex": "\\alpha\\mapsto R_\\alpha(p\\|q)\\ \\text{is non-decreasing}", "refs": [], "note": "monotone in the order α" }
+    ],
     "canonical_name": "Renyi divergence",
     "aliases": ["alpha-Renyi divergence"],
     "short_description": "A one-parameter family of divergences from the alpha-power affinity; tends to KL as alpha -> 1.",
@@ -729,6 +800,13 @@
   },
   {
     "id": "jeffreys",
+    "symbols": ["J(p,q)"],
+    "identities": [
+      { "latex": "J(p,q)=\\mathrm{KL}(p\\|q)+\\mathrm{KL}(q\\|p)", "refs": ["kullback_leibler", "reverse_kl"], "note": "symmetrized KL" }
+    ],
+    "inequalities": [
+      { "latex": "J(p,q)\\ge 4\\,\\mathrm{TV}(p,q)^2", "refs": ["total_variation"], "note": "Pinsker applied to both directions" }
+    ],
     "canonical_name": "Jeffreys divergence",
     "aliases": ["symmetric KL", "J-divergence", "symmetrized Kullback-Leibler"],
     "short_description": "The sum of the two KL directions; symmetric but unbounded and not a metric.",
@@ -753,6 +831,15 @@
   },
   {
     "id": "jensen_shannon",
+    "symbols": ["\\mathrm{JS}(p,q)", "D_{JS}(p,q)"],
+    "identities": [
+      { "latex": "\\mathrm{JS}(p,q)=\\tfrac12\\mathrm{KL}(p\\|m)+\\tfrac12\\mathrm{KL}(q\\|m),\\ m=\\tfrac{p+q}{2}", "refs": ["kullback_leibler"], "note": "mean of KLs to the mixture" },
+      { "latex": "\\mathrm{JS}(p,q)=H\\!\\big(\\tfrac{p+q}{2}\\big)-\\tfrac12 H(p)-\\tfrac12 H(q)", "refs": ["shannon_entropy", "burbea_rao"], "note": "Burbea–Rao with F=-H" }
+    ],
+    "inequalities": [
+      { "latex": "0\\le \\mathrm{JS}(p,q)\\le \\log 2", "refs": [], "note": "bounded (natural log)" },
+      { "latex": "\\sqrt{\\mathrm{JS}(p,q)}\\ \\text{is a metric}", "refs": [], "note": "the Jensen–Shannon distance obeys the triangle inequality" }
+    ],
     "canonical_name": "Jensen-Shannon divergence",
     "aliases": ["JS divergence", "JSD", "information radius", "total divergence to the average"],
     "short_description": "Bounded, symmetric divergence: the average of the two KL divergences to the mixture m=(p+q)/2; its square root is a metric.",
@@ -802,6 +889,11 @@
   },
   {
     "id": "shannon_entropy",
+    "symbols": ["H(p)", "H(X)"],
+    "identities": [
+      { "latex": "H(p,q)=H(p)+\\mathrm{KL}(p\\|q)", "refs": ["cross_entropy", "kullback_leibler"], "note": "cross-entropy identity" },
+      { "latex": "\\mathrm{JS}(p,q)=H\\!\\big(\\tfrac{p+q}{2}\\big)-\\tfrac12 H(p)-\\tfrac12 H(q)", "refs": ["jensen_shannon"], "note": "entropy form of Jensen–Shannon" }
+    ],
     "canonical_name": "Shannon entropy",
     "aliases": ["Boltzmann-Gibbs entropy", "Shannon information"],
     "short_description": "The average information content (uncertainty) of a single distribution; the functional behind KL and Jensen-Shannon.",
@@ -973,6 +1065,15 @@
   },
   {
     "id": "wasserstein",
+    "symbols": ["W_p(p,q)", "W_1", "\\mathrm{EMD}"],
+    "identities": [
+      { "latex": "W_1(p,q)=\\sup_{\\|f\\|_{\\mathrm{Lip}}\\le 1}\\int f\\,d(p-q)", "refs": [], "note": "Kantorovich–Rubinstein duality (an IPM)" },
+      { "latex": "W_2\\big(\\mathcal N(0,P),\\mathcal N(0,Q)\\big)=d_{BW}(P,Q)", "refs": ["bures_wasserstein"], "note": "W2 between Gaussians = Bures–Wasserstein" }
+    ],
+    "inequalities": [
+      { "latex": "W_p\\le W_q\\quad (p\\le q)", "refs": [], "note": "monotone in the order" },
+      { "latex": "W_1(p,q)\\le \\mathrm{diam}(\\mathcal X)\\,\\mathrm{TV}(p,q)", "refs": ["total_variation"], "note": "bounded by diameter × TV" }
+    ],
     "canonical_name": "Wasserstein distance / Earth Mover's Distance",
     "aliases": ["EMD", "Earth Mover's Distance", "Wasserstein-1", "Wasserstein-p", "Kantorovich-Rubinstein distance", "optimal transport distance"],
     "short_description": "The minimum cost to morph one distribution into another under a ground distance; a metric that respects geometry. EMD = Wasserstein-1.",
@@ -998,6 +1099,10 @@
   },
   {
     "id": "mmd",
+    "symbols": ["\\mathrm{MMD}(p,q)", "\\mathrm{MMD}_k"],
+    "identities": [
+      { "latex": "\\mathrm{MMD}^2(p,q)=\\mathbb E\\,k(x,x')+\\mathbb E\\,k(y,y')-2\\,\\mathbb E\\,k(x,y)", "refs": [], "note": "squared MMD in kernel form" }
+    ],
     "canonical_name": "Maximum Mean Discrepancy",
     "aliases": ["MMD", "kernel two-sample distance"],
     "short_description": "An IPM over an RKHS ball; the distance between kernel mean embeddings of two distributions. Estimable from samples.",
@@ -1119,6 +1224,10 @@
   },
   {
     "id": "bures_wasserstein",
+    "symbols": ["d_{BW}(P,Q)"],
+    "identities": [
+      { "latex": "d_{BW}(P,Q)=W_2\\big(\\mathcal N(0,P),\\mathcal N(0,Q)\\big)", "refs": ["wasserstein"], "note": "W2 between zero-mean Gaussians" }
+    ],
     "canonical_name": "Bures-Wasserstein distance (SPD)",
     "aliases": ["Bures distance", "Wasserstein distance between Gaussians", "Bures metric"],
     "short_description": "The optimal-transport (Wasserstein-2) distance between zero-mean Gaussians with given covariances; a metric on SPD matrices.",
@@ -1164,5 +1273,362 @@
     "worked_example": "$\\mathbf X=\\mathrm{diag}(4,1)$, $\\mathbf Y=I$: $\\sigma_{\\max}(\\mathrm{diag}(3,0))=\\mathbf{3.0}$.",
     "source_section": "../distances/distances.html#detailed",
     "applications": ["metric-learning"]
+  },
+  {
+    "id": "cross_entropy",
+    "canonical_name": "Cross-entropy",
+    "aliases": ["cross entropy", "log loss"],
+    "symbols": ["H(p,q)"],
+    "short_description": "Expected code length of q under the true distribution p; equals entropy plus KL divergence, and is the standard classification loss.",
+    "family": ["f-divergence", "entropy"],
+    "input_types": ["probability_vector", "probability_density"],
+    "formula_latex": "H(p,q)=-\\sum_i p_i\\log q_i",
+    "formula_plaintext": "H(p,q) = - sum_i p_i log q_i",
+    "assumptions": ["p and q are probability distributions on the same support"],
+    "properties": { "nonnegative": true, "symmetric": false, "bounded": false, "metric": false },
+    "range": "[H(p), infinity)",
+    "identities": [
+      { "latex": "H(p,q)=H(p)+\\mathrm{KL}(p\\|q)", "refs": ["shannon_entropy", "kullback_leibler"], "note": "entropy plus KL" },
+      { "latex": "H(p,p)=H(p)", "refs": ["shannon_entropy"], "note": "cross-entropy of p with itself is its entropy" }
+    ],
+    "inequalities": [
+      { "latex": "H(p,q)\\ge H(p)", "refs": ["shannon_entropy"], "note": "Gibbs' inequality; equality iff p=q" }
+    ],
+    "practical_use_cases": ["classification loss (log loss)", "language-model perplexity", "training neural networks"],
+    "when_to_use": "As a training loss when q models the true labels p; minimizing it minimizes KL(p||q).",
+    "when_not_to_use": "As a symmetric distance (it is asymmetric and nonzero at p=q; use KL or JS).",
+    "related": ["kullback_leibler", "shannon_entropy", "jensen_shannon"],
+    "special_cases": ["Minimizing cross-entropy over q equals minimizing KL(p||q)"],
+    "references": [{ "title": "Taxonomy of Principal Distances & Divergences (this site)", "url": "../distances/distances.html#detailed" }],
+    "code_templates": ["numpy", "pytorch"],
+    "implementation_notes": ["Clip q with eps for the log", "Renormalize inputs to sum to 1"],
+    "worked_example": "$p=[0.5,0.5]$, $q=[0.9,0.1]$: $H(p,q)=-0.5\\log 0.9-0.5\\log 0.1\\approx\\mathbf{1.204}$ nats.",
+    "source_section": "../distances/distances.html#detailed",
+    "applications": ["classification", "information-theory", "generative-modeling"]
+  },
+  {
+    "id": "cosine",
+    "canonical_name": "Cosine distance",
+    "aliases": ["cosine similarity", "cosine dissimilarity"],
+    "symbols": ["d_{\\cos}(x,y)", "1-\\cos\\theta"],
+    "short_description": "One minus the cosine of the angle between two vectors; scale-invariant, ignores magnitude.",
+    "family": ["vector-metric"],
+    "input_types": ["vector"],
+    "formula_latex": "d_{\\cos}(x,y)=1-\\frac{\\langle x,y\\rangle}{\\|x\\|\\,\\|y\\|}",
+    "formula_plaintext": "1 - dot(x,y) / (||x|| * ||y||)",
+    "assumptions": ["x, y are nonzero real vectors"],
+    "properties": { "nonnegative": true, "symmetric": true, "bounded": true, "metric": false },
+    "range": "[0, 2]",
+    "identities": [
+      { "latex": "\\|x-y\\|^2=\\|x\\|^2+\\|y\\|^2-2\\langle x,y\\rangle", "refs": ["euclidean"], "note": "on unit vectors, ‖x−y‖² = 2 d_cos" }
+    ],
+    "practical_use_cases": ["text/embedding similarity", "information retrieval", "recommender systems"],
+    "when_to_use": "Comparing direction of high-dimensional vectors (embeddings) where magnitude is irrelevant.",
+    "when_not_to_use": "When magnitude matters, or when you need a true metric (use angular distance / Euclidean).",
+    "related": ["euclidean", "mahalanobis"],
+    "special_cases": ["Angular distance arccos(1−d_cos) is a true metric"],
+    "references": [{ "title": "Taxonomy of Principal Distances & Divergences (this site)", "url": "../distances/distances.html#detailed" }],
+    "code_templates": ["numpy", "pytorch"],
+    "implementation_notes": ["Add eps to norms to avoid division by zero."],
+    "worked_example": "$x=(1,0)$, $y=(1,1)$: $\\cos\\theta=1/\\sqrt2\\Rightarrow d_{\\cos}\\approx\\mathbf{0.293}$.",
+    "source_section": "../distances/distances.html#detailed",
+    "applications": ["retrieval", "classification"]
+  },
+  {
+    "id": "chamfer",
+    "canonical_name": "Chamfer distance",
+    "aliases": ["chamfer discrepancy"],
+    "symbols": ["d_{CD}(X,Y)"],
+    "short_description": "Sum of squared nearest-neighbour distances between two point clouds, in both directions; fast but not a metric.",
+    "family": ["set-metric-space"],
+    "input_types": ["point_cloud"],
+    "formula_latex": "d_{CD}(X,Y)=\\sum_{x\\in X}\\min_{y\\in Y}\\|x-y\\|^2+\\sum_{y\\in Y}\\min_{x\\in X}\\|x-y\\|^2",
+    "formula_plaintext": "sum_x min_y ||x-y||^2 + sum_y min_x ||x-y||^2",
+    "assumptions": ["X, Y are finite point sets in a common space"],
+    "properties": { "nonnegative": true, "symmetric": true, "bounded": false, "metric": false },
+    "range": "[0, infinity)",
+    "practical_use_cases": ["3-D shape/point-cloud comparison", "generative point-cloud training", "registration"],
+    "when_to_use": "Fast, differentiable comparison of point clouds when exact matching is too costly.",
+    "when_not_to_use": "When you need the triangle inequality or robustness to outliers (use Hausdorff/Wasserstein).",
+    "related": ["hausdorff", "wasserstein", "gromov_wasserstein"],
+    "special_cases": ["A one-sided version keeps a single direction"],
+    "references": [{ "title": "Taxonomy of Principal Distances & Divergences (this site)", "url": "../distances/distances.html#detailed" }],
+    "code_templates": ["numpy"],
+    "implementation_notes": ["O(|X||Y|) with pairwise distances; use KD-trees for large clouds."],
+    "worked_example": "$X=\\{(0,0)\\}$, $Y=\\{(1,0),(0,2)\\}$: $\\min=1$ and $\\min_x$ over $Y$ gives $1+4$, total $=\\mathbf{6.0}$.",
+    "source_section": "../distances/distances.html#detailed",
+    "applications": ["retrieval", "generative-modeling"]
+  },
+  {
+    "id": "energy_distance",
+    "canonical_name": "Energy distance",
+    "aliases": ["Cramér-von-Mises energy distance", "Székely energy distance"],
+    "symbols": ["\\mathcal E(p,q)"],
+    "short_description": "A distance between distributions from expected pairwise Euclidean distances; a special case of MMD, estimable from samples.",
+    "family": ["ipm", "optimal-transport"],
+    "input_types": ["empirical_samples", "probability_distribution"],
+    "formula_latex": "\\mathcal E(p,q)=2\\,\\mathbb E\\|X-Y\\|-\\mathbb E\\|X-X'\\|-\\mathbb E\\|Y-Y'\\|",
+    "formula_plaintext": "2 E||X-Y|| - E||X-X'|| - E||Y-Y'||",
+    "assumptions": ["finite first moments; X,X'~p and Y,Y'~q independent"],
+    "properties": { "nonnegative": true, "symmetric": true, "bounded": false, "metric": true },
+    "range": "[0, infinity)",
+    "identities": [
+      { "latex": "\\mathcal E(p,q)=\\mathrm{MMD}^2_{k}(p,q),\\ \\ k(x,y)=-\\|x-y\\|", "refs": ["mmd"], "note": "MMD with the negative-distance kernel" }
+    ],
+    "practical_use_cases": ["two-sample testing", "distribution comparison from samples", "goodness-of-fit"],
+    "when_to_use": "Sample-based, kernel-free distribution comparison with a metric.",
+    "when_not_to_use": "When ground transport geometry is essential (use Wasserstein).",
+    "related": ["mmd", "wasserstein", "kolmogorov_smirnov"],
+    "special_cases": ["Distance-covariance / energy statistics build on the same idea"],
+    "references": [{ "title": "Taxonomy of Principal Distances & Divergences (this site)", "url": "../distances/distances.html#detailed" }],
+    "code_templates": ["numpy"],
+    "implementation_notes": ["Use the unbiased V-/U-statistic; O(n²) pairwise distances."],
+    "worked_example": "1-D $X=\\{0,0\\}$, $Y=\\{1,1\\}$: $2\\cdot1-0-0=\\mathbf{2.0}$.",
+    "source_section": "../distances/distances.html#detailed",
+    "applications": ["hypothesis-testing"]
+  },
+  {
+    "id": "sinkhorn",
+    "canonical_name": "Sinkhorn divergence",
+    "aliases": ["entropic optimal transport", "entropy-regularized Wasserstein"],
+    "symbols": ["S_\\varepsilon(p,q)", "\\mathrm{OT}_\\varepsilon"],
+    "short_description": "Entropy-regularized optimal transport, debiased so it vanishes at p=q; fast (Sinkhorn iterations) and differentiable.",
+    "family": ["optimal-transport"],
+    "input_types": ["probability_distribution", "empirical_samples"],
+    "formula_latex": "\\mathrm{OT}_\\varepsilon(p,q)=\\min_{\\gamma\\in\\Gamma(p,q)}\\langle\\gamma,C\\rangle+\\varepsilon\\,\\mathrm{KL}(\\gamma\\,\\|\\,p\\otimes q)",
+    "formula_plaintext": "min_gamma <gamma,C> + eps * KL(gamma || p x q)",
+    "assumptions": ["a ground cost C; regularization strength eps > 0"],
+    "properties": { "nonnegative": true, "symmetric": true, "bounded": false, "metric": false },
+    "range": "[0, infinity)",
+    "parameters": [{ "name": "eps", "description": "entropic regularization strength", "constraints": "eps > 0; eps→0 recovers Wasserstein" }],
+    "identities": [
+      { "latex": "S_\\varepsilon(p,q)=\\mathrm{OT}_\\varepsilon(p,q)-\\tfrac12\\mathrm{OT}_\\varepsilon(p,p)-\\tfrac12\\mathrm{OT}_\\varepsilon(q,q)", "refs": ["wasserstein"], "note": "debiased Sinkhorn divergence" },
+      { "latex": "\\lim_{\\varepsilon\\to 0}\\mathrm{OT}_\\varepsilon=W(p,q)", "refs": ["wasserstein"], "note": "recovers Wasserstein" }
+    ],
+    "practical_use_cases": ["scalable optimal transport", "generative models", "domain adaptation"],
+    "when_to_use": "When exact Wasserstein is too costly; want a smooth, differentiable OT surrogate.",
+    "when_not_to_use": "When you need the exact metric (small eps) or eps is hard to choose.",
+    "related": ["wasserstein", "kullback_leibler", "sliced_wasserstein"],
+    "special_cases": ["eps→0 gives Wasserstein; large eps → an energy-distance-like MMD"],
+    "references": [{ "title": "POT: Python Optimal Transport", "url": "https://pythonot.github.io/" }, { "title": "Taxonomy (this site)", "url": "../distances/distances.html#detailed" }],
+    "code_templates": [],
+    "implementation_notes": ["Compute with Sinkhorn iterations (e.g. POT ot.sinkhorn2 / ot.bregman)."],
+    "worked_example": "No one-line value; computed by Sinkhorn iterations (e.g. POT). eps→0 approaches the Wasserstein value.",
+    "source_section": "../distances/distances.html#detailed",
+    "applications": ["generative-modeling", "domain-adaptation"]
+  },
+  {
+    "id": "sliced_wasserstein",
+    "canonical_name": "Sliced Wasserstein distance",
+    "aliases": ["SW distance", "sliced OT"],
+    "symbols": ["\\mathrm{SW}_p(p,q)"],
+    "short_description": "Average of 1-D Wasserstein distances over random projections; a cheap, metric surrogate for Wasserstein.",
+    "family": ["optimal-transport", "ipm"],
+    "input_types": ["probability_distribution", "empirical_samples"],
+    "formula_latex": "\\mathrm{SW}_p(p,q)=\\Big(\\int_{\\mathbb S^{d-1}} W_p^p(\\theta_\\#p,\\theta_\\#q)\\,d\\theta\\Big)^{1/p}",
+    "formula_plaintext": "( E_theta W_p^p(proj_theta p, proj_theta q) )^(1/p)",
+    "assumptions": ["projections theta uniform on the sphere; 1-D W_p on each"],
+    "properties": { "nonnegative": true, "symmetric": true, "bounded": false, "metric": true },
+    "range": "[0, infinity)",
+    "identities": [
+      { "latex": "\\mathrm{SW}_p\\le W_p", "refs": ["wasserstein"], "note": "lower bounds full Wasserstein; equivalent in bounded domains" }
+    ],
+    "practical_use_cases": ["scalable OT for generative models", "high-dimensional distribution comparison"],
+    "when_to_use": "When full Wasserstein is too costly but you want a true metric that respects geometry.",
+    "when_not_to_use": "When the projection count needed for accuracy is prohibitive in very high dimension.",
+    "related": ["wasserstein", "sinkhorn"],
+    "special_cases": ["Max-sliced and generalized-sliced variants exist"],
+    "references": [{ "title": "Taxonomy of Principal Distances & Divergences (this site)", "url": "../distances/distances.html#detailed" }],
+    "code_templates": ["numpy"],
+    "implementation_notes": ["Average 1-D Wasserstein over many random unit directions."],
+    "worked_example": "Estimated by averaging 1-D $W_1$ over random projections; more projections → lower variance.",
+    "source_section": "../distances/distances.html#detailed",
+    "applications": ["generative-modeling"]
+  },
+  {
+    "id": "gromov_wasserstein",
+    "canonical_name": "Gromov-Wasserstein distance",
+    "aliases": ["GW distance"],
+    "symbols": ["\\mathrm{GW}(p,q)"],
+    "short_description": "Optimal transport between metric-measure spaces: matches pairwise distances rather than points, so it compares spaces up to isometry.",
+    "family": ["optimal-transport", "set-metric-space"],
+    "input_types": ["metric_space", "point_cloud"],
+    "formula_latex": "\\mathrm{GW}^2(p,q)=\\min_{\\gamma\\in\\Gamma(p,q)}\\sum_{i,j,k,l}\\big|d_X(x_i,x_k)-d_Y(y_j,y_l)\\big|^2\\gamma_{ij}\\gamma_{kl}",
+    "formula_plaintext": "min_gamma sum |d_X(x_i,x_k) - d_Y(y_j,y_l)|^2 gamma_ij gamma_kl",
+    "assumptions": ["metric-measure spaces with intra-space distances d_X, d_Y"],
+    "properties": { "nonnegative": true, "symmetric": true, "bounded": false, "metric": true },
+    "range": "[0, infinity)",
+    "identities": [
+      { "latex": "\\mathrm{GW}\\ \\text{relaxes the Gromov–Hausdorff distance}", "refs": ["gromov_hausdorff"], "note": "transport relaxation of GH" }
+    ],
+    "practical_use_cases": ["shape/graph matching across spaces", "unaligned domain adaptation", "single-cell alignment"],
+    "when_to_use": "Comparing objects in different spaces (no common embedding), invariant to isometry.",
+    "when_not_to_use": "When a shared space exists (plain Wasserstein is cheaper).",
+    "related": ["gromov_hausdorff", "wasserstein", "chamfer"],
+    "special_cases": ["Entropic Gromov-Wasserstein for scalability"],
+    "references": [{ "title": "POT: Python Optimal Transport", "url": "https://pythonot.github.io/" }, { "title": "Taxonomy (this site)", "url": "../distances/distances.html#detailed" }],
+    "code_templates": [],
+    "implementation_notes": ["Non-convex; approximate with POT ot.gromov (entropic GW)."],
+    "worked_example": "No closed form; approximated (e.g. POT). Two isometric spaces give GW = 0.",
+    "source_section": "../distances/distances.html#detailed",
+    "applications": ["domain-adaptation", "manifold-learning"]
+  },
+  {
+    "id": "wasserstein_fisher_rao",
+    "canonical_name": "Wasserstein-Fisher-Rao distance",
+    "aliases": ["WFR", "unbalanced optimal transport", "Hellinger-Kantorovich distance"],
+    "symbols": ["\\mathrm{WFR}(p,q)"],
+    "short_description": "Unbalanced optimal transport that both moves and creates/destroys mass; interpolates Wasserstein (transport) and Fisher-Rao (growth).",
+    "family": ["optimal-transport"],
+    "input_types": ["probability_distribution", "probability_density"],
+    "formula_latex": "\\mathrm{WFR}^2(p,q)=\\min_{(\\rho,v,\\alpha)}\\int_0^1\\!\\!\\int \\big(|v|^2+\\delta^2\\alpha^2\\big)\\rho\\,dx\\,dt",
+    "formula_plaintext": "dynamic unbalanced OT: transport cost |v|^2 + growth cost delta^2 alpha^2",
+    "assumptions": ["nonnegative measures of possibly different mass; scale delta"],
+    "properties": { "nonnegative": true, "symmetric": true, "bounded": false, "metric": true },
+    "range": "[0, infinity)",
+    "identities": [
+      { "latex": "\\delta\\to\\infty:\\ \\mathrm{WFR}\\to W_2;\\quad \\delta\\to 0:\\ \\mathrm{WFR}\\to \\text{Fisher–Rao}", "refs": ["wasserstein", "fisher_rao"], "note": "interpolates transport and growth" }
+    ],
+    "practical_use_cases": ["unbalanced OT (unequal mass)", "growth/birth-death processes", "imaging"],
+    "when_to_use": "When distributions have different total mass or local creation/destruction matters.",
+    "when_not_to_use": "When mass is conserved (plain Wasserstein suffices).",
+    "related": ["wasserstein", "fisher_rao", "sinkhorn"],
+    "special_cases": ["Also called the Hellinger-Kantorovich distance"],
+    "references": [{ "title": "Taxonomy of Principal Distances & Divergences (this site)", "url": "../distances/distances.html#detailed" }],
+    "code_templates": [],
+    "implementation_notes": ["Solve via unbalanced-OT solvers (e.g. POT ot.unbalanced)."],
+    "worked_example": "No one-line value; computed by unbalanced-OT solvers. Limits give W₂ or Fisher–Rao.",
+    "source_section": "../distances/distances.html#detailed",
+    "applications": ["domain-adaptation"]
+  },
+  {
+    "id": "cka",
+    "canonical_name": "Centered Kernel Alignment (CKA)",
+    "aliases": ["CKA", "kernel alignment"],
+    "symbols": ["\\mathrm{CKA}(K,L)"],
+    "short_description": "A similarity between two representations via their centered Gram matrices; invariant to orthogonal transforms and isotropic scaling. Distance = 1 − CKA.",
+    "family": ["kernel-representation"],
+    "input_types": ["matrix"],
+    "formula_latex": "\\mathrm{CKA}(K,L)=\\frac{\\langle K_c,\\,L_c\\rangle_F}{\\|K_c\\|_F\\,\\|L_c\\|_F}",
+    "formula_plaintext": "CKA(K,L) = <Kc, Lc>_F / (||Kc||_F ||Lc||_F), Kc = centered Gram",
+    "assumptions": ["K, L are Gram matrices of two representations of the same n samples"],
+    "properties": { "nonnegative": true, "symmetric": true, "bounded": true, "metric": false },
+    "range": "CKA in [0, 1]; distance 1−CKA in [0, 1]",
+    "practical_use_cases": ["comparing neural-network representations", "layer similarity analysis"],
+    "when_to_use": "Comparing learned representations regardless of rotation/scaling of features.",
+    "when_not_to_use": "As a metric between distributions (it compares representation geometry).",
+    "related": ["frobenius", "mmd"],
+    "special_cases": ["Linear CKA uses linear kernels K=XXᵀ; RBF CKA uses RBF Gram matrices"],
+    "references": [{ "title": "Kornblith et al., Similarity of Neural Network Representations Revisited", "url": "https://arxiv.org/abs/1905.00414" }],
+    "code_templates": ["numpy"],
+    "implementation_notes": ["Center Gram matrices with H = I − 1/n; report 1 − CKA as a distance."],
+    "worked_example": "Identical representations give CKA = 1 (distance 0); unrelated ones ≈ 0.",
+    "source_section": "../distances/distances.html#detailed",
+    "applications": ["metric-learning", "manifold-learning"]
+  },
+  {
+    "id": "jensen_renyi",
+    "canonical_name": "Jensen-Renyi divergence",
+    "aliases": ["JR divergence"],
+    "symbols": ["\\mathrm{JR}_\\alpha(p,q)"],
+    "short_description": "The Jensen gap of the Rényi entropy; a bounded, symmetric divergence generalizing Jensen-Shannon (which is the α→1 case).",
+    "family": ["symmetrized", "overlap-affinity"],
+    "input_types": ["probability_vector", "probability_density"],
+    "formula_latex": "\\mathrm{JR}_\\alpha(p,q)=H_\\alpha\\!\\Big(\\tfrac{p+q}{2}\\Big)-\\tfrac12 H_\\alpha(p)-\\tfrac12 H_\\alpha(q)",
+    "formula_plaintext": "JR_alpha(p,q) = H_alpha((p+q)/2) - 0.5 H_alpha(p) - 0.5 H_alpha(q)",
+    "assumptions": ["p, q probability distributions; H_alpha is the Rényi entropy"],
+    "properties": { "nonnegative": true, "symmetric": true, "bounded": true, "metric": false },
+    "range": "[0, H_alpha of the uniform 2-mix]",
+    "parameters": [{ "name": "alpha", "description": "Rényi entropy order", "default": "2", "constraints": "alpha > 0, alpha != 1" }],
+    "identities": [
+      { "latex": "\\lim_{\\alpha\\to 1}\\mathrm{JR}_\\alpha(p,q)=\\mathrm{JS}(p,q)", "refs": ["jensen_shannon"], "note": "Jensen–Shannon is the Shannon case" },
+      { "latex": "\\mathrm{JR}_\\alpha\\ \\text{is the Jensen gap of }H_\\alpha", "refs": ["renyi_entropy", "burbea_rao"], "note": "Burbea–Rao with F=-H_alpha" }
+    ],
+    "practical_use_cases": ["image registration", "robust distribution comparison", "clustering"],
+    "when_to_use": "When you want a tunable, bounded, symmetric divergence between distributions.",
+    "when_not_to_use": "When a single fixed divergence suffices (use JS).",
+    "related": ["jensen_shannon", "renyi_entropy", "burbea_rao"],
+    "special_cases": ["alpha=2 uses the collision entropy"],
+    "references": [{ "title": "Taxonomy of Principal Distances & Divergences (this site)", "url": "../distances/distances.html#detailed" }],
+    "code_templates": ["numpy"],
+    "implementation_notes": ["Compute Rényi entropies of p, q and their mean; subtract."],
+    "worked_example": "At $\\alpha=2$, $p=[0.5,0.5]$, $q=[0.9,0.1]$: $\\mathrm{JR}_2\\approx\\mathbf{0.099}$ nats.",
+    "source_section": "../distances/distances.html#detailed",
+    "applications": ["clustering", "information-theory"]
+  },
+  {
+    "id": "graph_edit_distance",
+    "canonical_name": "Graph edit distance",
+    "aliases": ["GED"],
+    "symbols": ["\\mathrm{GED}(G_1,G_2)"],
+    "short_description": "Minimum-cost sequence of node/edge insertions, deletions and substitutions transforming one graph into another; a metric, but NP-hard.",
+    "family": ["graph-distance", "set-metric-space"],
+    "input_types": ["graph"],
+    "formula_latex": "\\mathrm{GED}(G_1,G_2)=\\min_{(e_1,\\dots,e_k)\\in\\mathcal P}\\sum_i c(e_i)",
+    "formula_plaintext": "min over edit paths of sum of edit costs c(e_i)",
+    "assumptions": ["edit cost function c over node/edge insert/delete/substitute"],
+    "properties": { "nonnegative": true, "symmetric": true, "bounded": false, "metric": true },
+    "range": "[0, infinity)",
+    "practical_use_cases": ["molecule/graph similarity", "pattern recognition on graphs", "keyword spotting"],
+    "when_to_use": "Structural comparison of small graphs where edit semantics matter.",
+    "when_not_to_use": "Large graphs (NP-hard) — use spectral or approximate GED.",
+    "related": ["spectral_graph_distance", "levenshtein"],
+    "special_cases": ["A graph analogue of Levenshtein edit distance"],
+    "references": [{ "title": "Taxonomy of Principal Distances & Divergences (this site)", "url": "../distances/distances.html#detailed" }],
+    "code_templates": [],
+    "implementation_notes": ["NP-hard exactly; use approximations (bipartite/ Hausdorff-GED) e.g. networkx.graph_edit_distance."],
+    "worked_example": "Two identical graphs give GED = 0; one edge insertion at unit cost gives GED = 1.",
+    "source_section": "../distances/distances.html#detailed",
+    "applications": ["classification", "retrieval"]
+  },
+  {
+    "id": "spectral_graph_distance",
+    "canonical_name": "Spectral (Laplacian) graph distance",
+    "aliases": ["spectral distance", "Laplacian spectral distance"],
+    "symbols": ["d_{\\mathrm{spec}}(G_1,G_2)"],
+    "short_description": "Distance between graphs from the difference of their sorted Laplacian eigenvalues; fast and permutation-invariant.",
+    "family": ["graph-distance"],
+    "input_types": ["graph"],
+    "formula_latex": "d_{\\mathrm{spec}}(G_1,G_2)=\\Big(\\sum_i \\big(\\lambda_i^{(1)}-\\lambda_i^{(2)}\\big)^2\\Big)^{1/2}",
+    "formula_plaintext": "sqrt( sum_i (lambda_i^(1) - lambda_i^(2))^2 ), sorted Laplacian spectra",
+    "assumptions": ["graphs compared via (possibly padded) sorted Laplacian eigenvalues"],
+    "properties": { "nonnegative": true, "symmetric": true, "bounded": false, "metric": false },
+    "range": "[0, infinity)",
+    "practical_use_cases": ["graph comparison at scale", "network anomaly detection", "clustering graphs"],
+    "when_to_use": "Fast, permutation-invariant graph comparison when structure ≈ captured by the spectrum.",
+    "when_not_to_use": "When cospectral (spectrum-equal but non-isomorphic) graphs must be distinguished.",
+    "related": ["graph_edit_distance", "frobenius"],
+    "special_cases": ["Can use the adjacency or normalized Laplacian spectrum instead"],
+    "references": [{ "title": "Taxonomy of Principal Distances & Divergences (this site)", "url": "../distances/distances.html#detailed" }],
+    "code_templates": ["numpy"],
+    "implementation_notes": ["Pad the shorter spectrum with zeros; compare sorted eigenvalues."],
+    "worked_example": "Isomorphic graphs give 0 (equal spectra); differing degree structure gives a positive value.",
+    "source_section": "../distances/distances.html#detailed",
+    "applications": ["clustering", "classification"]
+  },
+  {
+    "id": "procrustes",
+    "canonical_name": "Procrustes distance",
+    "aliases": ["orthogonal Procrustes distance", "shape distance"],
+    "symbols": ["d_{\\mathrm{Proc}}(X,Y)"],
+    "short_description": "Residual Frobenius distance between two point sets after the best rotation (and optionally scaling/translation) aligns them.",
+    "family": ["set-metric-space"],
+    "input_types": ["point_cloud", "matrix"],
+    "formula_latex": "d_{\\mathrm{Proc}}(X,Y)=\\min_{R\\in O(d)}\\|X-YR\\|_F",
+    "formula_plaintext": "min over orthogonal R of ||X - Y R||_F",
+    "assumptions": ["X, Y are n×d configurations in correspondence"],
+    "properties": { "nonnegative": true, "symmetric": true, "bounded": false, "metric": true },
+    "range": "[0, infinity)",
+    "practical_use_cases": ["shape analysis", "aligning embeddings/representations", "morphometrics"],
+    "when_to_use": "Comparing shapes/configurations invariant to rotation (and optionally scale/translation).",
+    "when_not_to_use": "When point correspondence is unknown (use Chamfer/Wasserstein first).",
+    "related": ["frobenius", "cka", "chamfer"],
+    "special_cases": ["Full Procrustes also optimizes scaling and translation"],
+    "references": [{ "title": "Taxonomy of Principal Distances & Divergences (this site)", "url": "../distances/distances.html#detailed" }],
+    "code_templates": ["numpy"],
+    "implementation_notes": ["Optimal R from the SVD of XᵀY (orthogonal Procrustes)."],
+    "worked_example": "If Y is X rotated, the optimal R undoes the rotation and $d_{\\mathrm{Proc}}=0$.",
+    "source_section": "../distances/distances.html#detailed",
+    "applications": ["metric-learning", "manifold-learning"]
   }
 ]

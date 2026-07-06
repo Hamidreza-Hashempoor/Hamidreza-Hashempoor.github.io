@@ -12,6 +12,7 @@ import { hasToken } from "./chat.js";
 import { applyFilters, isFilterActive, filterCount } from "./filters.js";
 import { renderCodePanel } from "./codegen.js";
 import { renderGraph } from "./graph.js";
+import { editUrl, editCardIssueUrl } from "./config.js";
 
 const KEY_PROPERTIES = ["symmetric", "bounded", "metric", "nonnegative"];
 
@@ -329,6 +330,28 @@ function propertyTable(measure) {
   return table;
 }
 
+/** Identities / inequalities: LaTeX blocks with a note and cross-link chips. */
+function renderRelations(db, title, items) {
+  if (!items || !items.length) return null;
+  const wrap = el("div", { class: "relations" });
+  items.forEach((it) => {
+    if (!it || !it.latex) return;
+    const block = el("div", { class: "relation" });
+    const eq = el("div", { class: "eq" });
+    eq.textContent = `$$${it.latex}$$`;
+    block.appendChild(eq);
+    const meta = el("div", { class: "relation-meta" });
+    if (it.note) meta.appendChild(el("span", { class: "relation-note" }, [it.note]));
+    (it.refs || []).forEach((rid) => {
+      const m = db.byId.get(rid);
+      if (m) meta.appendChild(chip(m.canonical_name, { variant: "related", href: `#/m/${rid}` }));
+    });
+    if (meta.childNodes.length) block.appendChild(meta);
+    wrap.appendChild(block);
+  });
+  return section(title, wrap);
+}
+
 export function renderDetail(db, app, measure) {
   const root = el("article", { class: "detail" });
 
@@ -382,6 +405,13 @@ export function renderDetail(db, app, measure) {
       ul.appendChild(el("li", {}, parts));
     });
     root.appendChild(section("Parameters", ul));
+  }
+
+  {
+    const idSec = renderRelations(db, "Identities", measure.identities);
+    if (idSec) root.appendChild(idSec);
+    const ineqSec = renderRelations(db, "Inequalities", measure.inequalities);
+    if (ineqSec) root.appendChild(ineqSec);
   }
 
   if ((measure.assumptions || []).length) {
@@ -445,6 +475,30 @@ export function renderDetail(db, app, measure) {
       el("a", { href: measure.source_section }, ["Taxonomy of Distances & Divergences"]),
       " post.",
     ]));
+  }
+
+  // Contribute (collaborative, static): edit the data on GitHub, suggest an edit,
+  // or copy the card JSON. A merged change updates this card everywhere — including
+  // links inside annotated PDFs, which point to the stable #/m/:id permalink.
+  {
+    const box = el("div", {});
+    box.appendChild(el("p", { class: "muted" }, [
+      `This card is data-driven — a merged edit updates it everywhere (its permalink is #/m/${measure.id}).`,
+    ]));
+    const copyBtn = el("button", { type: "button", class: "answer-cta" }, ["Copy card JSON"]);
+    copyBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(JSON.stringify(measure, null, 2));
+        copyBtn.textContent = "Copied!";
+      } catch (_) { copyBtn.textContent = "Copy failed"; }
+      setTimeout(() => (copyBtn.textContent = "Copy card JSON"), 1400);
+    });
+    box.appendChild(el("div", { class: "chips" }, [
+      el("a", { class: "answer-cta", href: editUrl(), target: "_blank", rel: "noopener" }, ["Edit data on GitHub"]),
+      el("a", { class: "answer-cta", href: editCardIssueUrl(measure), target: "_blank", rel: "noopener" }, ["Suggest an edit"]),
+      copyBtn,
+    ]));
+    root.appendChild(section("Contribute", box));
   }
 
   return root;
@@ -517,6 +571,53 @@ export function renderCompare(db, app, ids) {
   table.appendChild(tbody);
   wrap.appendChild(table);
   root.appendChild(wrap);
+  return root;
+}
+
+/* ----------------------------- browse by type ----------------------------- */
+
+export function renderTypesView(db, app) {
+  const root = el("div", { class: "types-view" });
+  root.appendChild(el("a", { class: "back-link", href: "#/" }, ["← Back to search"]));
+  root.appendChild(el("h1", { tabindex: "-1", id: "route-heading" }, ["Browse by object type"]));
+  root.appendChild(el("p", { class: "detail-lead" }, [
+    "Dissimilarities grouped by the kind of object they compare. A measure can appear under more than one type.",
+  ]));
+
+  const groups = new Map();
+  for (const m of db.measures) {
+    const types = (m.input_types && m.input_types.length) ? m.input_types : ["unknown"];
+    for (const t of types) {
+      if (!groups.has(t)) groups.set(t, []);
+      groups.get(t).push(m);
+    }
+  }
+  const types = [...groups.keys()].sort((a, b) =>
+    groups.get(b).length - groups.get(a).length ||
+    (OBJECT_TYPE_LABELS[a] || a).localeCompare(OBJECT_TYPE_LABELS[b] || b)
+  );
+
+  const nav = el("div", { class: "types-nav" }, types.map((t) => {
+    const b = el("button", { type: "button", class: "chip" }, [`${OBJECT_TYPE_LABELS[t] || t} (${groups.get(t).length})`]);
+    b.addEventListener("click", () => {
+      const s = document.getElementById(`type-${t}`);
+      if (s) s.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return b;
+  }));
+  root.appendChild(nav);
+
+  for (const t of types) {
+    const sec = el("section", { class: "lk-section" });
+    sec.appendChild(el("h2", { id: `type-${t}` }, [`${OBJECT_TYPE_LABELS[t] || t} (${groups.get(t).length})`]));
+    const grid = el("div", { class: "card-grid" });
+    groups.get(t)
+      .slice()
+      .sort((a, b) => a.canonical_name.localeCompare(b.canonical_name))
+      .forEach((m) => grid.appendChild(renderResultCard(db, app, m)));
+    sec.appendChild(grid);
+    root.appendChild(sec);
+  }
   return root;
 }
 

@@ -30,6 +30,8 @@ export async function annotatePdf(bytes, pages, mentions) {
   const doc = await PDFDocument.load(bytes);
   const pdfPages = doc.getPages();
   const perPage = new Map(); // pageNum -> [{rect,url}]
+  const seen = new Set();    // dedupe identical link rects
+  const MAX_PER_PAGE = 300;
 
   for (const m of mentions) {
     if (!m.id) continue;
@@ -43,8 +45,13 @@ export async function annotatePdf(bytes, pages, mentions) {
         x2 = Math.max(x2, it.x + it.w);
         y2 = Math.max(y2, it.y + it.h);
       }
+      const url = permalink(m.id);
+      const key = `${pg.page}:${Math.round(x1)}:${Math.round(y1)}:${url}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
       const arr = perPage.get(pg.page) || [];
-      arr.push({ rect: [x1, y1, x2, y2], url: permalink(m.id) });
+      if (arr.length >= MAX_PER_PAGE) continue;
+      arr.push({ rect: [x1, y1, x2, y2], url });
       perPage.set(pg.page, arr);
     }
   }

@@ -29,7 +29,7 @@ jobs:
 
           KNOWN_TYPES = {"scalar","vector","matrix","spd_matrix","probability_vector",
             "probability_density","probability_distribution","empirical_samples","function",
-            "set","metric_space","graph","string","time_series"}
+            "set","metric_space","graph","string","time_series","point_cloud","tensor","sequence"}
           KNOWN_PROPS = {"nonnegative","symmetric","bounded","metric","sqrt_metric","differentiable",
             "convex_in_first_argument","finite_requires_absolute_continuity","requires_same_support",
             "closed_form_gaussian"}
@@ -56,6 +56,11 @@ jobs:
               for t in m.get("code_templates", []):
                   tpl = C.get(i)
                   if not tpl or t not in tpl: errors.append(f"{i}: declared code template '{t}' not found")
+              for kind in ("identities", "inequalities"):
+                  for rel in m.get(kind, []):
+                      if not rel.get("latex"): errors.append(f"{i}: {kind} entry missing latex")
+                      for r in rel.get("refs", []):
+                          if r not in ids: errors.append(f"{i}: {kind} ref -> unknown id '{r}'")
           for term, target in A.items():
               if target not in ids: errors.append(f"alias '{term}' -> unknown id '{target}'")
           for cid in C:

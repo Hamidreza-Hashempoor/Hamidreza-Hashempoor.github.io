@@ -810,5 +810,167 @@
       "",
       "print(spectral_norm_distance([[4, 0], [0, 1]], [[1, 0], [0, 1]]))  # 3.0"
     ]
+  },
+  "cross_entropy": {
+    "requires_probability": true,
+    "requires_spd": false,
+    "notes": ["Clip q for the log; renormalize inputs."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def cross_entropy(p, q, eps=1e-12):",
+      "    p = np.asarray(p, float); p = p / p.sum()",
+      "    q = np.asarray(q, float); q = q / q.sum()",
+      "    q = np.clip(q, eps, 1.0)",
+      "    return float(-np.sum(p * np.log(q)))",
+      "",
+      "print(cross_entropy([0.5, 0.5], [0.9, 0.1]))  # ~1.204"
+    ],
+    "pytorch": [
+      "import torch",
+      "",
+      "def cross_entropy(p, q, eps=1e-12):",
+      "    p = p / p.sum()",
+      "    q = (q / q.sum()).clamp_min(eps)",
+      "    return -torch.sum(p * torch.log(q))"
+    ]
+  },
+  "cosine": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["Add eps to the norms to avoid division by zero."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def cosine_distance(x, y, eps=1e-12):",
+      "    x = np.asarray(x, float); y = np.asarray(y, float)",
+      "    return float(1.0 - np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y) + eps))",
+      "",
+      "print(cosine_distance([1, 0], [1, 1]))  # ~0.293"
+    ],
+    "pytorch": [
+      "import torch",
+      "",
+      "def cosine_distance(x, y, eps=1e-12):",
+      "    return 1.0 - torch.dot(x, y) / (x.norm() * y.norm() + eps)"
+    ]
+  },
+  "chamfer": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["O(|X||Y|); use KD-trees for large point clouds."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def chamfer(X, Y):",
+      "    X = np.asarray(X, float); Y = np.asarray(Y, float)",
+      "    d2 = ((X[:, None, :] - Y[None, :, :]) ** 2).sum(-1)",
+      "    return float(d2.min(axis=1).sum() + d2.min(axis=0).sum())",
+      "",
+      "print(chamfer([[0, 0]], [[1, 0], [0, 2]]))  # 6.0"
+    ]
+  },
+  "energy_distance": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["Biased V-statistic; O(n^2) pairwise distances."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def _pdist(A, B):",
+      "    return np.sqrt(((A[:, None, :] - B[None, :, :]) ** 2).sum(-1))",
+      "",
+      "def energy_distance(X, Y):",
+      "    X = np.asarray(X, float).reshape(len(X), -1)",
+      "    Y = np.asarray(Y, float).reshape(len(Y), -1)",
+      "    return float(2 * _pdist(X, Y).mean() - _pdist(X, X).mean() - _pdist(Y, Y).mean())",
+      "",
+      "print(energy_distance([[0], [0]], [[1], [1]]))  # 2.0"
+    ]
+  },
+  "sliced_wasserstein": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["Average of 1-D Wasserstein-1 over random projections."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def sliced_wasserstein(X, Y, n_proj=128, seed=0):",
+      "    X = np.asarray(X, float); Y = np.asarray(Y, float)",
+      "    rng = np.random.default_rng(seed)",
+      "    theta = rng.standard_normal((n_proj, X.shape[1]))",
+      "    theta /= np.linalg.norm(theta, axis=1, keepdims=True)",
+      "    total = 0.0",
+      "    for t in theta:",
+      "        a = np.sort(X @ t); b = np.sort(Y @ t)",
+      "        m = min(len(a), len(b))",
+      "        total += np.mean(np.abs(a[:m] - b[:m]))",
+      "    return float(total / n_proj)"
+    ]
+  },
+  "cka": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["Linear CKA; reported as a distance 1 - CKA."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def linear_cka_distance(X, Y):",
+      "    '''1 - linear CKA between representations X (n x p), Y (n x q).'''",
+      "    X = np.asarray(X, float); Y = np.asarray(Y, float)",
+      "    X = X - X.mean(0); Y = Y - Y.mean(0)",
+      "    hsic = np.linalg.norm(X.T @ Y, 'fro') ** 2",
+      "    denom = np.linalg.norm(X.T @ X, 'fro') * np.linalg.norm(Y.T @ Y, 'fro') + 1e-12",
+      "    return float(1.0 - hsic / denom)"
+    ]
+  },
+  "jensen_renyi": {
+    "requires_probability": true,
+    "requires_spd": false,
+    "notes": ["alpha=1 recovers Jensen-Shannon (use the JS code there)."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def _renyi_entropy(p, alpha, eps=1e-12):",
+      "    p = np.clip(np.asarray(p, float), eps, 1.0); p = p / p.sum()",
+      "    return 1.0 / (1.0 - alpha) * np.log(np.sum(p ** alpha))",
+      "",
+      "def jensen_renyi(p, q, alpha=2.0):",
+      "    p = np.asarray(p, float) / np.sum(p); q = np.asarray(q, float) / np.sum(q)",
+      "    m = 0.5 * (p + q)",
+      "    return float(_renyi_entropy(m, alpha) - 0.5 * _renyi_entropy(p, alpha) - 0.5 * _renyi_entropy(q, alpha))",
+      "",
+      "print(jensen_renyi([0.5, 0.5], [0.9, 0.1], alpha=2))  # ~0.099"
+    ]
+  },
+  "spectral_graph_distance": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["Pass Laplacian (or adjacency) matrices; compares sorted spectra."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def spectral_graph_distance(L1, L2):",
+      "    a = np.sort(np.linalg.eigvalsh(np.asarray(L1, float)))",
+      "    b = np.sort(np.linalg.eigvalsh(np.asarray(L2, float)))",
+      "    n = max(len(a), len(b))",
+      "    a = np.pad(a, (n - len(a), 0)); b = np.pad(b, (n - len(b), 0))",
+      "    return float(np.sqrt(np.sum((a - b) ** 2)))"
+    ]
+  },
+  "procrustes": {
+    "requires_probability": false,
+    "requires_spd": false,
+    "notes": ["Optimal rotation from the SVD of Y^T X (orthogonal Procrustes)."],
+    "numpy": [
+      "import numpy as np",
+      "",
+      "def procrustes(X, Y):",
+      "    '''min over orthogonal R of ||X - Y R||_F.'''",
+      "    X = np.asarray(X, float); Y = np.asarray(Y, float)",
+      "    U, _, Vt = np.linalg.svd(Y.T @ X)",
+      "    R = U @ Vt",
+      "    return float(np.linalg.norm(X - Y @ R, 'fro'))"
+    ]
   }
 }

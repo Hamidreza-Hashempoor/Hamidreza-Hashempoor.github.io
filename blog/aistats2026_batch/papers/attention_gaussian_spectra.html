@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gaussian Equivalence for Self-Attention Spectra</title>
+  <meta name="description" content="A randomly-initialized softmax self-attention matrix is, spectrally, a rank-one uniform-averaging mode plus a Gaussian-equivalent linear bulk: the deterministic-normalizer approximation, the nonlinearity f and its statistics, the Gaussian-equivalent model, a seven-model ladder, and a d=1000 experiment with a reproducible notebook." />
+  <style>
+    :root {
+      --paper: #fffef8;
+      --ink: #1f2429;
+      --muted: #55606a;
+      --line: #d8d3c9;
+      --accent: #8a2d1f;
+      --accent-soft: #f2ebe2;
+      --maxw: 920px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 520px at 5% -10%, #f3efe5 0%, rgba(243, 239, 229, 0) 65%),
+        radial-gradient(900px 440px at 95% 0%, #efe6dc 0%, rgba(239, 230, 220, 0) 62%),
+        #f8f6f1;
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", serif;
+      line-height: 1.7;
+    }
+
+    .page {
+      width: min(var(--maxw), 94vw);
+      margin: 0 auto;
+      padding: 42px 0 56px;
+    }
+
+    .article {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 14px 40px rgba(40, 35, 26, 0.08);
+      padding: clamp(20px, 4vw, 46px);
+    }
+
+    .meta {
+      color: var(--muted);
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      letter-spacing: 0.02em;
+      font-size: 0.88rem;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .post-stats {
+      margin: 6px 0 16px;
+      display: grid;
+      gap: 8px;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      color: #4f5963;
+    }
+
+    .stat {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.02rem;
+      line-height: 1.35;
+    }
+
+    .stat svg {
+      width: 20px; height: 20px;
+      stroke: #5a626c; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .stat strong { color: #343b42; font-weight: 700; }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 4vw, 2.85rem);
+      line-height: 1.15;
+      letter-spacing: -0.015em;
+    }
+
+    .authors {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 1.02rem;
+    }
+
+    .tools {
+      margin-top: 18px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    .tools a {
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid #d6c6b7;
+      background: #fff;
+      border-radius: 999px;
+      padding: 7px 13px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .toc {
+      margin-top: 20px;
+      padding: 10px 14px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      font-size: 0.92rem;
+    }
+
+    .toc a {
+      color: #203142;
+      text-decoration: none;
+      margin-right: 10px;
+      white-space: nowrap;
+    }
+
+    h2 {
+      margin: 34px 0 10px;
+      font-size: clamp(1.25rem, 2.7vw, 1.75rem);
+      line-height: 1.25;
+    }
+
+    h3 {
+      margin: 22px 0 6px;
+      font-size: clamp(1.05rem, 2vw, 1.3rem);
+      color: var(--accent);
+    }
+
+    p { margin: 0 0 13px; font-size: 1.04rem; }
+
+    .eq {
+      margin: 15px 0;
+      padding: 12px 14px;
+      border: 1px solid #e0dbd1;
+      background: #fff;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+
+    .eq-note {
+      margin-top: -3px;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .figure-full {
+      margin: 20px auto;
+      border: 1px solid #e4dfd6;
+      border-radius: 9px;
+      background: #fff;
+      padding: 8px;
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    .figure-full img { display: block; width: auto; height: auto; max-width: 100%; }
+
+    .figure-full figcaption {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.4;
+    }
+
+    ul { margin-top: 6px; margin-bottom: 14px; padding-left: 20px; }
+    li { margin-bottom: 6px; }
+
+    .callout {
+      margin: 16px 0 22px;
+      padding: 14px 16px;
+      border: 1px solid #d5e0ef;
+      border-left: 4px solid var(--accent);
+      background: #f4f7fb;
+      border-radius: 8px;
+      font-size: 1.0rem;
+    }
+
+    .callout strong { color: var(--accent); }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin: 14px 0 8px;
+      border: 1px solid #e0dbd1;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    table.dist-table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.93rem;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    table.dist-table th {
+      background: var(--accent);
+      color: #fff;
+      text-align: left;
+      padding: 9px 12px;
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+    }
+
+    table.dist-table td {
+      padding: 8px 12px;
+      border-top: 1px solid #ece6dc;
+      vertical-align: top;
+    }
+
+    table.dist-table tr:nth-child(even) td { background: #faf7f0; }
+
+    table.dist-table td.group {
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft) !important;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    table.dist-table td.best { color: #2a6a2a; font-weight: 700; }
+
+    code {
+      font-family: "SF Mono", "Menlo", "Consolas", monospace;
+      font-size: 0.9em;
+      background: #f2ede3;
+      padding: 1px 5px;
+      border-radius: 5px;
+    }
+
+    footer {
+      margin-top: 30px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    @media (max-width: 900px) {
+      p { font-size: 1rem; }
+    }
+  </style>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+  <div class="page">
+    <article class="article">
+      <div class="meta">AISTATS 2026 Batch • Paper 5</div>
+      <div class="post-stats" aria-label="Post metadata">
+        <div class="stat">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M12 7v6l4 2"></path>
+          </svg>
+          <span>16 minute read</span>
+        </div>
+        <div class="stat">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="4.5" width="18" height="16" rx="2"></rect>
+            <path d="M8 2.5v4M16 2.5v4M3 9.5h18"></path>
+          </svg>
+          <span><strong>Published:</strong> July 2026</span>
+        </div>
+      </div>
+      <h1>Gaussian Equivalence for Self-Attention Spectra</h1>
+      <p class="authors">Hamidreza Hashempoor • Institute for AI, University of Stuttgart</p>
+
+      <div class="tools">
+        <a href="../index.html">← Back to series</a>
+        <a href="https://openreview.net/forum?id=ABbVGvqaj3" target="_blank" rel="noopener">Original paper ↗</a>
+        <a href="resources/attention_gaussian/attention_gaussian_examples.html">View notebook</a>
+        <a href="resources/attention_gaussian/attention_gaussian_examples.ipynb">Download .ipynb</a>
+        <a href="#experiment">Experiment</a>
+        <a href="#results">Results</a>
+      </div>
+
+      <div class="toc">
+        <a href="#idea">The idea</a>
+        <a href="#setup">Attention setup</a>
+        <a href="#normalizer">Normalizer &amp; $f$</a>
+        <a href="#equivalence">Gaussian equivalence</a>
+        <a href="#models">Seven models</a>
+        <a href="#experiment">Experiment</a>
+        <a href="#results">Results</a>
+        <a href="#notebook">Notebook</a>
+      </div>
+
+      <p style="margin-top:18px;">
+        What does the singular-value spectrum of a freshly-initialized <em>softmax self-attention</em>
+        matrix actually look like? The surprising answer: strip off one rank-one spike and what remains is,
+        to leading order, the spectrum of a simple <em>linear Gaussian matrix</em>. This post follows
+        <a href="https://openreview.net/forum?id=ABbVGvqaj3" target="_blank" rel="noopener">Gaussian
+        Equivalence for Self-Attention Spectra</a> and verifies its central claim empirically: in the
+        high-dimensional limit the centered, scaled attention matrix $\sqrt{\ell}\,(A-u_\ell u_\ell^\top)$
+        has the same bulk squared-singular-value distribution as an explicit
+        <strong>Gaussian-equivalent linear model</strong>. The whole story is checked on a
+        $d=1000$ experiment whose numbers are reproduced by the companion
+        <a href="#notebook">notebook</a>.
+      </p>
+
+      <!-- ===================== IDEA ===================== -->
+      <h2 id="idea">The idea: attention = a rank-one mode + a Gaussian bulk</h2>
+      <p>
+        Softmax attention is nonlinear and its rows are coupled through a shared normalizer, so its
+        spectrum has no business being simple. Yet in the proportional high-dimensional regime a clean
+        decomposition emerges. The attention matrix splits into a <strong>rank-one uniform-averaging
+        mode</strong> — every row is nearly the uniform distribution, contributing a single large
+        Perron singular value — plus a small <strong>diffusive fluctuation</strong> whose bulk spectral
+        law is <em>deterministic</em> and matches that of a purely linear random matrix.
+      </p>
+      <div class="callout">
+        <strong>The claim in one line.</strong> Write $A$ for softmax attention and
+        $u_\ell u_\ell^\top$ for the uniform (rank-one) attention. Then
+        $A\approx u_\ell u_\ell^\top+\tfrac{1}{\sqrt{\ell}}\,Y_{\text{bulk}}$, and the bulk
+        $Y_{\text{bulk}}$ has the <strong>same limiting squared-singular-value distribution</strong> as
+        the Gaussian-equivalent linear model
+        $Y_{\text{lin}}^f=\beta\,\tfrac{S}{\sqrt d}+\sqrt{e^{\beta^2}-1-\beta^2}\,\tfrac{W}{\sqrt d}$,
+        with $S$ the attention score matrix and $W$ an independent Gaussian. The nonlinearity survives
+        only through two scalar constants.
+      </div>
+
+      <!-- ===================== SETUP ===================== -->
+      <h2 id="setup">The attention matrix</h2>
+      <p>
+        Take an input sequence $X\in\mathbb R^{\ell\times d}$, query/key weights $W^Q,W^K\in\mathbb
+        R^{d\times d_{qk}}$ with i.i.d. $\mathcal N(0,1)$ entries, and form the score matrix
+        $S=\tfrac{1}{\sqrt{d_{qk}}}\,XW^Q(W^K)^\top X^\top$. The experiment uses the clean reduction
+        $\ell=d=d_{qk}$ and $X=I_d$, so the score matrix is simply
+      </p>
+      <div class="eq">$$ S=\frac{1}{\sqrt{d}}\,W^Q(W^K)^\top . $$</div>
+      <p>Softmax over each row gives the row-stochastic attention matrix, and the uniform baseline is its rank-one mean:</p>
+      <div class="eq">
+        $$ A=\operatorname{softmax}(\beta S),\quad A_{ij}=\frac{e^{\beta S_{ij}}}{Z_i},\quad
+        Z_i=\sum_j e^{\beta S_{ij}};\qquad
+        u_d u_d^\top=\frac1d\mathbf 1\mathbf 1^\top,\quad u_d=\frac{1}{\sqrt d}\mathbf 1. $$
+      </div>
+      <p>The object of interest is the centered fluctuation around the uniform mode,</p>
+      <div class="eq">$$ A_\perp = A - u_d u_d^\top , $$</div>
+      <p>
+        where $\beta>0$ is an inverse-temperature. All the action is in $A_\perp$: the uniform mode
+        $u_d u_d^\top$ carries the one big singular value, and $A_\perp$ carries the bulk.
+      </p>
+
+      <!-- ===================== NORMALIZER + f ===================== -->
+      <h2 id="normalizer">The deterministic normalizer and the nonlinearity $f$</h2>
+      <p>
+        The row normalizers $Z_i$ are what make attention rows dependent. The key simplification is that
+        for large $d$ they <em>concentrate</em>: since each $S_{ij}\approx\mathcal N(0,1/d)\cdot\sqrt d$
+        behaves like a standard Gaussian $\chi$, the law of large numbers gives
+      </p>
+      <div class="eq">$$ Z_i \;\approx\; d\,\mathbb E\!\left[e^{\beta\chi}\right] \;=\; d\,e^{\beta^2/2},\qquad \chi\sim\mathcal N(0,1). $$</div>
+      <p>Replacing $Z_i$ by this deterministic value turns each entry into a pointwise nonlinearity of the score:</p>
+      <div class="eq">
+        $$ A_{ij}\approx\frac1d\,e^{\beta S_{ij}-\beta^2/2}=\frac1d\bigl(1+f(S_{ij})\bigr),\qquad
+        f(x)=e^{\beta x-\beta^2/2}-1, $$
+      </div>
+      <p>so that the centered, scaled fluctuation is governed entirely by $f$ applied to the scores:</p>
+      <div class="eq">$$ \sqrt d\,(A-u_du_d^\top)\;\approx\;\frac{1}{\sqrt d}\,f(S). $$</div>
+      <p>
+        The function $f$ is centered ($\mathbb E[f(\chi)]=0$) and, remarkably, its whole spectral effect is
+        summarized by just two scalars — a <em>linear</em> coefficient and a <em>variance</em>:
+      </p>
+      <div class="eq">
+        $$ \theta_1=\mathbb E\!\left[f(\chi)^2\right]=e^{\beta^2}-1,\qquad
+        \theta_2=\bigl(\mathbb E[f'(\chi)]\bigr)^2=\beta^2, $$
+      </div>
+      <p class="eq-note">
+        The convexity inequality $e^{x}\ge 1+x$ gives $\theta_1\ge\theta_2$, with equality only at
+        $\beta=0$; $\theta_1-\theta_2=e^{\beta^2}-1-\beta^2\ge 0$ is exactly the non-linear "residual"
+        energy that a linear model cannot capture with the score alone.
+      </p>
+
+      <!-- ===================== EQUIVALENCE ===================== -->
+      <h2 id="equivalence">The Gaussian-equivalent linear model</h2>
+      <p>
+        Here is the heart of the result. By an orthogonal (Stein) projection, the scalar random variable
+        $f(\chi)$ can be split into the part correlated with $\chi$ plus an independent Gaussian residual
+        carrying the leftover variance:
+      </p>
+      <div class="eq">
+        $$ f(\chi)\;\approx\;\sqrt{\theta_2}\;\chi\;+\;\sqrt{\theta_1-\theta_2}\;\eta,\qquad
+        \eta\sim\mathcal N(0,1),\ \eta\perp\chi. $$
+      </div>
+      <p>
+        Promoting this to matrices — the score $S/\sqrt d$ plays the role of $\chi$, and an independent
+        Gaussian $W/\sqrt d$ plays the role of $\eta$ — turns the nonlinear $f(S)/\sqrt d$ into a linear
+        surrogate. With the exact statistics of $f$ this is the <strong>Gaussian-equivalent model</strong>:
+      </p>
+      <div class="eq">
+        $$ \boxed{\;Y_{\text{lin}}^f=\beta\,\frac{S}{\sqrt d}\;+\;\sqrt{\,e^{\beta^2}-1-\beta^2\,}\,\frac{W}{\sqrt d}\;} $$
+      </div>
+      <p>
+        This is <em>not</em> an entrywise equality — the two matrices are entirely different objects.
+        It is an <strong>asymptotic statement about their bulk singular-value distributions</strong>. In
+        the proportional regime $d,\ell,d_{qk}\to\infty$ with $\ell/d\to\gamma$ and $d_{qk}/d\to\psi$, the
+        theory shows two things:
+      </p>
+      <ul>
+        <li><strong>Rank-one dominance:</strong> $s_1(A)\to 1$ almost surely — the top singular value is
+          exactly the uniform Perron mode, nothing else.</li>
+        <li><strong>Bulk equivalence:</strong> the squared-singular-value law of $\sqrt\ell\,A_\perp$
+          converges to the <em>same</em> limiting law $\nu_\infty(\beta,\gamma,\psi)$ as that of
+          $Y_{\text{lin}}^f$.</li>
+      </ul>
+      <p>Together these give the practical decomposition advertised in the introduction,</p>
+      <div class="eq">$$ A\;\approx\;u_\ell u_\ell^\top\;+\;\frac{1}{\sqrt\ell}\,Y_{\text{bulk}}, $$</div>
+      <p>a rank-one averaging mode plus a diffusive bulk with a deterministic spectral law.</p>
+
+      <h3>A polynomial bridge</h3>
+      <p>
+        To connect the true nonlinearity to its linear surrogate the paper interposes a
+        <em>polynomial</em> model: replace $e^{(\cdot)}$ by its truncated Taylor expansion
+        $P_n(x)=\sum_{k<n}x^k/k!$, recentered so the mean is zero,
+      </p>
+      <div class="eq">
+        $$ Q_n(x)=e^{-\beta^2/2}\bigl(P_n(\beta x)-\mathbb E[P_n(\beta\chi)]\bigr),\qquad
+        n_d=\Bigl\lceil c\,\frac{\log d}{\log\log d}\Bigr\rceil. $$
+      </div>
+      <p>
+        $Q_n$ has its own statistics $\theta_1^Q=\mathbb E[Q_n(\chi)^2]$ and
+        $\theta_2^Q=(\mathbb E[Q_n'(\chi)])^2$ (estimated by Monte-Carlo), and its own Gaussian-equivalent
+        $Y_{\text{lin}}^Q=\sqrt{\theta_2^Q}\,S/\sqrt d+\sqrt{\theta_1^Q-\theta_2^Q}\,W/\sqrt d$. As the
+        degree grows, $Q_n\to f$ and the two equivalences coincide.
+      </p>
+
+      <!-- ===================== MODELS ===================== -->
+      <h2 id="models">A ladder of seven models</h2>
+      <p>
+        The experiment builds seven matrices that step from the true attention down to the linear
+        Gaussian equivalent. Comparing their bulk spectra shows the equivalence tighten rung by rung.
+      </p>
+      <div class="table-wrap">
+        <table class="dist-table">
+          <thead><tr><th>#</th><th>Name</th><th>Definition</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td>M0</td><td><code>sqrt_d_A</code></td><td>$\sqrt d\,A$</td><td>reference; keeps the rank-one outlier</td></tr>
+            <tr><td>M1</td><td><code>sqrt_d_A_perp</code></td><td>$\sqrt d\,(A-u_du_d^\top)$</td><td>cleanest target for the theorem</td></tr>
+            <tr><td>M2</td><td><code>Y</code></td><td>$e^{\beta S}/(e^{\beta^2/2}\sqrt d)$</td><td>deterministic-normalizer exponential</td></tr>
+            <tr><td>M3</td><td><code>Y_f</code></td><td>$f(S)/\sqrt d$</td><td>centered nonlinear model</td></tr>
+            <tr><td>M4</td><td><code>Y_Q</code></td><td>$Q_n(S)/\sqrt d$</td><td>polynomial (Taylor) approximation</td></tr>
+            <tr><td>M5</td><td><code>Y_Q_lin</code></td><td>$\sqrt{\theta_2^Q}\tfrac{S}{\sqrt d}+\sqrt{\theta_1^Q-\theta_2^Q}\tfrac{W}{\sqrt d}$</td><td>Gaussian-equivalent of $Q_n$</td></tr>
+            <tr><td>M6</td><td><code>Y_f_lin</code></td><td>$\beta\tfrac{S}{\sqrt d}+\sqrt{e^{\beta^2}-1-\beta^2}\,\tfrac{W}{\sqrt d}$</td><td>final Gaussian-equivalent, exact $\theta$</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ===================== EXPERIMENT ===================== -->
+      <h2 id="experiment">The experiment</h2>
+      <p>
+        A single high-dimensional draw is already enough to see the limiting behaviour. The reported run
+        averages over $10$ independent trials at $d=1000$; each trial draws fresh Gaussian
+        $W^Q,W^K,W$, builds all seven models, and compares their squared-singular-value
+        <em>bulk</em> (after discarding the top $3$ values, which hold any rank-one spikes) against the
+        cleanest reference <code>sqrt_d_A_perp</code>.
+      </p>
+      <div class="table-wrap">
+        <table class="dist-table">
+          <thead><tr><th>Setting</th><th>Value</th><th>Setting</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td>dimensions $d=\ell=d_{qk}$</td><td>1000</td><td>input $X$</td><td>$I_d$ (identity)</td></tr>
+            <tr><td>inverse temp. $\beta$</td><td>1.0</td><td>trials</td><td>10</td></tr>
+            <tr><td>top-$k$ removed (bulk)</td><td>3</td><td>dtype</td><td>float64</td></tr>
+            <tr><td>polynomial $c$</td><td>2.0 → degree $n_d=8$</td><td>$\theta^Q$ MC samples</td><td>200,000</td></tr>
+            <tr><td>histogram bins</td><td>120 over $[0,8]$</td><td>SVD</td><td>full, dense</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ===================== RESULTS ===================== -->
+      <h2 id="results">Results</h2>
+      <p>
+        All three theoretical claims come out cleanly at $d=1000$. First, the rank-one mode: the top
+        squared singular value of $\sqrt d\,A$ (and of the deterministic-normalizer model $Y$) sits at
+        $\sim\!1000$, while every centered/linear model has no such spike — its largest bulk value is
+        only $\sim\!10$.
+      </p>
+
+      <figure class="figure-full">
+        <img src="resources/attention_gaussian/top_singular_values.png" alt="Bar chart of the top five squared singular values per model on a log scale; sqrt_d_A and Y show a spike near 1000 while all other models sit near 10." />
+        <figcaption>
+          Figure 1. Top-5 squared singular values per model (log scale, averaged over 10 trials).
+          <strong>sqrt_d_A</strong> and <strong>Y</strong> carry the rank-one Perron spike
+          $s_1^2\approx1000\approx d$; removing the uniform mode (<strong>sqrt_d_A_perp</strong>) or
+          working with any centered/linear model drops $s_1^2$ to $\sim\!10$ — the outlier is
+          <em>entirely</em> the uniform-averaging direction.
+        </figcaption>
+      </figure>
+
+      <p>
+        Second, the deterministic-normalizer approximation that everything rests on. The diagnostic
+        $D_i=Z_i/(d\,e^{\beta^2/2})$ concentrates tightly at $1$ (mean $0.99994$, std $0.047$, worst-case
+        deviation $0.199$ across all $10^4$ rows) — exactly what licenses replacing $Z_i$ by
+        $d\,e^{\beta^2/2}$.
+      </p>
+
+      <figure class="figure-full">
+        <img src="resources/attention_gaussian/normalizer_concentration.png" alt="Histogram of the row-normalizer diagnostic D_i, sharply peaked at 1." />
+        <figcaption>
+          Figure 2. Row-normalizer concentration: histogram of $D_i=Z_i/(d\,e^{\beta^2/2})$ over all rows
+          and trials. Tightly peaked at the dashed line $D_i=1$, validating $Z_i\approx d\,e^{\beta^2/2}$
+          at finite $d$.
+        </figcaption>
+      </figure>
+
+      <p>
+        Third — the main event — bulk spectral equivalence. Once the top-3 values are removed, the
+        squared-singular-value histograms of the nonlinear models and their linear Gaussian equivalents
+        line up, and the sorted-curve overlay is nearly a single line.
+      </p>
+
+      <figure class="figure-full">
+        <img src="resources/attention_gaussian/stepwise_histograms.png" alt="Grid of six panels, each overlaying a model's bulk squared-singular-value histogram on the reference sqrt_d_A histogram." />
+        <figcaption>
+          Figure 3. Bulk squared-singular-value histograms (top-3 removed), each model (blue step) vs.
+          the reference <strong>sqrt_d_A</strong> bulk (grey). The polynomial model
+          <strong>Y_Q</strong> and the Gaussian-equivalent <strong>Y_f_lin</strong> track the reference
+          bulk closely; small tail differences are the expected finite-$d$ gap, since the equivalence is
+          asymptotic.
+        </figcaption>
+      </figure>
+
+      <figure class="figure-full">
+        <img src="resources/attention_gaussian/sorted_squared_singular_values.png" alt="Overlaid descending sorted bulk squared-singular-value curves for all seven models; the curves nearly coincide." />
+        <figcaption>
+          Figure 4. Sorted (descending) bulk squared singular values for all seven models. The reference
+          <strong>sqrt_d_A</strong> is dashed; every other curve nearly coincides across the bulk — the
+          visual statement of a shared limiting spectral law.
+        </figcaption>
+      </figure>
+
+      <h3>Representative numbers</h3>
+      <p>The diagnostics and bulk distances from the reported 10-trial run:</p>
+      <div class="table-wrap">
+        <table class="dist-table">
+          <thead>
+            <tr><th>Model</th><th>top-1 $s^2$</th><th>$L_1$ to <code>sqrt_d_A_perp</code></th><th>Wasserstein</th><th>mean curve err</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>sqrt_d_A</code></td><td>1002.21</td><td>0.0202</td><td>0.0068</td><td>0.0068</td></tr>
+            <tr><td><code>sqrt_d_A_perp</code></td><td>10.29</td><td class="best">0.0000</td><td>0.0000</td><td>0.0000</td></tr>
+            <tr><td><code>Y</code></td><td>1004.40</td><td>0.0320</td><td>0.0313</td><td>0.0313</td></tr>
+            <tr><td><code>Y_f</code></td><td>11.48</td><td>0.0322</td><td>0.0265</td><td>0.0265</td></tr>
+            <tr><td><code>Y_Q</code></td><td>10.28</td><td>0.0381</td><td>0.0165</td><td>0.0165</td></tr>
+            <tr><td><code>Y_Q_lin</code></td><td>8.83</td><td>0.0486</td><td>0.0352</td><td>0.0352</td></tr>
+            <tr><td><code>Y_f_lin</code></td><td>8.88</td><td>0.0501</td><td>0.0389</td><td>0.0389</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="eq-note">
+        Statistics ($\beta=1$): $\theta_1(f)=e-1=1.7183$, $\theta_2(f)=1.0$; Monte-Carlo polynomial
+        $\theta_1^Q=1.7047$, $\theta_2^Q=0.9987$ (degree $n_d=8$). Rank-one diagnostics: mean $s_1(A)=1.0011$
+        and mean $s_1(\sqrt d\,A)=31.658$ vs. $\sqrt{1000}=31.623$. Normalizer: mean $0.99994$, std $0.047$,
+        max $|D_i-1|=0.199$.
+      </p>
+
+      <div class="callout">
+        <strong>Reading the three regimes of the ladder.</strong>
+        (1) <em>Rank-one:</em> only <code>sqrt_d_A</code> and <code>Y</code> keep the $s_1^2\approx d$
+        spike; centering removes it and confirms it is the uniform mode.
+        (2) <em>Nonlinear vs. deterministic-normalizer:</em> <code>Y</code> and <code>Y_f</code> match
+        <code>sqrt_d_A_perp</code> closely, so the normalizer approximation costs almost nothing.
+        (3) <em>Linear surrogate:</em> the Gaussian-equivalents <code>Y_Q_lin</code> and
+        <code>Y_f_lin</code> sit a hair further from the reference than the polynomial <code>Y_Q</code> —
+        the residual is the finite-$d$ gap that shrinks as $d\to\infty$. In every case the bulk
+        distances are small and of the same order, which is the empirical content of the theorem.
+      </div>
+
+      <p>
+        The takeaway: a randomly-initialized softmax attention map is spectrally boring in the best
+        possible way. One rank-one averaging direction aside, its singular values behave like those of a
+        linear Gaussian matrix whose only memory of the softmax is two numbers, $\theta_1$ and $\theta_2$.
+      </p>
+
+      <!-- ===================== NOTEBOOK ===================== -->
+      <h2 id="notebook">Reproduce it</h2>
+      <p>
+        The companion notebook rebuilds the whole experiment from scratch with only <code>numpy</code>
+        (and <code>matplotlib</code> for the figures). It constructs the score matrix, the softmax
+        attention, the nonlinearity $f$, the Taylor polynomial $Q_n$, and both Gaussian-equivalent
+        models, then computes singular-value spectra, the normalizer diagnostic, and the bulk
+        histogram distances — printing the exact $\theta$ statistics and diagnostics reported above. It
+        runs $5$ trials by default (rather than $10$) for a snappier execution; this only smooths the
+        Monte-Carlo histograms and leaves the verified quantities unchanged.
+      </p>
+      <div class="tools" style="margin-top:6px;">
+        <a href="resources/attention_gaussian/attention_gaussian_examples.html">View notebook (rendered)</a>
+        <a href="resources/attention_gaussian/attention_gaussian_examples.ipynb">Download .ipynb</a>
+      </div>
+
+      <footer>
+        The figures and tables are from a 10-trial run of the $d=1000$ experiment described above; the
+        linked notebook reproduces the statistics and diagnostics. Summaries are my own re-derivations
+        for study — see the linked source for the authoritative statements.
+      </footer>
+    </article>
+  </div>
+</body>
+</html>

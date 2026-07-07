@@ -3,7 +3,7 @@
 
 import { loadData } from "./modules/data.js";
 import { parseHash, onRoute } from "./modules/router.js";
-import { renderHome, renderDetail, renderCompare, renderNotFound, renderTypesView } from "./modules/render.js";
+import { renderHome, renderDetail, renderCompare, renderNotFound, renderTypesView, renderContribute } from "./modules/render.js";
 import {
   filterFromParams, filterToParams, emptyFilterState,
 } from "./modules/filters.js";
@@ -251,6 +251,9 @@ function route() {
   } else if (parts[0] === "linker") {
     view = renderLinker(app.db, app);
     active = "linker";
+  } else if (parts[0] === "contribute") {
+    view = renderContribute(app.db);
+    active = "contribute";
   } else {
     view = renderNotFound();
     active = "";

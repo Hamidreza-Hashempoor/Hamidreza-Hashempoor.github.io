@@ -28,8 +28,11 @@ async function loadPdfjs() {
  */
 export async function extractDocument(input, onProgress = () => {}) {
   const pdfjs = await loadPdfjs();
-  const data = input instanceof ArrayBuffer ? input : await input.arrayBuffer();
-  const doc = await pdfjs.getDocument({ data }).promise;
+  const src = input instanceof ArrayBuffer ? input : await input.arrayBuffer();
+  // pdf.js transfers the buffer to its worker (detaching it), so hand it a fresh
+  // COPY — this leaves the caller's original bytes intact for the annotated-PDF
+  // export (pdf-lib would otherwise throw "detached ArrayBuffer").
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(src.slice(0)) }).promise;
   const pages = [];
   let fullText = "";
 
@@ -74,8 +77,9 @@ export async function extractDocument(input, onProgress = () => {}) {
 /** Render a page to a data URL (for the optional Mathpix path). */
 export async function renderPageImage(input, pageNumber = 1, scale = 2) {
   const pdfjs = await loadPdfjs();
-  const data = input instanceof ArrayBuffer ? input : await input.arrayBuffer();
-  const doc = await pdfjs.getDocument({ data }).promise;
+  const src = input instanceof ArrayBuffer ? input : await input.arrayBuffer();
+  // Copy so repeated calls (Mathpix renders each page) don't detach the buffer.
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(src.slice(0)) }).promise;
   const page = await doc.getPage(pageNumber);
   const viewport = page.getViewport({ scale });
   const canvas = document.createElement("canvas");

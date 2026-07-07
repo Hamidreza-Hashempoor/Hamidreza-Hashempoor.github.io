@@ -27,7 +27,9 @@ function permalink(id) {
  */
 export async function annotatePdf(bytes, pages, mentions) {
   const { PDFDocument, PDFName, PDFString } = await loadPdfLib();
-  const doc = await PDFDocument.load(bytes);
+  // Load from a copy: guards against a detached buffer if the same bytes were
+  // handed to pdf.js earlier (which transfers the buffer to its worker).
+  const doc = await PDFDocument.load(bytes instanceof ArrayBuffer ? bytes.slice(0) : bytes);
   const pdfPages = doc.getPages();
   const perPage = new Map(); // pageNum -> [{rect,url}]
   const seen = new Set();    // dedupe identical link rects

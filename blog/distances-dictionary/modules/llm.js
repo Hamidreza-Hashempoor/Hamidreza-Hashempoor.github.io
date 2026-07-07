@@ -35,12 +35,13 @@ export const PROVIDERS = {
     defaultModel: "openrouter/auto",
     keyHint: "sk-or-…",
     corsNote: "One key fronts many models (Claude, GPT, Gemini, Llama…). Browser-friendly.",
-    buildRequest({ key, model, system, user, maxTokens, temperature }) {
+    buildRequest({ key, model, system, user, maxTokens, temperature, json }) {
       return {
         url: "https://openrouter.ai/api/v1/chat/completions",
         headers: { Authorization: `Bearer ${key}`, "content-type": "application/json" },
         body: {
           model, max_tokens: maxTokens, temperature,
+          ...(json ? { response_format: { type: "json_object" } } : {}),
           messages: [{ role: "system", content: system }, { role: "user", content: user }],
         },
       };
@@ -53,14 +54,14 @@ export const PROVIDERS = {
     defaultModel: "gemini-2.0-flash",
     keyHint: "AIza… (Google AI Studio key)",
     corsNote: "Gemini REST API, callable from the browser with your key.",
-    buildRequest({ key, model, system, user, maxTokens, temperature }) {
+    buildRequest({ key, model, system, user, maxTokens, temperature, json }) {
       return {
         url: `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,
         headers: { "content-type": "application/json" },
         body: {
           systemInstruction: { parts: [{ text: system }] },
           contents: [{ role: "user", parts: [{ text: user }] }],
-          generationConfig: { maxOutputTokens: maxTokens, temperature },
+          generationConfig: { maxOutputTokens: maxTokens, temperature, ...(json ? { responseMimeType: "application/json" } : {}) },
         },
       };
     },
@@ -72,12 +73,13 @@ export const PROVIDERS = {
     defaultModel: "meta-llama/Llama-3.2-3B-Instruct",
     keyHint: "hf_…",
     corsNote: "Free-tier friendly HF Inference router (OpenAI-compatible).",
-    buildRequest({ key, model, system, user, maxTokens, temperature }) {
+    buildRequest({ key, model, system, user, maxTokens, temperature, json }) {
       return {
         url: "https://router.huggingface.co/v1/chat/completions",
         headers: { Authorization: `Bearer ${key}`, "content-type": "application/json" },
         body: {
           model, max_tokens: maxTokens, temperature,
+          ...(json ? { response_format: { type: "json_object" } } : {}),
           messages: [{ role: "system", content: system }, { role: "user", content: user }],
         },
       };
@@ -139,24 +141,43 @@ export function hasCreds(provider = getProvider()) {
 /* --------------------------------- calls ---------------------------------- */
 
 /** Call the selected provider. Returns the assistant text. Throws on error. */
-export async function callLLM({ system = "", user = "", maxTokens = 1500, temperature = 0.2, signal } = {}) {
+export async function callLLM({ system = "", user = "", maxTokens = 1500, temperature = 0.2, json = false, signal } = {}) {
   const pid = getProvider();
   const p = PROVIDERS[pid];
   if (!p) throw new Error(`Unknown provider: ${pid}`);
   const key = getKey(pid);
   if (!key) throw new Error(`No API key set for ${p.label}.`);
   const model = getModel(pid);
-  const { url, headers, body } = p.buildRequest({ key, model, system, user, maxTokens, temperature });
-  const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal });
-  if (!res.ok) {
-    let detail = "";
-    try { const j = await res.json(); detail = j.error?.message || (typeof j.error === "string" ? j.error : "") || JSON.stringify(j).slice(0, 300); }
-    catch (_) { detail = await res.text().catch(() => ""); }
-    if (res.status === 401 || res.status === 403) throw new Error(`Auth failed (${res.status}) for ${p.label}. Check your API key / model access. ${detail}`);
-    if (res.status === 0) throw new Error(`${p.label} call blocked (CORS or network). ${p.corsNote || ""}`);
-    throw new Error(`${p.label} request failed (${res.status}). ${detail}`);
+
+  const attempt = async (useJson) => {
+    const { url, headers, body } = p.buildRequest({ key, model, system, user, maxTokens, temperature, json: useJson });
+    const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal });
+    if (!res.ok) {
+      let detail = "";
+      try { const j = await res.json(); detail = j.error?.message || (typeof j.error === "string" ? j.error : "") || JSON.stringify(j).slice(0, 300); }
+      catch (_) { detail = await res.text().catch(() => ""); }
+      let msg;
+      if (res.status === 401 || res.status === 403) msg = `Auth failed (${res.status}) for ${p.label}. Check your API key / model access. ${detail}`;
+      else if (res.status === 0) msg = `${p.label} call blocked (CORS or network). ${p.corsNote || ""}`;
+      else msg = `${p.label} request failed (${res.status}). ${detail}`;
+      const err = new Error(msg);
+      err.status = res.status;
+      err.detail = detail;
+      throw err;
+    }
+    return p.parseText(await res.json());
+  };
+
+  try {
+    return await attempt(json);
+  } catch (e) {
+    // Defensive: if JSON mode is what the model/route rejected, retry without it.
+    const d = `${e && e.detail || ""} ${e && e.message || ""}`.toLowerCase();
+    if (json && e && e.status >= 400 && e.status < 500 && /response_format|json|unsupported|not support/.test(d)) {
+      return attempt(false);
+    }
+    throw e;
   }
-  return p.parseText(await res.json());
 }
 
 /** Strip code fences / surrounding prose and JSON.parse. */
@@ -170,15 +191,17 @@ export function parseJsonLoose(text) {
   throw new Error("Model did not return valid JSON.");
 }
 
-/** Call expecting strict JSON; one retry nudging for JSON-only. */
+/** Call expecting strict JSON; requests JSON mode, one stronger retry on failure. */
 export async function callJSON(opts, _retry = true) {
-  const text = await callLLM(opts);
+  const text = await callLLM({ json: true, ...opts });
   try {
     return parseJsonLoose(text);
   } catch (e) {
     if (_retry) {
-      const user = (opts.user || "") + "\n\nReturn ONLY valid JSON. No prose, no markdown code fences.";
-      return callJSON({ ...opts, user }, false);
+      const user = (opts.user || "") +
+        "\n\nYour previous reply was not valid JSON. Reply with ONLY a single JSON object, " +
+        "starting with { and ending with }. No prose, no markdown, no code fences.";
+      return callJSON({ ...opts, user, temperature: 0, json: true }, false);
     }
     throw e;
   }

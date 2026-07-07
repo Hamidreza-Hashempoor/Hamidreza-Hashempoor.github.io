@@ -535,6 +535,18 @@ a.chip:hover { text-decoration: none; border-color: var(--accent); color: var(--
 .types-nav .chip:hover { background: var(--accent-soft); color: var(--accent); }
 .types-view .lk-section h2 { scroll-margin-top: 80px; }
 
+/* -------------------------------- contribute ------------------------------ */
+
+.hero-contribute { margin: 12px 0 0; font-size: 0.95rem; }
+.hero-contribute a { font-weight: 600; }
+.contribute-actions { gap: 10px; margin: 4px 0; }
+.contribute-actions .answer-cta { font-size: 0.95rem; padding: 8px 14px; }
+.contribute-steps { margin: 4px 0 0; padding-left: 20px; line-height: 1.6; }
+.contribute-steps li { margin-bottom: 8px; }
+.schema-list { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 6px 0; }
+.schema-list dt { font-family: var(--mono, monospace); font-weight: 600; color: var(--accent); }
+.schema-list dd { margin: 0; color: var(--ink, inherit); }
+
 /* ------------------------------ misc / states ----------------------------- */
 
 .muted { color: var(--muted); }

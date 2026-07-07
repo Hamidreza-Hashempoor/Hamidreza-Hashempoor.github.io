@@ -12,7 +12,7 @@ import { hasToken } from "./chat.js";
 import { applyFilters, isFilterActive, filterCount } from "./filters.js";
 import { renderCodePanel } from "./codegen.js";
 import { renderGraph } from "./graph.js";
-import { editUrl, editCardIssueUrl } from "./config.js";
+import { editUrl, editCardIssueUrl, newCardIssueUrl, blobUrl } from "./config.js";
 
 const KEY_PROPERTIES = ["symmetric", "bounded", "metric", "nonnegative"];
 
@@ -243,6 +243,10 @@ export function renderHome(db, app) {
       "Open a measure for its formula, properties, code, and related measures.",
     ]));
     hero.appendChild(exampleChips(app, EXAMPLE_QUERIES));
+    hero.appendChild(el("p", { class: "hero-contribute" }, [
+      "Missing a measure or spotted an error? ",
+      el("a", { href: "#/contribute" }, ["Contribute →"]),
+    ]));
     root.appendChild(hero);
   }
 
@@ -583,6 +587,10 @@ export function renderTypesView(db, app) {
   root.appendChild(el("p", { class: "detail-lead" }, [
     "Dissimilarities grouped by the kind of object they compare. A measure can appear under more than one type.",
   ]));
+  root.appendChild(el("p", { class: "hero-contribute" }, [
+    "Missing a type or a measure? ",
+    el("a", { href: "#/contribute" }, ["Contribute →"]),
+  ]));
 
   const groups = new Map();
   for (const m of db.measures) {
@@ -618,6 +626,89 @@ export function renderTypesView(db, app) {
     sec.appendChild(grid);
     root.appendChild(sec);
   }
+  return root;
+}
+
+/* ------------------------------- contribute ------------------------------- */
+
+const NEW_MEASURE_SKELETON = {
+  id: "my_measure",
+  canonical_name: "My Measure",
+  aliases: [],
+  short_description: "One-sentence description of what it measures.",
+  family: [],
+  input_types: ["vector"],
+  symbols: [],
+  formula_latex: "",
+  formula_plaintext: "",
+  properties: { nonnegative: true, symmetric: true, bounded: false, metric: false },
+  identities: [],
+  inequalities: [],
+  range: "",
+  parameters: [],
+  practical_use_cases: [],
+  when_to_use: "",
+  when_not_to_use: "",
+  related: [],
+  references: [{ title: "", url: "" }],
+};
+
+export function renderContribute(db) {
+  const root = el("div", { class: "contribute" });
+  root.appendChild(el("a", { class: "back-link", href: "#/" }, ["← Back to search"]));
+  root.appendChild(el("h1", { tabindex: "-1", id: "route-heading" }, ["Contribute to the dictionary"]));
+  root.appendChild(el("p", { class: "detail-lead" }, [
+    "The flash cards are data-driven — they live in one JSON file, so anyone can propose a new measure or an ",
+    "edit with no local setup. Because links use the stable #/m/:id permalink, a merged change updates the card ",
+    "everywhere automatically, including inside already-annotated PDFs.",
+  ]));
+
+  // Primary actions.
+  const actions = el("div", { class: "chips contribute-actions" }, [
+    el("a", { class: "answer-cta", href: newCardIssueUrl(NEW_MEASURE_SKELETON), target: "_blank", rel: "noopener" }, ["➕ Propose a new measure"]),
+    el("a", { class: "answer-cta", href: editUrl(), target: "_blank", rel: "noopener" }, ["✎ Edit measures.json on GitHub"]),
+    el("a", { class: "answer-cta", href: "#/" }, ["🔎 Browse & edit an existing card"]),
+  ]);
+  root.appendChild(section("Ways to contribute", actions));
+
+  // How it works.
+  const how = el("ol", { class: "contribute-steps" }, [
+    el("li", {}, ["Open any measure and use its ", el("strong", {}, ["Contribute"]), " box to edit it, or start from the buttons above."]),
+    el("li", {}, ["The ", el("a", { href: "#/linker" }, ["PDF Linker"]), " can draft a new entry for you: it flags a measure that isn't in the dictionary and the AI drafts a schema-valid card to download or propose."]),
+    el("li", {}, ["Open a pull request (or a prefilled issue). Continuous integration validates the data automatically — ids, types, and every cross-reference."]),
+    el("li", {}, ["A maintainer reviews and merges. GitHub Pages rebuilds and the card is live; existing annotated PDFs keep working because their links point to the permalink."]),
+  ]);
+  root.appendChild(section("How it works", how));
+
+  // Schema summary.
+  const schema = el("div", {});
+  schema.appendChild(el("p", { class: "muted" }, ["Each entry is one JSON object. The core fields:"]));
+  const dl = el("dl", { class: "schema-list" });
+  [
+    ["id", "unique kebab-case slug (becomes the #/m/:id permalink)"],
+    ["canonical_name", "the primary display name"],
+    ["aliases", "other names it goes by — used by search and the PDF linker"],
+    ["input_types", "objects compared: vector, matrix, spd_matrix, probability_vector, …"],
+    ["symbols", "LaTeX symbol forms, e.g. D_{KL}(p\\|q)"],
+    ["formula_latex / formula_plaintext", "the definition"],
+    ["properties", "{ nonnegative, symmetric, bounded, metric }"],
+    ["identities / inequalities", "cross-linked relations: { latex, refs, note }"],
+    ["related / references", "other measure ids and citations"],
+  ].forEach(([k, v]) => {
+    dl.appendChild(el("dt", {}, [k]));
+    dl.appendChild(el("dd", {}, [v]));
+  });
+  schema.appendChild(dl);
+  schema.appendChild(el("p", { class: "muted" }, [
+    "Full schema and validation rules live with the data: ",
+    el("a", { href: blobUrl(), target: "_blank", rel: "noopener" }, ["measures.json"]),
+    ". Set metric / symmetric / bounded / SPD flags from known mathematics, not guesses.",
+  ]));
+  root.appendChild(section("Entry schema", schema));
+
+  root.appendChild(el("p", { class: "muted" }, [
+    `The dictionary currently has ${db.measures.length} measures. No unreviewed math reaches the site — human review and CI gate every contribution.`,
+  ]));
   return root;
 }
 

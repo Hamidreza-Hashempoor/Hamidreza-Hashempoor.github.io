@@ -34,13 +34,18 @@ https://hamidreza-hashempoor.github.io/blog/distances-dictionary/
      stays in your browser (sessionStorage by default), billed to you — never the
      site owner's. See `modules/llm.js`.
 - **PDF → Dictionary Linker** (`#/linker`) — upload a PDF (parsed client-side with
-  pdf.js) or paste text; your BYOK LLM detects the measures it uses (even under
-  different names), links each to a canonical entry with audited code, and drafts
-  schema-valid entries for missing ones (download for review). Optional &
-  experimental: Mathpix equation OCR (BYO key), Pyodide code verification, and an
-  annotated-PDF export (pdf-lib). Deep links use the stable `#/m/:id` permalink.
-  Unnamed-formula detection is the least reliable step — low-confidence and
-  unmatched items are flagged, never silently trusted.
+  pdf.js) or paste text. Detection is **hybrid**: a deterministic dictionary match
+  links every measure named in the cards (by name, alias, or abbreviation) with
+  **no API key at all**; adding your own BYOK LLM additionally detects measures that
+  appear only as unnamed formulas or under names not yet in the dictionary, and
+  drafts schema-valid entries for missing ones (download for review). Each linked
+  measure carries audited code. Optional: Mathpix equation OCR (BYO key), Pyodide
+  code verification, and an annotated-PDF export (pdf-lib). Deep links use the stable
+  `#/m/:id` permalink. Unnamed-formula detection is the least reliable step —
+  low-confidence and unmatched items are flagged, never silently trusted.
+- **Contribute** (`#/contribute`) — an in-app page (also linked from the toolbar and
+  home) with one-click "propose a new measure" / "edit on GitHub" actions, the entry
+  schema, and how the data-driven, CI-gated PR flow keeps the flash cards current.
 
 ## Local development
 

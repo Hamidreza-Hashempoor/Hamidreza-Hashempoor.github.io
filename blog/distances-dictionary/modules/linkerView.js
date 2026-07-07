@@ -62,8 +62,9 @@ export function renderLinker(db) {
     "even under different names — and link each to a dictionary entry with audited code. Missing measures can be drafted for review.",
   ]));
   root.appendChild(el("p", { class: "muted" }, [
-    "Runs in your browser; the AI call uses your own key (below). Detection of unnamed formulas is the least reliable step — ",
-    "low-confidence and unmatched items are flagged, never silently trusted.",
+    "Runs entirely in your browser. Measures named in the dictionary are linked with no API key at all; ",
+    "adding your own key (below) also detects measures that appear only as unnamed formulas. ",
+    "Detection of unnamed formulas is the least reliable step — low-confidence and unmatched items are flagged, never silently trusted.",
   ]));
 
   // Provider settings (shared component).
@@ -93,8 +94,14 @@ export function renderLinker(db) {
     const matched = res.mentions.filter((m) => m.id);
     const unmatched = res.mentions.filter((m) => !m.id);
 
+    const dict = matched.filter((m) => m.source === "lexical").length;
+    const ai = matched.length - dict;
+    const srcParts = [];
+    if (dict) srcParts.push(`${dict} from the dictionary`);
+    if (ai) srcParts.push(`${ai} from AI`);
+    const srcDetail = srcParts.length ? ` (${srcParts.join(", ")})` : "";
     const summary = el("p", { class: "lk-summary" }, [
-      `${matched.length} linked mention${matched.length === 1 ? "" : "s"}, ${unmatched.length} unmatched.`,
+      `${matched.length} linked mention${matched.length === 1 ? "" : "s"}${srcDetail}, ${unmatched.length} unmatched.`,
     ]);
     if (res.dropped > 0) summary.appendChild(el("span", { class: "muted" }, [` (only the first ${res.chunks - res.dropped} of ${res.chunks} chunks scanned)`]));
     output.appendChild(summary);
@@ -121,6 +128,9 @@ export function renderLinker(db) {
         }
       });
       output.appendChild(el("div", { class: "chat-actions" }, [annBtn, annStatus]));
+      output.appendChild(el("p", { class: "muted" }, [
+        "Adds clickable links on the original PDF pointing to each measure's card. Link placement is best-effort (approximate coordinates) — the reading view above is the reliable output.",
+      ]));
     }
 
     // Reading view.
@@ -244,15 +254,18 @@ export function renderLinker(db) {
       }
     }
     if (!text) { setProgress("Upload a PDF or paste some text first."); return; }
-    if (!hasCreds()) { setProgress("Add your AI provider key above first."); settings.open = true; return; }
+    const useLLM = hasCreds(); // no key still runs the dictionary match
     runBtn.disabled = true;
     output.innerHTML = "";
     try {
       const res = await detectAndLink({
-        db, text, call,
-        onProgress: (s) => { if (s.stage === "detect") setProgress(`Detecting & linking… chunk ${s.index}/${s.total}`); },
+        db, text, call: useLLM ? call : null,
+        onProgress: (s) => {
+          if (s.stage === "lexical") setProgress("Scanning for known measures…");
+          else if (s.stage === "detect") setProgress(`Detecting with AI… chunk ${s.index}/${s.total}`);
+        },
       });
-      setProgress("");
+      setProgress(useLLM ? "" : "Matched against the dictionary only — add an AI key above to also detect unnamed/formula measures.");
       renderResults(text, res);
     } catch (e) {
       setProgress("Failed: " + (e && e.message ? e.message : e));

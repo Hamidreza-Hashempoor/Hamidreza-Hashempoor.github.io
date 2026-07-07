@@ -3,7 +3,7 @@
 
 import { loadData } from "./modules/data.js";
 import { parseHash, onRoute } from "./modules/router.js";
-import { renderHome, renderDetail, renderCompare, renderNotFound, renderTypesView, renderContribute } from "./modules/render.js";
+import { renderHome, renderDetail, renderCompare, renderNotFound, renderTypesView, renderContribute, renderPipeline } from "./modules/render.js";
 import {
   filterFromParams, filterToParams, emptyFilterState,
 } from "./modules/filters.js";
@@ -254,6 +254,9 @@ function route() {
   } else if (parts[0] === "contribute") {
     view = renderContribute(app.db);
     active = "contribute";
+  } else if (parts[0] === "pipeline") {
+    view = renderPipeline(app.db);
+    active = "pipeline";
   } else {
     view = renderNotFound();
     active = "";

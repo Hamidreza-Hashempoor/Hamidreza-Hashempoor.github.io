@@ -137,6 +137,11 @@ export function setModel(provider, model) {
 export function hasCreds(provider = getProvider()) {
   return !!getKey(provider);
 }
+/** True only when BOTH a key and a model are configured — the gate for using
+ *  the BYOK LLM. Without this, the app falls back to the light (no-key) path. */
+export function hasFullCreds(provider = getProvider()) {
+  return !!getKey(provider) && !!getModel(provider);
+}
 
 /* --------------------------------- calls ---------------------------------- */
 

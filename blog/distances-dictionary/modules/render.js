@@ -712,6 +712,194 @@ export function renderContribute(db) {
   return root;
 }
 
+/* ------------------------------- pipeline --------------------------------- */
+
+// Informational only: a map of the whole project. Each block expands to explain
+// how that stage is used. This page runs nothing.
+const PIPELINE_GROUPS = [
+  {
+    label: "Dictionary data",
+    blocks: [{
+      id: "data",
+      title: "Dictionary data",
+      short: "Curated cards in JSON, indexed & validated on load",
+      modules: ["data.js", "measures.json", "aliases.json"],
+      detail: [
+        "Every measure is one JSON object: name, aliases, symbols, formula, properties, cross-linked identities & inequalities, audited code, and references.",
+        "On load, data.js builds fast lookups (by id, and an alias index mapping every name/alias to a measure) and validates the data. This single source of truth powers search, the assistant, and the PDF linker.",
+      ],
+      link: { href: "#/contribute", label: "How to add a card" },
+    }],
+  },
+  {
+    label: "Explore the dictionary",
+    blocks: [
+      {
+        id: "search",
+        title: "Search & filter",
+        short: "Instant lexical search + faceted filters (no key)",
+        modules: ["search.js", "fuzzy.js", "aliasResolver.js", "filters.js"],
+        detail: [
+          "A dependency-free cascade: exact alias → fuzzy (bigram-Dice + edit distance) → field-weighted token match. Facet filters (object type, property, family, application) are URL-driven, so a filtered view is shareable.",
+          "Runs entirely in your browser — no network, no key.",
+        ],
+        link: { href: "#/", label: "Open search" },
+      },
+      {
+        id: "lightai",
+        title: "Light in-browser AI (optional)",
+        short: "Free semantic search — MiniLM, no key, on your device",
+        modules: ["embeddings.js", "Transformers.js"],
+        detail: [
+          "“Enable AI search” downloads a small embedding model (MiniLM, ~23MB, then cached) that runs fully in your browser and ranks measures by meaning — so natural-language queries work even with no keyword overlap. No API key; nothing leaves your device.",
+          "This is the “light web version”: whenever a BYOK model is not configured, the app falls back to these free, on-device methods.",
+        ],
+        link: { href: "#/", label: "Try it on search" },
+      },
+      {
+        id: "assistant",
+        title: "Rule-based assistant",
+        short: "Deterministic Q&A — always on, no model",
+        modules: ["assistant.js"],
+        detail: [
+          "Hard-coded intent rules answer common questions (e.g. “I have covariance matrices”, “a bounded symmetric divergence?”) and greet off-topic queries. It never calls a model and is always available.",
+        ],
+        link: { href: "#/ask", label: "Open Ask AI" },
+      },
+      {
+        id: "byok",
+        title: "BYOK LLM (optional) — where the LLM is used",
+        short: "Your OWN Claude / Gemini / OpenRouter / HF key + model",
+        modules: ["llm.js", "chat.js"],
+        detail: [
+          "When you add your OWN provider key AND model, the app can call a large language model for two things: (1) grounded natural-language answers on the Ask page (retrieval-augmented over the local cards), and (2) detecting unnamed / formula-defined measures in the PDF linker.",
+          "The key stays in your browser, is sent directly to your provider, and is billed to you — never the site owner. Without a key+model, the light path above is used instead. The LLM is always grounded: it can only link to measure ids that already exist in the dictionary.",
+        ],
+        link: { href: "#/ask", label: "Configure your key" },
+      },
+    ],
+  },
+  {
+    label: "Read a PDF (the linker)",
+    blocks: [
+      {
+        id: "extract",
+        title: "1 · Extract text",
+        short: "pdf.js reads the PDF in your browser",
+        modules: ["pdf.js"],
+        detail: [
+          "pdf.js pulls out the text with per-word geometry and character offsets — no server, no key. (Optional: Mathpix OCR for equation-heavy PDFs, using your own Mathpix key.)",
+        ],
+      },
+      {
+        id: "match",
+        title: "2 · Dictionary match",
+        short: "Deterministically link measures named in our cards",
+        modules: ["linker.js"],
+        detail: [
+          "A deterministic pass scans the text against every name / alias / abbreviation in the dictionary and links each hit to its card, with correct offsets and no LLM. This is the reliable core, and it runs with no key (light mode).",
+        ],
+      },
+      {
+        id: "detect",
+        title: "3 · LLM detect (optional)",
+        short: "Find unnamed / formula-defined measures",
+        modules: ["linker.js", "llm.js"],
+        detail: [
+          "If a key+model are set, chunks of text plus a compact catalog go to your LLM, which returns measures that appear only as formulas or under names not in our dictionary. Its results are merged with the dictionary matches (the dictionary wins overlaps), and invalid JSON from a weak model is non-fatal.",
+        ],
+      },
+      {
+        id: "present",
+        title: "4 · Reading view + export",
+        short: "Linkified text, code, and a highlighted annotated PDF",
+        modules: ["linkerView.js", "annotate.js", "verify.js"],
+        detail: [
+          "The reading view shows the text with each measure linked to its card, plus audited code for each. You can download an annotated PDF (pdf-lib) where every detected measure is highlighted and clickable to its card, and optionally verify a drafted measure’s code in-browser with Pyodide.",
+        ],
+        link: { href: "#/linker", label: "Open the linker" },
+      },
+    ],
+  },
+  {
+    label: "Present & collaborate",
+    blocks: [
+      {
+        id: "render",
+        title: "Rendering",
+        short: "Cards, MathJax formulas, audited code, relation graph",
+        modules: ["render.js", "mathjax.js", "codegen.js", "graph.js"],
+        detail: [
+          "Detail pages render formulas with MathJax, show audited NumPy / PyTorch / JAX (never AI-generated code), cross-linked identities & inequalities, and an SVG graph of related measures.",
+        ],
+      },
+      {
+        id: "collaborate",
+        title: "Collaborate",
+        short: "Data-driven cards, GitHub PR + CI, stable permalinks",
+        modules: ["config.js", "GitHub Actions"],
+        detail: [
+          "Because cards are just data, anyone can propose or edit one on GitHub. CI validates every change; once merged, GitHub Pages rebuilds and the card updates everywhere — including inside already-annotated PDFs, whose links point to the stable #/m/:id permalink.",
+        ],
+        link: { href: "#/contribute", label: "Contribute" },
+      },
+    ],
+  },
+];
+
+export function renderPipeline(db) {
+  const root = el("div", { class: "pipeline" });
+  root.appendChild(el("a", { class: "back-link", href: "#/" }, ["← Back to search"]));
+  root.appendChild(el("h1", { tabindex: "-1", id: "route-heading" }, ["How this project works"]));
+  root.appendChild(el("p", { class: "detail-lead" }, [
+    "A map of the whole pipeline — from the dictionary data to search, the optional AI layers, the PDF linker, and the collaborative flow. ",
+    "Click any block to see how it is used. This page is informational only; it runs nothing.",
+  ]));
+
+  const flow = el("div", { class: "pipeline-flow" });
+  const allBlocks = [];
+
+  PIPELINE_GROUPS.forEach((g, gi) => {
+    if (gi > 0) flow.appendChild(el("div", { class: "pipe-arrow", "aria-hidden": "true" }, ["↓"]));
+    const groupEl = el("section", { class: "pipe-group" });
+    groupEl.appendChild(el("h2", { class: "pipe-group-title" }, [g.label]));
+
+    g.blocks.forEach((b) => {
+      const detail = el("div", { class: "pipe-detail", id: `pipe-d-${b.id}`, hidden: true });
+      b.detail.forEach((p) => detail.appendChild(el("p", {}, [p])));
+      if (b.modules && b.modules.length) {
+        detail.appendChild(el("div", { class: "pipe-modules chips" }, b.modules.map((mn) => chip(mn, { variant: "type" }))));
+      }
+      if (b.link) detail.appendChild(el("p", {}, [el("a", { class: "answer-cta", href: b.link.href }, [`${b.link.label} →`])]));
+
+      const btn = el("button", {
+        type: "button", class: "pipe-block",
+        "aria-expanded": "false", "aria-controls": `pipe-d-${b.id}`,
+      }, [
+        el("span", { class: "pipe-title" }, [b.title]),
+        el("span", { class: "pipe-short" }, [b.short]),
+        el("span", { class: "pipe-caret", "aria-hidden": "true" }, ["▸"]),
+      ]);
+      allBlocks.push(btn);
+      btn.addEventListener("click", () => {
+        const willOpen = btn.getAttribute("aria-expanded") !== "true";
+        allBlocks.forEach((x) => { x.setAttribute("aria-expanded", "false"); x.classList.remove("active"); });
+        flow.querySelectorAll(".pipe-detail").forEach((d) => { d.hidden = true; });
+        if (willOpen) { detail.hidden = false; btn.setAttribute("aria-expanded", "true"); btn.classList.add("active"); }
+      });
+
+      groupEl.appendChild(el("div", { class: "pipe-item" }, [btn, detail]));
+    });
+    flow.appendChild(groupEl);
+  });
+
+  root.appendChild(flow);
+  root.appendChild(el("p", { class: "muted" }, [
+    "Everything runs in your browser. The only network calls are to your own AI / Mathpix provider (if you add a key) and to CDNs for libraries.",
+  ]));
+  return root;
+}
+
 /* ------------------------------- not found -------------------------------- */
 
 export function renderNotFound(message) {

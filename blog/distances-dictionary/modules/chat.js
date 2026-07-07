@@ -5,7 +5,7 @@
 import { el, escapeHTML } from "./util.js";
 import { search } from "./search.js";
 import { isReady as semanticReady, nearest } from "./embeddings.js";
-import { callLLM, hasCreds, getModel, renderProviderSettings } from "./llm.js";
+import { callLLM, hasFullCreds, getModel, renderProviderSettings } from "./llm.js";
 
 /* -------------------------------- retrieval ------------------------------- */
 
@@ -48,9 +48,9 @@ function buildPrompt(db, question, entries) {
 
 /* ----------------------- reusable generation (exported) ------------------- */
 
-/** True if the selected provider has a key configured. */
+/** True if the selected provider has BOTH a key and a model configured. */
 export function hasToken() {
-  return hasCreds();
+  return hasFullCreds();
 }
 
 /** The current model id of the selected provider. */
@@ -63,7 +63,7 @@ export function currentModel() {
  * @returns {Promise<{text:string, entries:object[], model:string}>}
  */
 export async function askModel(db, question, k = 5) {
-  if (!hasCreds()) throw new Error("No API key set. Add your provider key in AI settings.");
+  if (!hasFullCreds()) throw new Error("Set your provider key and model in AI settings.");
   const entries = await retrieve(db, question, k);
   const { system, user } = buildPrompt(db, question, entries);
   const text = await callLLM({ system, user, maxTokens: 800, temperature: 0.2 });
@@ -117,7 +117,7 @@ export function renderChatPanel(db) {
   const doAsk = async () => {
     const q = question.value.trim();
     if (!q) return;
-    if (!hasCreds()) { status.textContent = "Add your provider API key in AI settings above."; return; }
+    if (!hasFullCreds()) { status.textContent = "Add your provider API key and model in AI settings above."; return; }
     askBtn.disabled = true;
     answer.innerHTML = "";
     status.textContent = "Querying your AI provider…";

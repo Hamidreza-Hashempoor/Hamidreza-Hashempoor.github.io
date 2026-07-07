@@ -547,6 +547,31 @@ a.chip:hover { text-decoration: none; border-color: var(--accent); color: var(--
 .schema-list dt { font-family: var(--mono, monospace); font-weight: 600; color: var(--accent); }
 .schema-list dd { margin: 0; color: var(--ink, inherit); }
 
+/* --------------------------- linker mode badge ---------------------------- */
+
+.lk-mode { display: inline-block; font-family: var(--sans); font-weight: 600; font-size: 0.82rem; border-radius: 999px; padding: 4px 12px; margin: 0 0 10px; }
+.lk-mode.light { background: #eef3f6; color: #33627a; border: 1px solid #cfe0e8; }
+.lk-mode.ai { background: var(--accent-soft); color: var(--accent); border: 1px solid #d6c6b7; }
+
+/* ------------------------------- pipeline --------------------------------- */
+
+.pipeline-flow { max-width: 720px; margin: 12px auto 0; }
+.pipe-group { border: 1px solid #e7ddd2; border-radius: 12px; padding: 12px 14px; background: #fffdfb; }
+.pipe-group-title { margin: 0 0 10px; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.pipe-arrow { text-align: center; color: #c9b8a6; font-size: 1.4rem; line-height: 1; margin: 6px 0; }
+.pipe-item + .pipe-item { margin-top: 8px; }
+.pipe-block { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; width: 100%; text-align: left; cursor: pointer;
+  font-family: var(--sans); background: #fff; border: 1px solid #d6c6b7; border-radius: 9px; padding: 10px 12px; }
+.pipe-block:hover { background: var(--accent-soft); }
+.pipe-block.active { border-color: var(--accent); background: var(--accent-soft); }
+.pipe-title { font-weight: 700; color: var(--accent); }
+.pipe-short { color: var(--muted); font-size: 0.9rem; flex: 1; }
+.pipe-caret { color: var(--accent); transition: transform 0.15s ease; }
+.pipe-block.active .pipe-caret { transform: rotate(90deg); }
+.pipe-detail { padding: 10px 12px 4px; line-height: 1.6; }
+.pipe-detail p { margin: 0 0 8px; }
+.pipe-modules { gap: 6px; margin: 4px 0 8px; }
+
 /* ------------------------------ misc / states ----------------------------- */
 
 .muted { color: var(--muted); }

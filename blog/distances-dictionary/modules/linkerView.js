@@ -3,7 +3,7 @@
 // Everything runs client-side; the LLM is the user's own provider (llm.js).
 
 import { el, escapeHTML } from "./util.js";
-import { renderProviderSettings, callJSON, hasCreds } from "./llm.js";
+import { renderProviderSettings, callJSON, hasFullCreds } from "./llm.js";
 import { extractDocument } from "./pdf.js";
 import { detectAndLink, draftEntry } from "./linker.js";
 import { verifyDraft } from "./verify.js";
@@ -89,10 +89,15 @@ export function renderLinker(db) {
 
   const setProgress = (t) => { progress.textContent = t || ""; };
 
-  const renderResults = (text, res) => {
+  const renderResults = (text, res, usedLLM) => {
     output.innerHTML = "";
     const matched = res.mentions.filter((m) => m.id);
     const unmatched = res.mentions.filter((m) => !m.id);
+
+    output.appendChild(el("p", { class: usedLLM ? "lk-mode ai" : "lk-mode light" }, [
+      usedLLM ? "AI mode — dictionary match + your LLM (unnamed/formula detection)"
+              : "Light mode — dictionary match only (no AI key)",
+    ]));
 
     const dict = matched.filter((m) => m.source === "lexical").length;
     const ai = matched.length - dict;
@@ -129,7 +134,7 @@ export function renderLinker(db) {
       });
       output.appendChild(el("div", { class: "chat-actions" }, [annBtn, annStatus]));
       output.appendChild(el("p", { class: "muted" }, [
-        "Adds clickable links on the original PDF pointing to each measure's card. Link placement is best-effort (approximate coordinates) — the reading view above is the reliable output.",
+        "Highlights each detected measure on the original PDF and links it to its dictionary card. Placement is best-effort (approximate coordinates) — the reading view above is the reliable output.",
       ]));
     }
 
@@ -176,7 +181,7 @@ export function renderLinker(db) {
         const draftBtn = el("button", { type: "button", class: "chat-btn" }, ["Draft entry"]);
         const out = el("div", { class: "lk-draft" });
         draftBtn.addEventListener("click", async () => {
-          if (!hasCreds()) { out.textContent = "Set your AI provider key above first."; return; }
+          if (!hasFullCreds()) { out.textContent = "Set your AI provider key and model above first."; return; }
           draftBtn.disabled = true;
           out.textContent = "Drafting…";
           try {
@@ -254,7 +259,7 @@ export function renderLinker(db) {
       }
     }
     if (!text) { setProgress("Upload a PDF or paste some text first."); return; }
-    const useLLM = hasCreds(); // no key still runs the dictionary match
+    const useLLM = hasFullCreds(); // LLM only when a key AND model are set; else light mode
     runBtn.disabled = true;
     output.innerHTML = "";
     try {
@@ -265,8 +270,8 @@ export function renderLinker(db) {
           else if (s.stage === "detect") setProgress(`Detecting with AI… chunk ${s.index}/${s.total}`);
         },
       });
-      setProgress(useLLM ? "" : "Matched against the dictionary only — add an AI key above to also detect unnamed/formula measures.");
-      renderResults(text, res);
+      setProgress(useLLM ? "" : "Light mode: matched against the dictionary only — add an AI key + model above to also detect unnamed/formula measures.");
+      renderResults(text, res, useLLM);
     } catch (e) {
       setProgress("Failed: " + (e && e.message ? e.message : e));
     } finally {

@@ -7,8 +7,8 @@ import { renderProviderSettings, callJSON, hasFullCreds } from "./llm.js";
 import { extractDocument } from "./pdf.js";
 import { detectAndLink, draftEntry } from "./linker.js";
 import { verifyDraft } from "./verify.js";
-import { renderMathpixSettings, hasMathpix, ocrDocument } from "./mathpix.js";
-import { annotatePdf } from "./annotate.js";
+import { ocrPagesToLatex, ocrImagesToLatex, augmentText, toOriginalMentions } from "./vision.js";
+import { annotatePdf, annotateImagesToPdf } from "./annotate.js";
 import { newCardIssueUrl } from "./config.js";
 import { renderCodePanel } from "./codegen.js";
 import { typeset } from "./mathjax.js";
@@ -30,6 +30,46 @@ function download(blob, filename) {
 function downloadJSON(obj, filename) {
   download(new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" }), filename || "draft-entry.json");
 }
+
+/** Read an uploaded image File into a data URL for the vision model. */
+function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result);
+    fr.onerror = () => reject(fr.error || new Error("Could not read image."));
+    fr.readAsDataURL(file);
+  });
+}
+
+function loadImage(src) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = () => rej(new Error("Could not load image."));
+    im.src = src;
+  });
+}
+
+/**
+ * Normalize an uploaded image to a downscaled JPEG data URL + pixel size. Doing
+ * this (a) keeps the vision payload small and (b) guarantees a JPEG/PNG pdf-lib
+ * can embed for the annotated-image export (webp/gif would otherwise fail).
+ */
+async function normalizeToJpeg(dataUrl, maxDim = 1600) {
+  const im = await loadImage(dataUrl);
+  let w = im.naturalWidth || im.width, h = im.naturalHeight || im.height;
+  const long = Math.max(w, h) || 1;
+  const s = long > maxDim ? maxDim / long : 1;
+  w = Math.max(1, Math.round(w * s));
+  h = Math.max(1, Math.round(h * s));
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  c.getContext("2d").drawImage(im, 0, 0, w, h);
+  return { dataUrl: c.toDataURL("image/jpeg", 0.85), width: w, height: h };
+}
+
+const isPdf = (f) => f && (f.type === "application/pdf" || /\.pdf$/i.test(f.name || ""));
+const isImage = (f) => f && (/^image\//.test(f.type || "") || /\.(png|jpe?g|webp|gif|bmp)$/i.test(f.name || ""));
 
 /** Build the linkified reading-view HTML from full text + sorted mentions. */
 function buildReadingHTML(text, mentions) {
@@ -58,28 +98,29 @@ export function renderLinker(db) {
   root.appendChild(el("a", { class: "back-link", href: "#/" }, ["← Back to search"]));
   root.appendChild(el("h1", { tabindex: "-1", id: "route-heading" }, ["PDF → Dictionary Linker"]));
   root.appendChild(el("p", { class: "detail-lead" }, [
-    "Upload a PDF (or paste text) and your own AI provider will detect the distances/divergences it uses — ",
+    "Upload a PDF or image(s) (or paste text) and your own AI provider will detect the distances/divergences it uses — ",
     "even under different names — and link each to a dictionary entry with audited code. Missing measures can be drafted for review.",
   ]));
   root.appendChild(el("p", { class: "muted" }, [
     "Runs entirely in your browser. Measures named in the dictionary are linked with no API key at all; ",
     "adding your own key (below) also detects measures that appear only as unnamed formulas. ",
-    "Detection of unnamed formulas is the least reliable step — low-confidence and unmatched items are flagged, never silently trusted.",
+    "For formula-defined measures, enable the equation reader (below the file picker): a vision-capable model ",
+    "transcribes each page's math so equations can be linked too. Detection of unnamed formulas is the least ",
+    "reliable step — low-confidence and unmatched items are flagged, never silently trusted.",
   ]));
 
   // Provider settings (shared component).
   const settings = renderProviderSettings();
   root.appendChild(settings);
 
-  // Optional Mathpix equation OCR (experimental).
-  const mathpixSettings = renderMathpixSettings();
-  root.appendChild(mathpixSettings);
-
   // Input controls.
-  const fileInput = el("input", { type: "file", accept: "application/pdf,.pdf", class: "lk-file" });
+  const fileInput = el("input", { type: "file", accept: "application/pdf,.pdf,image/*", multiple: "multiple", class: "lk-file" });
   const pasteArea = el("textarea", { class: "chat-question", rows: "5", placeholder: "…or paste text (e.g. an abstract or a methods section)" });
-  const useMathpix = el("input", { type: "checkbox", id: "lk-use-mathpix" });
-  const useMathpixLabel = el("label", { for: "lk-use-mathpix", class: "chat-consent" }, [useMathpix, el("span", {}, [" Use Mathpix for equations (first ~5 pages; experimental)"])]);
+  const useVision = el("input", { type: "checkbox", id: "lk-use-vision" });
+  const useVisionLabel = el("label", { for: "lk-use-vision", class: "chat-consent" }, [
+    useVision,
+    el("span", {}, [" Detect equations in a PDF with a vision model — sends each page image to your provider (your own account), one call per page. Requires a vision-capable model on OpenRouter or Hugging Face. (Uploaded images always use the vision reader.)"]),
+  ]);
   const runBtn = el("button", { type: "button", class: "chat-btn primary" }, ["Detect & link"]);
   const progress = el("div", { class: "chat-status", "aria-live": "polite" });
   const output = el("div", { class: "lk-output" });
@@ -89,14 +130,28 @@ export function renderLinker(db) {
 
   const setProgress = (t) => { progress.textContent = t || ""; };
 
-  const renderResults = (text, res, usedLLM) => {
+  const renderResults = (text, res, usedLLM, extra = {}) => {
+    const { toOriginal = null, ocrEquations = [], ocrErrors = [], showReading = true, equationSpans = [], images: annotatedImages = null } = extra;
+    const usedVision = ocrEquations.length > 0 || ocrErrors.length > 0;
     output.innerHTML = "";
     const matched = res.mentions.filter((m) => m.id);
     const unmatched = res.mentions.filter((m) => !m.id);
 
+    // Equation highlight boxes for the annotated PDF: associate each vision-detected
+    // equation (with a bbox) to a linked card by offset overlap in the augmented text.
+    const eqBoxes = [];
+    for (const span of equationSpans) {
+      if (!span.bbox) continue;
+      const hit = res.mentions.find((m) => m.id && m.start < span.augEnd && m.end > span.augStart);
+      eqBoxes.push({ page: span.page, bbox: span.bbox, id: hit ? hit.id : null });
+    }
+
     output.appendChild(el("p", { class: usedLLM ? "lk-mode ai" : "lk-mode light" }, [
-      usedLLM ? "AI mode — dictionary match + your LLM (unnamed/formula detection)"
-              : "Light mode — dictionary match only (no AI key)",
+      usedLLM
+        ? (usedVision
+            ? "AI mode — dictionary match + your LLM + vision equation reading"
+            : "AI mode — dictionary match + your LLM (unnamed/formula detection)")
+        : "Light mode — dictionary match only (no AI key)",
     ]));
 
     const dict = matched.filter((m) => m.source === "lexical").length;
@@ -113,17 +168,31 @@ export function renderLinker(db) {
     if (res.errors && res.errors.length) {
       output.appendChild(el("p", { class: "chat-error" }, [`Some chunks failed: ${res.errors[0]}`]));
     }
+    if (ocrErrors.length) {
+      output.appendChild(el("p", { class: "chat-error" }, [`Some pages' equations couldn't be read (${ocrErrors.length}): ${ocrErrors[0]}`]));
+    }
 
-    // Annotated-PDF export (available on the pdf.js text path). Each detected
-    // measure becomes a clickable link to its live #/m/:id dictionary card.
-    if (pdfState && matched.length) {
+    // Annotated-PDF export. For PDFs: text highlights (+ equation boxes when the
+    // vision reader ran). For image uploads: a PDF built from the images with the
+    // equation boxes drawn on. Each highlight links to its #/m/:id card.
+    const canAnnotatePdf = pdfState && (matched.length || eqBoxes.length);
+    const canAnnotateImages = annotatedImages && annotatedImages.length && eqBoxes.length;
+    if (canAnnotatePdf || canAnnotateImages) {
       const annBtn = el("button", { type: "button", class: "chat-btn primary" }, ["Download annotated PDF"]);
       const annStatus = el("span", { class: "chat-status" });
       annBtn.addEventListener("click", async () => {
         annBtn.disabled = true;
         annStatus.textContent = "Annotating…";
         try {
-          const bytes = await annotatePdf(pdfState.bytes, pdfState.pages, matched);
+          let bytes;
+          if (pdfState) {
+            // When the vision pass augmented the text, text-mention offsets are in
+            // augmented coordinates; translate them back so pdf.js geometry lines up.
+            const anno = toOriginal ? toOriginalMentions(matched, toOriginal) : matched;
+            bytes = await annotatePdf(pdfState.bytes, pdfState.pages, anno, eqBoxes);
+          } else {
+            bytes = await annotateImagesToPdf(annotatedImages, eqBoxes);
+          }
           download(new Blob([bytes], { type: "application/pdf" }), "annotated.pdf");
           annStatus.textContent = "Downloaded.";
         } catch (e) {
@@ -134,17 +203,21 @@ export function renderLinker(db) {
       });
       output.appendChild(el("div", { class: "chat-actions" }, [annBtn, annStatus]));
       output.appendChild(el("p", { class: "muted" }, [
-        "Highlights each detected measure on the original PDF and links it to its dictionary card. Placement is best-effort (approximate coordinates) — the reading view above is the reliable output.",
+        annotatedImages
+          ? "Builds a PDF from your image(s) with each detected equation highlighted and linked to its card. Box placement is estimated by the vision model (best-effort)."
+          : "Highlights measures named in the text and, when the equation reader is on, the detected equations too — each linked to its dictionary card. Placement is best-effort (approximate coordinates).",
       ]));
     }
 
-    // Reading view.
-    const view = el("section", { class: "lk-section" });
-    view.appendChild(el("h2", {}, ["Reading view"]));
-    const reading = el("div", { class: "lk-reading" });
-    reading.innerHTML = buildReadingHTML(text, res.mentions);
-    view.appendChild(reading);
-    output.appendChild(view);
+    // Reading view (skipped for image uploads, which have no prose to read).
+    if (showReading) {
+      const view = el("section", { class: "lk-section" });
+      view.appendChild(el("h2", {}, ["Reading view"]));
+      const reading = el("div", { class: "lk-reading" });
+      reading.innerHTML = buildReadingHTML(text, res.mentions);
+      view.appendChild(reading);
+      output.appendChild(view);
+    }
 
     // Detected measures (unique) with audited code.
     const ids = [...new Set(matched.map((m) => m.id))];
@@ -163,6 +236,47 @@ export function renderLinker(db) {
         }
         card.appendChild(renderCodePanel(db, meas));
         sec.appendChild(card);
+      });
+      output.appendChild(sec);
+    }
+
+    // Equations detected by the vision reader (transcribed LaTeX). Each is linked to
+    // a card when the detector matched it — best-effort association by LaTeX/surface
+    // overlap, shown as a hint (the reading view above is authoritative).
+    const allEqs = ocrEquations.flatMap((o) => (o.equations || []).map((e) => ({ ...e, page: o.page })));
+    if (allEqs.length) {
+      const norm = (s) => String(s || "").replace(/\$/g, "").replace(/\s+/g, "").toLowerCase();
+      const findLink = (latex) => {
+        const L = norm(latex);
+        if (L.length < 4) return null;
+        for (const m of res.mentions) {
+          const S = norm(m.surface);
+          if (S.length >= 6 && (S.includes(L) || L.includes(S))) return m;
+        }
+        return null;
+      };
+      const sec = el("section", { class: "lk-section" });
+      sec.appendChild(el("h2", {}, [`Equations detected (${allEqs.length})`]));
+      sec.appendChild(el("p", { class: "muted" }, [
+        "Transcribed from the page images by your vision model. Arrows are best-effort links to dictionary cards.",
+      ]));
+      allEqs.forEach((e) => {
+        const row = el("div", { class: "lk-equation" });
+        const head = el("div", { class: "lk-eq-head" }, [
+          el("span", { class: "muted" }, [`p${e.page}${e.eq_number ? " · " + e.eq_number : ""}`]),
+        ]);
+        const link = findLink(e.latex);
+        if (link && link.id) {
+          const meas = db.byId.get(link.id);
+          head.appendChild(el("a", { class: "lk-eq-link", href: `#/m/${link.id}` }, [`→ ${meas ? meas.canonical_name : link.id}`]));
+        } else if (link && !link.id) {
+          head.appendChild(el("span", { class: "lk-eq-link muted" }, [`→ ${link.canonical_guess || "possible new measure"}`]));
+        }
+        row.appendChild(head);
+        const eq = el("div", { class: "eq" });
+        eq.textContent = `$$${String(e.latex).replace(/^\$+|\$+$/g, "")}$$`;
+        row.appendChild(eq);
+        sec.appendChild(row);
       });
       output.appendChild(sec);
     }
@@ -233,32 +347,102 @@ export function renderLinker(db) {
 
   const run = async () => {
     let text = pasteArea.value.trim();
-    const file = fileInput.files && fileInput.files[0];
+    const files = fileInput.files ? [...fileInput.files] : [];
+    const pdf = files.find(isPdf);
+    const images = files.filter(isImage);
     pdfState = null;
-    if (file) {
+    let ocrEquations = [];
+    let ocrErrors = [];
+    let toOriginal = null; // augmented→original offset translator when vision augments text
+    let truncated = 0;
+    let showReading = true;
+    let equationSpans = []; // {page, augStart, augEnd, bbox} per injected equation
+    let annotatedImages = null; // [{dataUrl,width,height}] for the image annotated-PDF export
+
+    if (pdf) {
       let bytes;
-      try { bytes = await file.arrayBuffer(); } catch (e) { setProgress("Could not read file."); return; }
-      if (useMathpix.checked && hasMathpix()) {
-        setProgress("Running Mathpix OCR…");
-        try {
-          text = await ocrDocument(bytes, { maxPages: 5, onProgress: (p) => setProgress(`Mathpix OCR page ${p.page}/${p.total}…`) });
-        } catch (e) {
-          setProgress("Mathpix OCR failed: " + (e && e.message ? e.message : e));
+      try { bytes = await pdf.arrayBuffer(); } catch (e) { setProgress("Could not read file."); return; }
+      setProgress("Parsing PDF…");
+      let doc;
+      try {
+        doc = await extractDocument(bytes, (p) => setProgress(`Parsing page ${p.page}/${p.total}…`));
+      } catch (e) {
+        setProgress("PDF parse failed: " + (e && e.message ? e.message : e));
+        return;
+      }
+      text = doc.fullText;
+      pdfState = { bytes, pages: doc.pages }; // enables annotated-PDF export
+
+      // Optional vision pass: transcribe each page's equations to LaTeX and fold
+      // them into the text so formula-defined measures can be detected + linked.
+      if (useVision.checked) {
+        if (!hasFullCreds()) {
+          setProgress("Enable a provider key + a vision-capable model in AI settings to read equations.");
           return;
         }
-      } else {
-        setProgress("Parsing PDF…");
         try {
-          const doc = await extractDocument(bytes, (p) => setProgress(`Parsing page ${p.page}/${p.total}…`));
-          text = doc.fullText;
-          pdfState = { bytes, pages: doc.pages }; // enables annotated-PDF export
+          ocrEquations = await ocrPagesToLatex({
+            bytes, numPages: doc.numPages, maxPages: 15,
+            onProgress: (p) => setProgress(`Reading equations… page ${p.page}/${p.total}`),
+          });
+          truncated = Math.max(0, doc.numPages - 15);
+          const aug = augmentText(doc.pages, ocrEquations);
+          text = aug.fullText;
+          toOriginal = aug.toOriginalOffset;
+          equationSpans = aug.equationSpans;
+          ocrErrors = ocrEquations.filter((o) => o.error).map((o) => `p${o.page}: ${o.error}`);
         } catch (e) {
-          setProgress("PDF parse failed: " + (e && e.message ? e.message : e));
+          setProgress("Equation reading failed: " + (e && e.message ? e.message : e));
           return;
         }
       }
+    } else if (images.length) {
+      // Image-upload path: each picture is a "page" read by the vision model. There
+      // is no text layer, so this needs a vision-capable model + key.
+      if (!hasFullCreds()) {
+        setProgress("To analyze an image, set a vision-capable model + key in AI settings (OpenRouter or Hugging Face).");
+        return;
+      }
+      let normImages;
+      try {
+        setProgress("Reading image(s)…");
+        const raw = await Promise.all(images.map(fileToDataURL));
+        normImages = await Promise.all(raw.map((u) => normalizeToJpeg(u)));
+      } catch (e) {
+        setProgress("Could not read image: " + (e && e.message ? e.message : e));
+        return;
+      }
+      try {
+        const capped = normImages.slice(0, 15);
+        ocrEquations = await ocrImagesToLatex({
+          images: capped.map((n) => n.dataUrl), maxPages: 15,
+          onProgress: (p) => setProgress(`Reading equations… image ${p.page}/${p.total}`),
+        });
+        truncated = Math.max(0, images.length - 15);
+        ocrErrors = ocrEquations.filter((o) => o.error).map((o) => `img${o.page}: ${o.error}`);
+        annotatedImages = capped; // one PDF page per image for the annotated export
+        const anyEq = ocrEquations.some((o) => (o.equations || []).length);
+        if (anyEq) {
+          const synthetic = capped.map((_, i) => ({ page: i + 1, text: "", items: [] }));
+          const aug = augmentText(synthetic, ocrEquations);
+          text = aug.fullText;
+          equationSpans = aug.equationSpans;
+        } else {
+          text = ""; // nothing read → fall through to the "no equations" message below
+        }
+        showReading = false; // no prose to read — the Equations section is the display
+      } catch (e) {
+        setProgress("Equation reading failed: " + (e && e.message ? e.message : e));
+        return;
+      }
     }
-    if (!text) { setProgress("Upload a PDF or paste some text first."); return; }
+
+    if (!text) {
+      setProgress(images.length
+        ? "The vision reader found no equations in the image(s)."
+        : "Upload a PDF or image, or paste some text first.");
+      return;
+    }
     const useLLM = hasFullCreds(); // LLM only when a key AND model are set; else light mode
     runBtn.disabled = true;
     output.innerHTML = "";
@@ -270,8 +454,13 @@ export function renderLinker(db) {
           else if (s.stage === "detect") setProgress(`Detecting with AI… chunk ${s.index}/${s.total}`);
         },
       });
-      setProgress(useLLM ? "" : "Light mode: matched against the dictionary only — add an AI key + model above to also detect unnamed/formula measures.");
-      renderResults(text, res, useLLM);
+      const notes = [];
+      if (!useLLM) notes.push("Light mode: matched against the dictionary only — add an AI key + model above to also detect unnamed/formula measures.");
+      if (pdf && images.length) notes.push("A PDF was uploaded; the image(s) were ignored.");
+      if (truncated) notes.push(`Only the first 15 ${pdf ? "pages" : "images"} were read for equations; ${truncated} more were skipped.`);
+      if (ocrEquations.length && !ocrEquations.some((o) => (o.equations || []).length)) notes.push("The vision reader found no equations.");
+      setProgress(notes.join(" "));
+      renderResults(text, res, useLLM, { toOriginal, ocrEquations, ocrErrors, showReading, equationSpans, images: annotatedImages });
     } catch (e) {
       setProgress("Failed: " + (e && e.message ? e.message : e));
     } finally {
@@ -281,9 +470,9 @@ export function renderLinker(db) {
   runBtn.addEventListener("click", run);
 
   const inputBox = el("section", { class: "lk-input" });
-  inputBox.appendChild(el("label", { class: "field-label" }, ["PDF file"]));
+  inputBox.appendChild(el("label", { class: "field-label" }, ["PDF or image(s)"]));
   inputBox.appendChild(fileInput);
-  inputBox.appendChild(useMathpixLabel);
+  inputBox.appendChild(useVisionLabel);
   inputBox.appendChild(el("label", { class: "field-label" }, ["or paste text"]));
   inputBox.appendChild(pasteArea);
   inputBox.appendChild(el("div", { class: "chat-actions" }, [runBtn, progress]));

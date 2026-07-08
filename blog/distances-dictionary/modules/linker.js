@@ -220,7 +220,11 @@ const DETECT_SYSTEM =
   "\"needs_human_review\":<bool>}]}. " +
   "Rules: choose ids ONLY from the catalog; never invent an id. char_start/char_end are 0-based offsets " +
   "into the CHUNK text. Set needs_human_review=true when confidence<0.75 or when argument-order/sign " +
-  "conventions could change the identity. If none, return {\"mentions\":[]}.";
+  "conventions could change the identity. If none, return {\"mentions\":[]}. " +
+  "Output rule: ESCAPE every backslash in JSON string values — write \"\\\\ln\", \"\\\\Gamma\", " +
+  "\"\\\\sum\", never \"\\ln\". A chunk may contain a block delimited by [[EQUATIONS p<N>]] listing " +
+  "transcribed LaTeX equations; treat each listed equation as candidate math to match, using its LaTeX " +
+  "as the surface, and set match_type:\"formula\" for those.";
 
 function detectUser(catalog, chunkText) {
   return `CATALOG (json):\n${JSON.stringify(catalog)}\n\nCHUNK (offsets are 0-based into this exact text):\n${chunkText}`;

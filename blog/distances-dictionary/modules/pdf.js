@@ -74,18 +74,37 @@ export async function extractDocument(input, onProgress = () => {}) {
   return { fullText, numPages: doc.numPages, pages };
 }
 
-/** Render a page to a data URL (for the optional Mathpix path). */
-export async function renderPageImage(input, pageNumber = 1, scale = 2) {
+/**
+ * Render a page to an image data URL.
+ * The 3rd arg is either a number (scale — legacy, renders PNG at that scale) or an
+ * options object `{ scale, type, quality, maxDim }`. The vision (equation) pass
+ * defaults to downscaled JPEG so base64 payloads stay within free-tier size
+ * limits; a bare number preserves the old PNG behavior for existing callers.
+ */
+export async function renderPageImage(input, pageNumber = 1, opts = {}) {
+  const legacyScale = typeof opts === "number";
+  const scale = legacyScale ? opts : (opts.scale ?? 1.75);
+  const type = legacyScale ? "image/png" : (opts.type || "image/jpeg");
+  const quality = legacyScale ? undefined : (opts.quality ?? 0.8);
+  const maxDim = legacyScale ? Infinity : (opts.maxDim ?? 1600);
+
   const pdfjs = await loadPdfjs();
   const src = input instanceof ArrayBuffer ? input : await input.arrayBuffer();
-  // Copy so repeated calls (Mathpix renders each page) don't detach the buffer.
+  // Copy so repeated calls (one render per page) don't detach the buffer.
   const doc = await pdfjs.getDocument({ data: new Uint8Array(src.slice(0)) }).promise;
   const page = await doc.getPage(pageNumber);
-  const viewport = page.getViewport({ scale });
+
+  // If the long edge would exceed maxDim, reduce the scale so it fits.
+  let s = scale;
+  const base = page.getViewport({ scale: 1 });
+  const longEdge = Math.max(base.width, base.height) * scale;
+  if (longEdge > maxDim) s = scale * (maxDim / longEdge);
+
+  const viewport = page.getViewport({ scale: s });
   const canvas = document.createElement("canvas");
   canvas.width = viewport.width;
   canvas.height = viewport.height;
   const ctx = canvas.getContext("2d");
   await page.render({ canvasContext: ctx, viewport }).promise;
-  return canvas.toDataURL("image/png");
+  return canvas.toDataURL(type, quality);
 }

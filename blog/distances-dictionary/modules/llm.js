@@ -15,7 +15,8 @@ export const PROVIDERS = {
     defaultModel: "claude-sonnet-4-6",
     keyHint: "sk-ant-…",
     corsNote: "Direct browser calls are enabled via Anthropic's browser-access header.",
-    buildRequest({ key, model, system, user, maxTokens, temperature }) {
+    buildRequest({ key, model, system, user, maxTokens, temperature, images }) {
+      if (images && images.length) throw new Error("Anthropic image input isn't wired in this app — pick OpenRouter or Hugging Face for the vision (equation) pass.");
       return {
         url: "https://api.anthropic.com/v1/messages",
         headers: {
@@ -35,14 +36,17 @@ export const PROVIDERS = {
     defaultModel: "openrouter/auto",
     keyHint: "sk-or-…",
     corsNote: "One key fronts many models (Claude, GPT, Gemini, Llama…). Browser-friendly.",
-    buildRequest({ key, model, system, user, maxTokens, temperature, json }) {
+    buildRequest({ key, model, system, user, maxTokens, temperature, json, images }) {
+      const content = (images && images.length)
+        ? [{ type: "text", text: user }, ...images.map((url) => ({ type: "image_url", image_url: { url } }))]
+        : user;
       return {
         url: "https://openrouter.ai/api/v1/chat/completions",
         headers: { Authorization: `Bearer ${key}`, "content-type": "application/json" },
         body: {
           model, max_tokens: maxTokens, temperature,
           ...(json ? { response_format: { type: "json_object" } } : {}),
-          messages: [{ role: "system", content: system }, { role: "user", content: user }],
+          messages: [{ role: "system", content: system }, { role: "user", content }],
         },
       };
     },
@@ -54,7 +58,8 @@ export const PROVIDERS = {
     defaultModel: "gemini-2.0-flash",
     keyHint: "AIza… (Google AI Studio key)",
     corsNote: "Gemini REST API, callable from the browser with your key.",
-    buildRequest({ key, model, system, user, maxTokens, temperature, json }) {
+    buildRequest({ key, model, system, user, maxTokens, temperature, json, images }) {
+      if (images && images.length) throw new Error("Gemini image input isn't wired in this app — pick OpenRouter or Hugging Face for the vision (equation) pass.");
       return {
         url: `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,
         headers: { "content-type": "application/json" },
@@ -73,14 +78,17 @@ export const PROVIDERS = {
     defaultModel: "meta-llama/Llama-3.2-3B-Instruct",
     keyHint: "hf_…",
     corsNote: "Free-tier friendly HF Inference router (OpenAI-compatible).",
-    buildRequest({ key, model, system, user, maxTokens, temperature, json }) {
+    buildRequest({ key, model, system, user, maxTokens, temperature, json, images }) {
+      const content = (images && images.length)
+        ? [{ type: "text", text: user }, ...images.map((url) => ({ type: "image_url", image_url: { url } }))]
+        : user;
       return {
         url: "https://router.huggingface.co/v1/chat/completions",
         headers: { Authorization: `Bearer ${key}`, "content-type": "application/json" },
         body: {
           model, max_tokens: maxTokens, temperature,
           ...(json ? { response_format: { type: "json_object" } } : {}),
-          messages: [{ role: "system", content: system }, { role: "user", content: user }],
+          messages: [{ role: "system", content: system }, { role: "user", content }],
         },
       };
     },
@@ -145,8 +153,12 @@ export function hasFullCreds(provider = getProvider()) {
 
 /* --------------------------------- calls ---------------------------------- */
 
-/** Call the selected provider. Returns the assistant text. Throws on error. */
-export async function callLLM({ system = "", user = "", maxTokens = 1500, temperature = 0.2, json = false, signal } = {}) {
+/**
+ * Call the selected provider. Returns the assistant text. Throws on error.
+ * `images` (array of data URLs) is threaded to providers that support vision
+ * (OpenRouter / Hugging Face, OpenAI-style content); others reject it clearly.
+ */
+export async function callLLM({ system = "", user = "", maxTokens = 1500, temperature = 0.2, json = false, images = null, signal } = {}) {
   const pid = getProvider();
   const p = PROVIDERS[pid];
   if (!p) throw new Error(`Unknown provider: ${pid}`);
@@ -155,7 +167,7 @@ export async function callLLM({ system = "", user = "", maxTokens = 1500, temper
   const model = getModel(pid);
 
   const attempt = async (useJson) => {
-    const { url, headers, body } = p.buildRequest({ key, model, system, user, maxTokens, temperature, json: useJson });
+    const { url, headers, body } = p.buildRequest({ key, model, system, user, maxTokens, temperature, json: useJson, images });
     const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal });
     if (!res.ok) {
       let detail = "";
@@ -185,14 +197,39 @@ export async function callLLM({ system = "", user = "", maxTokens = 1500, temper
   }
 }
 
-/** Strip code fences / surrounding prose and JSON.parse. */
+/**
+ * Strip code fences / surrounding prose, tolerate trailing commas, and parse.
+ * Falls back to a balanced-bracket scan from the first `{`/`[` — but STRING-AWARE,
+ * so braces inside LaTeX values ("\\frac{a}{b}", "\\sum_{i}") don't throw off the
+ * depth count. This is what makes equation-heavy JSON (and reasoning models that
+ * wrap JSON in prose / think-blocks) parse reliably.
+ */
 export function parseJsonLoose(text) {
   let t = String(text || "").trim();
   const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fence) t = fence[1].trim();
-  try { return JSON.parse(t); } catch (_) { /* fall through */ }
-  const m = t.match(/[\[{][\s\S]*[\]}]/);
-  if (m) { try { return JSON.parse(m[0]); } catch (_) { /* fall through */ } }
+  const strip = (s) => s.replace(/,\s*([}\]])/g, "$1"); // kill trailing commas
+  try { return JSON.parse(strip(t)); } catch (_) { /* fall through */ }
+  const i = t.search(/[{[]/);
+  if (i >= 0) {
+    const open = t[i], close = open === "{" ? "}" : "]";
+    let depth = 0, inStr = false, esc = false;
+    for (let j = i; j < t.length; j++) {
+      const c = t[j];
+      if (inStr) {
+        if (esc) esc = false;
+        else if (c === "\\") esc = true;
+        else if (c === '"') inStr = false;
+        continue;
+      }
+      if (c === '"') { inStr = true; continue; }
+      if (c === open) depth++;
+      else if (c === close && --depth === 0) {
+        try { return JSON.parse(strip(t.slice(i, j + 1))); } catch (_) { /* fall through */ }
+        break;
+      }
+    }
+  }
   throw new Error("Model did not return valid JSON.");
 }
 

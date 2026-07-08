@@ -138,6 +138,14 @@ export function getProvider() {
 export function setProvider(id) {
   if (PROVIDERS[id]) write("dd_llm_provider", id, true); // remembering the choice (not the key) is fine
 }
+/** Rate tier drives request pacing only. Default "free" (safe for public free keys —
+ *  10–15 RPM); "paid" (Gemini Tier 1+) uses a much smaller gap. Remembered on device. */
+export function getRateTier() {
+  return read("dd_llm_rate_tier") === "paid" ? "paid" : "free";
+}
+export function setRateTier(tier) {
+  write("dd_llm_rate_tier", tier === "paid" ? "paid" : "free", true);
+}
 export function getKey(provider = getProvider()) {
   return read(`dd_llm_key_${provider}`) || "";
 }
@@ -190,10 +198,11 @@ function retryDelayFromBody(detail) {
    burst becomes a paced stream. Interval is derived from the selected model's RPM.
    Trade-off: a multi-page run is slower, but "instant 429" becomes "slow but succeeds." */
 function paceIntervalMs() {
+  if (getRateTier() === "paid") return 800;  // Tier 1+ (>100 RPM): a tiny gap just avoids an instant burst
   const m = (getModel() || "").toLowerCase();
-  if (m.includes("2.5-flash")) return 4500; // Gemini 2.5 Flash ≈ 15 RPM
-  if (m.includes("flash")) return 6500;     // 3.x Flash / flash-latest ≈ 10 RPM (stay safe)
-  return 5000;                              // other free tiers (OpenRouter ~20/min, HF)
+  if (m.includes("2.5-flash")) return 4500;  // Gemini 2.5 Flash ≈ 15 RPM
+  if (m.includes("flash")) return 6500;      // 3.x Flash / flash-latest ≈ 10 RPM (stay safe)
+  return 5000;                               // other free tiers (OpenRouter ~20/min, HF)
 }
 let _paceChain = Promise.resolve();
 let _lastStart = 0;
@@ -366,6 +375,11 @@ export function renderProviderSettings(onChange = () => {}) {
   const rememberLabel = el("label", { for: "llm-remember", class: "chat-consent" }, [remember, el("span", {}, [" Remember on this device (less safe than session-only)"])]);
   const corsNote = el("p", { class: "muted llm-cors" }, []);
   const modelHint = el("p", { class: "muted llm-hint" }, []);
+  const tierSel = el("select", { class: "llm-field" });
+  tierSel.appendChild(el("option", { value: "free" }, ["Free key — safe pacing"]));
+  tierSel.appendChild(el("option", { value: "paid" }, ["Paid tier — fast"]));
+  tierSel.value = getRateTier();
+  tierSel.addEventListener("change", () => setRateTier(tierSel.value));
   const status = el("span", { class: "chat-status" });
 
   function sync() {
@@ -400,6 +414,11 @@ export function renderProviderSettings(onChange = () => {}) {
   wrap.appendChild(el("label", { class: "field-label" }, ["Model"]));
   wrap.appendChild(modelInput);
   wrap.appendChild(modelHint);
+  wrap.appendChild(el("label", { class: "field-label" }, ["Rate tier (request pacing)"]));
+  wrap.appendChild(tierSel);
+  wrap.appendChild(el("p", { class: "muted llm-hint" }, [
+    "Free = paced for free-tier limits (~10–15 req/min). Paid = Gemini Tier 1+ (fast). Affects only request spacing.",
+  ]));
   wrap.appendChild(rememberLabel);
   wrap.appendChild(corsNote);
   wrap.appendChild(el("div", { class: "chat-actions" }, [saveBtn, clearBtn, status]));

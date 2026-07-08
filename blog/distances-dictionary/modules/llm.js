@@ -174,12 +174,49 @@ const RETRYABLE = new Set([429, 500, 502, 503, 504]); // transient; back off and
 const MAX_RETRIES = 5; // patient enough to ride out Gemini 503 "high demand" spikes
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/* --- free-tier 429s: tell a per-DAY limit (RPD — no retry until it resets) from a
+   per-MINUTE limit (RPM, rolling 60s window — wait and retry). --- */
+function is429PerDay(detail) {
+  return /per\s*day|perday|daily|requests per day|\bRPD\b|quota.*\bday\b/i.test(String(detail || ""));
+}
+function retryDelayFromBody(detail) {
+  // Gemini often returns a RetryInfo delay like "retryDelay":"30s".
+  const m = String(detail || "").match(/retry[_-]?delay"?\s*[:=]\s*"?(\d+(?:\.\d+)?)\s*s?/i);
+  return m ? Math.ceil(parseFloat(m[1])) : 0;
+}
+
+/* --- global request pacer: keep the whole run under the free-tier RPM ceiling (rolling
+   60s window). EVERY provider call (vision + text + retries) goes through paced(), so a
+   burst becomes a paced stream. Interval is derived from the selected model's RPM.
+   Trade-off: a multi-page run is slower, but "instant 429" becomes "slow but succeeds." */
+function paceIntervalMs() {
+  const m = (getModel() || "").toLowerCase();
+  if (m.includes("2.5-flash")) return 4500; // Gemini 2.5 Flash ≈ 15 RPM
+  if (m.includes("flash")) return 6500;     // 3.x Flash / flash-latest ≈ 10 RPM (stay safe)
+  return 5000;                              // other free tiers (OpenRouter ~20/min, HF)
+}
+let _paceChain = Promise.resolve();
+let _lastStart = 0;
+function paced(fn) {
+  const run = _paceChain.then(async () => {
+    const gap = paceIntervalMs() - (Date.now() - _lastStart);
+    if (gap > 0) await sleep(gap);
+    _lastStart = Date.now();
+    return fn();
+  });
+  _paceChain = run.then(() => {}, () => {}); // keep the chain alive on error
+  return run;
+}
+
 /** Actionable, provider-aware error message so failures tell the user what to do. */
 function describeError(status, providerLabel, detail = "") {
   const p = providerLabel;
   if (status === 401 || status === 403) return `Auth failed for ${p} (${status}). Check your key and that your key/plan can use this model.`;
   if (status === 402) return `${p}: included credits/quota are used up. Switch to a smaller/cheaper model, change provider, or add credits.`;
-  if (status === 429) return `${p}: rate limit or quota hit — retried and still limited. Wait a moment and retry, or switch model/provider.`;
+  if (status === 429) {
+    if (is429PerDay(detail)) return `${p}: daily free quota reached (resets ~midnight Pacific). Try later, or switch model (e.g. gemini-2.5-flash) / provider.`;
+    return `${p}: per-minute rate limit — pausing and retrying. If it persists, wait a moment or switch model/provider.`;
+  }
   if (status === 404) return `${p}: model not found (${status}). Check the model id.`;
   if (status === 400) return `${p}: bad request (400). ${String(detail).slice(0, 200)}`;
   if (status === 0)   return `${p}: blocked (CORS or network).`;
@@ -219,16 +256,27 @@ export async function callLLM({ system = "", user = "", maxTokens = 1500, temper
 
   for (let i = 0; ; i++) {
     try {
-      return await attempt(json, reasoningOff);
+      return await paced(() => attempt(json, reasoningOff));
     } catch (e) {
       const d = `${e && e.detail || ""} ${e && e.message || ""}`.toLowerCase();
       // If a param (JSON mode or the reasoning knob) was rejected, retry once without both.
       if ((json || reasoningOff) && e && e.status >= 400 && e.status < 500 &&
           /response_format|json|reasoning|effort|thinking|unsupported|not support/.test(d)) {
-        return attempt(false, false);
+        return paced(() => attempt(false, false));
       }
-      // Transient (rate limit / capacity — e.g. Gemini 503 "high demand"): back off and
-      // retry, patiently. 503 needs more room; honor Retry-After when the server sends it.
+      // Rate limit (429): a per-DAY quota can't be retried today (fail fast); a per-MINUTE
+      // limit clears within the rolling window, so wait (server delay if given, else
+      // ~15→30→60s) and retry.
+      if (e && e.status === 429) {
+        if (is429PerDay(e.detail || e.message)) throw e;
+        if (i < MAX_RETRIES) {
+          const rd = e.retryAfter || retryDelayFromBody(e.detail || e.message);
+          const wait = rd > 0 ? rd * 1000 : Math.min(60000, 15000 * 2 ** i) + Math.random() * 1000;
+          await sleep(wait);
+          continue;
+        }
+      }
+      // Other transient (5xx capacity — e.g. Gemini 503 "high demand"): patient backoff.
       if (e && RETRYABLE.has(e.status) && i < MAX_RETRIES) {
         const base = e.status === 503 ? 2000 : 1000;
         const wait = e.retryAfter > 0 ? e.retryAfter * 1000 : Math.min(25000, base * 2 ** i) + Math.random() * 600;

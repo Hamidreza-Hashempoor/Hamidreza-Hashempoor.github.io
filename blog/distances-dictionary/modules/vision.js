@@ -12,10 +12,9 @@
 import { renderPageImage } from "./pdf.js";
 import { callJSON } from "./llm.js";
 
-// Gap between per-page calls to avoid bursting free-tier limits / adding load while a
-// model is already under demand. A failed-page sweep after the main loop rides out
-// transient 503 "high demand" spikes that survive the in-call backoff.
-const PAGE_GAP_MS = 1500;
+// The global request pacer in llm.js spaces ALL calls (pages, text chunks, retries) to
+// stay under the free-tier RPM, so no per-page gap is needed here. A failed-page sweep
+// after the main loop rides out transient 503 "high demand" spikes.
 const SWEEP_WAIT_MS = 15000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -103,7 +102,6 @@ export async function ocrPagesToLatex({ bytes, numPages, maxPages = 15, onProgre
   const out = [];
   for (let p = 1; p <= n; p++) {
     onProgress({ stage: "ocr", page: p, total: n });
-    if (p > 1) await sleep(PAGE_GAP_MS);
     out.push(await attemptPage(p));
   }
   await sweepFailed(out, attemptPage, onProgress);
@@ -121,7 +119,6 @@ export async function ocrImagesToLatex({ images, maxPages = 15, onProgress = () 
   const out = [];
   for (let i = 0; i < list.length; i++) {
     onProgress({ stage: "ocr", page: i + 1, total: list.length });
-    if (i > 0) await sleep(PAGE_GAP_MS);
     out.push(await attemptImage(i + 1));
   }
   await sweepFailed(out, attemptImage, onProgress);

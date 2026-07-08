@@ -99,11 +99,14 @@ export async function ocrPagesToLatex({ bytes, numPages, maxPages = 15, onProgre
     return _ocrDataUrl(img, p);
   };
 
-  const out = [];
-  for (let p = 1; p <= n; p++) {
-    onProgress({ stage: "ocr", page: p, total: n });
-    out.push(await attemptPage(p));
-  }
+  // Fire pages concurrently; the pacer's pool throttles how many actually run at once
+  // (serial on free, up to ~5 on paid). Promise.all preserves order, so out[i] is page i+1.
+  let done = 0;
+  const out = await Promise.all(
+    Array.from({ length: n }, (_, i) => i + 1).map((p) =>
+      attemptPage(p).then((r) => { onProgress({ stage: "ocr", page: ++done, total: n }); return r; })
+    )
+  );
   await sweepFailed(out, attemptPage, onProgress);
   return out;
 }
@@ -116,11 +119,10 @@ export async function ocrPagesToLatex({ bytes, numPages, maxPages = 15, onProgre
 export async function ocrImagesToLatex({ images, maxPages = 15, onProgress = () => {} }) {
   const list = (images || []).slice(0, maxPages);
   const attemptImage = (pageNum) => _ocrDataUrl(list[pageNum - 1], pageNum);
-  const out = [];
-  for (let i = 0; i < list.length; i++) {
-    onProgress({ stage: "ocr", page: i + 1, total: list.length });
-    out.push(await attemptImage(i + 1));
-  }
+  let done = 0;
+  const out = await Promise.all(
+    list.map((_, i) => attemptImage(i + 1).then((r) => { onProgress({ stage: "ocr", page: ++done, total: list.length }); return r; }))
+  );
   await sweepFailed(out, attemptImage, onProgress);
   return out;
 }

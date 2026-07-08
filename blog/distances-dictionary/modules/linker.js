@@ -376,21 +376,27 @@ export async function detectAndLink({ db, text, call, onProgress = () => {}, max
   const llm = [];
 
   if (typeof call === "function") {
-    for (let i = 0; i < use.length; i++) {
-      onProgress({ stage: "detect", index: i + 1, total: use.length });
-      const { text: ctext, base } = use[i];
+    // Chunks run concurrently; the pacer's pool throttles actual concurrency (serial on
+    // free, parallel on paid). Per-chunk failure stays non-fatal; order is irrelevant
+    // because mergeMentions sorts. Progress advances by completion count.
+    let done = 0;
+    const results = await Promise.all(use.map(async ({ text: ctext, base }) => {
       let parsed;
       try {
         parsed = await call({ system: DETECT_SYSTEM, user: detectUser(catalog, ctext) });
       } catch (e) {
-        errors.push(String(e && e.message ? e.message : e));
-        continue; // lexical hits in this chunk's range are unaffected
+        onProgress({ stage: "detect", index: ++done, total: use.length });
+        return { error: String(e && e.message ? e.message : e) };
       }
-      const mentions = (parsed && Array.isArray(parsed.mentions)) ? parsed.mentions : [];
-      for (const raw of mentions) {
-        const norm = normalizeMention(raw, ctext, base, ids);
-        if (norm) llm.push(norm);
-      }
+      onProgress({ stage: "detect", index: ++done, total: use.length });
+      const raws = (parsed && Array.isArray(parsed.mentions)) ? parsed.mentions : [];
+      const norms = [];
+      for (const raw of raws) { const norm = normalizeMention(raw, ctext, base, ids); if (norm) norms.push(norm); }
+      return { mentions: norms };
+    }));
+    for (const r of results) {
+      if (r.error) errors.push(r.error);
+      else if (r.mentions) llm.push(...r.mentions);
     }
   }
 

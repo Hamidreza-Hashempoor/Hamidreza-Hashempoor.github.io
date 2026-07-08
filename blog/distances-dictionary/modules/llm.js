@@ -204,17 +204,28 @@ function paceIntervalMs() {
   if (m.includes("flash")) return 6500;      // 3.x Flash / flash-latest ≈ 10 RPM (stay safe)
   return 5000;                               // other free tiers (OpenRouter ~20/min, HF)
 }
-let _paceChain = Promise.resolve();
-let _lastStart = 0;
+// Concurrency pool: serial on free (protect 10–15 RPM), parallel on paid (Tier 1+).
+// Starts are still staggered by paceIntervalMs() so N calls don't fire in one instant.
+function _maxConcurrent() {
+  return getRateTier() === "paid" ? 5 : 1;
+}
+let _inFlight = 0;
+let _nextStart = 0;      // earliest timestamp the next call may start
+const _queue = [];
+function _pump() {
+  while (_inFlight < _maxConcurrent() && _queue.length) {
+    const { fn, resolve, reject } = _queue.shift();
+    _inFlight++;
+    const now = Date.now();
+    const start = Math.max(now, _nextStart);
+    _nextStart = start + paceIntervalMs();  // stagger starts by the pace interval
+    const go = () => Promise.resolve().then(fn).then(resolve, reject).finally(() => { _inFlight--; _pump(); });
+    const delay = start - now;
+    if (delay > 0) setTimeout(go, delay); else go();
+  }
+}
 function paced(fn) {
-  const run = _paceChain.then(async () => {
-    const gap = paceIntervalMs() - (Date.now() - _lastStart);
-    if (gap > 0) await sleep(gap);
-    _lastStart = Date.now();
-    return fn();
-  });
-  _paceChain = run.then(() => {}, () => {}); // keep the chain alive on error
-  return run;
+  return new Promise((resolve, reject) => { _queue.push({ fn, resolve, reject }); _pump(); });
 }
 
 /** Actionable, provider-aware error message so failures tell the user what to do. */

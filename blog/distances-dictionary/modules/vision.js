@@ -12,8 +12,11 @@
 import { renderPageImage } from "./pdf.js";
 import { callJSON } from "./llm.js";
 
-// Small gap between per-page calls to avoid bursting free-tier per-minute limits.
-const PAGE_GAP_MS = 700;
+// Gap between per-page calls to avoid bursting free-tier limits / adding load while a
+// model is already under demand. A failed-page sweep after the main loop rides out
+// transient 503 "high demand" spikes that survive the in-call backoff.
+const PAGE_GAP_MS = 1500;
+const SWEEP_WAIT_MS = 15000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const OCR_SYSTEM =
@@ -58,26 +61,52 @@ async function _ocrDataUrl(dataUrl, pageNumber) {
 }
 
 /**
+ * Give pages/images that errored in the main loop (typically transient 503 "high
+ * demand" spikes that survived the in-call backoff) ONE more attempt after a pause,
+ * replacing each result in place. Non-fatal: a still-failing entry keeps its error so
+ * the UI still lists genuinely unreadable pages. No-op (and no wait) when nothing failed.
+ * @param {Array} out       results array (mutated in place)
+ * @param {(pageNum:number)=>Promise<object>} attempt  re-run one item by 1-based page number
+ */
+async function sweepFailed(out, attempt, onProgress) {
+  const failed = out.map((o, idx) => ({ o, idx })).filter((x) => x.o && x.o.error);
+  if (!failed.length) return;
+  onProgress({ stage: "ocr", retry: true, page: 0, total: failed.length });
+  await sleep(SWEEP_WAIT_MS);
+  for (let k = 0; k < failed.length; k++) {
+    const { o, idx } = failed[k];
+    onProgress({ stage: "ocr", retry: true, page: k + 1, total: failed.length });
+    out[idx] = await attempt(o.page);
+  }
+}
+
+/**
  * OCR the first `maxPages` pages of a PDF into LaTeX equations, one model call per
  * page. Never throws for a single page — errors are captured per page so the
  * caller can keep going.
  * @returns {Promise<Array<{page:number, equations:Array<{eq_number:?string, latex:string}>, error?:string}>>}
  */
 export async function ocrPagesToLatex({ bytes, numPages, maxPages = 15, onProgress = () => {} }) {
-  const out = [];
   const n = Math.min(numPages, maxPages);
-  for (let p = 1; p <= n; p++) {
-    onProgress({ stage: "ocr", page: p, total: n });
-    if (p > 1) await sleep(PAGE_GAP_MS);
+  // Render + OCR one page (by 1-based number). Never throws — used by the main loop and
+  // the failed-page sweep alike.
+  const attemptPage = async (p) => {
     let img;
     try {
       img = await renderPageImage(bytes, p, { type: "image/jpeg", quality: 0.8, scale: 1.75, maxDim: 1600 });
     } catch (e) {
-      out.push({ page: p, equations: [], error: `render failed: ${e && e.message ? e.message : e}` });
-      continue;
+      return { page: p, equations: [], error: `render failed: ${e && e.message ? e.message : e}` };
     }
-    out.push(await _ocrDataUrl(img, p));
+    return _ocrDataUrl(img, p);
+  };
+
+  const out = [];
+  for (let p = 1; p <= n; p++) {
+    onProgress({ stage: "ocr", page: p, total: n });
+    if (p > 1) await sleep(PAGE_GAP_MS);
+    out.push(await attemptPage(p));
   }
+  await sweepFailed(out, attemptPage, onProgress);
   return out;
 }
 
@@ -87,13 +116,15 @@ export async function ocrPagesToLatex({ bytes, numPages, maxPages = 15, onProgre
  * cost. Same return shape as ocrPagesToLatex, so augmentText/rendering are unchanged.
  */
 export async function ocrImagesToLatex({ images, maxPages = 15, onProgress = () => {} }) {
-  const out = [];
   const list = (images || []).slice(0, maxPages);
+  const attemptImage = (pageNum) => _ocrDataUrl(list[pageNum - 1], pageNum);
+  const out = [];
   for (let i = 0; i < list.length; i++) {
     onProgress({ stage: "ocr", page: i + 1, total: list.length });
     if (i > 0) await sleep(PAGE_GAP_MS);
-    out.push(await _ocrDataUrl(list[i], i + 1));
+    out.push(await attemptImage(i + 1));
   }
+  await sweepFailed(out, attemptImage, onProgress);
   return out;
 }
 

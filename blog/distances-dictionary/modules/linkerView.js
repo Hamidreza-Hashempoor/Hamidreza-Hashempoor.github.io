@@ -439,7 +439,9 @@ export function renderLinker(db) {
         try {
           ocrEquations = await ocrPagesToLatex({
             bytes, numPages: doc.numPages, maxPages: 15,
-            onProgress: (p) => setProgress(`Reading equations… page ${p.page}/${p.total}`),
+            onProgress: (p) => setProgress(p.retry
+              ? `High demand — retrying ${p.total} page(s) after a pause…`
+              : `Reading equations… page ${p.page}/${p.total}`),
           });
           truncated = Math.max(0, doc.numPages - 15);
           const aug = augmentText(doc.pages, ocrEquations);
@@ -472,7 +474,9 @@ export function renderLinker(db) {
         const capped = normImages.slice(0, 15);
         ocrEquations = await ocrImagesToLatex({
           images: capped.map((n) => n.dataUrl), maxPages: 15,
-          onProgress: (p) => setProgress(`Reading equations… image ${p.page}/${p.total}`),
+          onProgress: (p) => setProgress(p.retry
+            ? `High demand — retrying ${p.total} image(s) after a pause…`
+            : `Reading equations… image ${p.page}/${p.total}`),
         });
         truncated = Math.max(0, images.length - 15);
         ocrErrors = ocrEquations.filter((o) => o.error).map((o) => `img${o.page}: ${o.error}`);

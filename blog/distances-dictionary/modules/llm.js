@@ -171,6 +171,7 @@ export function providerSupportsImages(provider = getProvider()) {
 /* --------------------------------- calls ---------------------------------- */
 
 const RETRYABLE = new Set([429, 500, 502, 503, 504]); // transient; back off and retry
+const MAX_RETRIES = 5; // patient enough to ride out Gemini 503 "high demand" spikes
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** Actionable, provider-aware error message so failures tell the user what to do. */
@@ -226,9 +227,11 @@ export async function callLLM({ system = "", user = "", maxTokens = 1500, temper
           /response_format|json|reasoning|effort|thinking|unsupported|not support/.test(d)) {
         return attempt(false, false);
       }
-      // Transient (rate limit / overload): back off and retry, capped.
-      if (e && RETRYABLE.has(e.status) && i < 3) {
-        const wait = e.retryAfter > 0 ? e.retryAfter * 1000 : Math.min(8000, 1000 * 2 ** i) + Math.random() * 400;
+      // Transient (rate limit / capacity — e.g. Gemini 503 "high demand"): back off and
+      // retry, patiently. 503 needs more room; honor Retry-After when the server sends it.
+      if (e && RETRYABLE.has(e.status) && i < MAX_RETRIES) {
+        const base = e.status === 503 ? 2000 : 1000;
+        const wait = e.retryAfter > 0 ? e.retryAfter * 1000 : Math.min(25000, base * 2 ** i) + Math.random() * 600;
         await sleep(wait);
         continue;
       }

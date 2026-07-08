@@ -509,6 +509,8 @@ a.chip:hover { text-decoration: none; border-color: var(--accent); color: var(--
 }
 .lk-hit:hover { background: #d9ecdc; }
 .lk-hit.review { background: #fdf3e7; border-bottom-color: #c98a3a; }
+.lk-hit.variant { background: #eef4fb; border-bottom-style: dashed; border-bottom-color: #6aa3d8; }
+.lk-hit.variant:hover { background: #dce9f7; }
 .lk-miss {
   background: #f7eeec;
   border-bottom: 2px dotted var(--bad);
@@ -537,6 +539,7 @@ a.chip:hover { text-decoration: none; border-color: var(--accent); color: var(--
 .lk-other-math { margin-top: 12px; }
 .lk-other-math > summary { cursor: pointer; font-family: var(--sans); font-size: 0.9rem; }
 .lk-draftblock { margin-top: 6px; }
+.lk-eq-note { font-family: var(--sans); font-size: 0.85rem; margin: 4px 0 0; }
 
 /* ------------------------------ browse by type ---------------------------- */
 

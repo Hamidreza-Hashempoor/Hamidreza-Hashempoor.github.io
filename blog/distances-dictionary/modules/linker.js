@@ -203,6 +203,14 @@ export function lexicalPass(db, text) {
   return hits;
 }
 
+// Link-precision gate: demote low-confidence links to candidates so "linked" keeps
+// meaning "genuinely this measure / a real variant." Variants are gated more strictly
+// (they're the main source of over-linking). A link that clears the gate but is below
+// REVIEW_CONF renders in the "review" style. Tune these on real papers.
+const MIN_ID_CONF = 0.55;
+const MIN_VARIANT_CONF = 0.70;
+const REVIEW_CONF = 0.8;
+
 const DETECT_SYSTEM =
   "You analyze an academic text CHUNK and identify every MENTION of a distance, divergence, " +
   "similarity, or metric MEASURE between mathematical objects (vectors, matrices, probability " +
@@ -217,6 +225,7 @@ const DETECT_SYSTEM =
   "\"id\":\"<catalog id or null>\",\"related_id\":\"<catalog id or null>\"," +
   "\"relation\":\"<generalization|special_case|regularized|bound|reduces_to or null>\"," +
   "\"canonical_guess\":\"<name if id AND related_id are null, else null>\",\"defines_measure\":<bool>," +
+  "\"note\":\"<one short grounded sentence for LINKED mentions, else null>\"," +
   "\"operand_type\":\"vector|spd_matrix|probability_distribution|function|string|quantum_state|unknown\"," +
   "\"match_type\":\"exact|alias|symbol|formula|variant|semantic|none\",\"confidence\":<0..1>," +
   "\"needs_human_review\":<bool>}]}. " +
@@ -242,7 +251,19 @@ const DETECT_SYSTEM =
   "nor a variant match (a new measure). " +
   "Set \"defines_measure\": false for math that is NOT a measure between objects (a probability " +
   "distribution, a partition/normalization function, an algebraic identity) — leave these unlinked " +
-  "(id and related_id both null). This applies to named-in-prose mentions too, not only equations.";
+  "(id and related_id both null). This applies to named-in-prose mentions too, not only equations. " +
+  "Link precision: assign an \"id\" or \"related_id\" ONLY when you are genuinely confident the mention " +
+  "corresponds to that measure, and set \"confidence\" honestly. A \"related_id\" requires a REAL " +
+  "mathematical relationship (limit / special case / generalization / bound / regularization), NOT mere " +
+  "topical similarity (\"also an entropy\", \"also a distance\"). For a superficial resemblance, leave " +
+  "both null. " +
+  "Notes: for every LINKED mention (has an id or related_id), also return \"note\": ONE short sentence " +
+  "(max ~25 words) that (a) says what this equation or term is IN THIS PAPER, grounded in the surrounding " +
+  "text (e.g. \"the paper's proposed per-event entropy\", \"the classic baseline (1)\"), and (b) states " +
+  "its relationship to the linked card with a plain verb (is / generalizes / reduces to / special case of " +
+  "/ bounds / regularizes) plus a brief reason when it fits. Base the note ONLY on the visible text; do " +
+  "not invent facts or numbers. Set \"note\" to null for unlinked mentions. Escape backslashes if the note " +
+  "contains LaTeX.";
 
 function detectUser(catalog, chunkText) {
   return `CATALOG (json):\n${JSON.stringify(catalog)}\n\nCHUNK (offsets are 0-based into this exact text):\n${chunkText}`;
@@ -268,14 +289,21 @@ function normalizeMention(raw, chunkText, base, ids) {
     start = idx;
     end = idx + raw.surface.length;
   }
-  const id = raw.id && ids.has(raw.id) ? raw.id : null;
+  const confNum = typeof raw.confidence === "number" ? raw.confidence : null;
+  let id = (raw.id && ids.has(raw.id)) ? raw.id : null;
   // A variant links to related_id — a catalog card it generalizes / reduces to /
   // bounds / is a special or regularized case of. Only when there's no exact id, and
   // only if the related_id is a real catalog id.
-  const related_id = (!id && raw.related_id && ids.has(raw.related_id)) ? raw.related_id : null;
+  let related_id = (!id && raw.related_id && ids.has(raw.related_id)) ? raw.related_id : null;
+  // Precision gate: demote links below their confidence floor to unmatched candidates
+  // (variants gated more strictly, since they over-link). Missing confidence passes.
+  if (id && confNum != null && confNum < MIN_ID_CONF) id = null;
+  if (related_id && confNum != null && confNum < MIN_VARIANT_CONF) related_id = null;
   const relation = related_id ? (raw.relation || "variant") : null;
   const linked = !!(id || related_id);
-  const conf = typeof raw.confidence === "number" ? raw.confidence : 0.5;
+  // Keep a demoted / unmatched signal as a candidate name rather than dropping it.
+  const canonical_guess = linked ? null : (raw.canonical_guess || (raw.id && !ids.has(raw.id) ? raw.id : null));
+  const note = linked && typeof raw.note === "string" ? raw.note.trim().slice(0, 240) : null;
   return {
     surface: raw.surface,
     start: base + start,
@@ -283,12 +311,13 @@ function normalizeMention(raw, chunkText, base, ids) {
     id,
     related_id,
     relation,
-    canonical_guess: linked ? null : (raw.canonical_guess || null),
+    canonical_guess,
     defines_measure: raw.defines_measure !== false, // default true unless the model says otherwise
+    note,
     operand_type: raw.operand_type || "unknown",
     match_type: id ? (raw.match_type || "semantic") : (related_id ? "variant" : "none"),
-    confidence: conf,
-    needs_review: !!raw.needs_human_review || !linked || conf < 0.75,
+    confidence: confNum == null ? 0.5 : confNum,
+    needs_review: !!raw.needs_human_review || !linked || confNum == null || confNum < REVIEW_CONF,
     source: "llm",
   };
 }

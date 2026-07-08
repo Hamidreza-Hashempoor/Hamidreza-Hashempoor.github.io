@@ -79,10 +79,14 @@ function buildReadingHTML(text, mentions) {
     if (m.start < cursor) continue;
     html += escapeHTML(text.slice(cursor, m.start));
     const surf = escapeHTML(text.slice(m.start, m.end));
-    if (m.id) {
+    const cardId = m.id || m.related_id; // variants (related_id, no id) are links too
+    if (cardId) {
+      const isVariant = !m.id && !!m.related_id;
       const conf = Math.round(m.confidence * 100);
-      const cls = "lk-hit" + (m.needs_review ? " review" : "");
-      html += `<a class="${cls}" href="#/m/${m.id}" title="${escapeHTML(m.id)} · ${conf}%${m.needs_review ? " · review" : ""}">${surf}</a>`;
+      const cls = "lk-hit" + (isVariant ? " variant" : "") + (m.needs_review ? " review" : "");
+      const fallback = `${cardId}${isVariant ? " (" + (m.relation || "variant") + ")" : ""} · ${conf}%${m.needs_review ? " · review" : ""}`;
+      const title = m.note ? `${m.note} — ${cardId}` : fallback;
+      html += `<a class="${cls}" href="#/m/${cardId}" title="${escapeHTML(title)}">${surf}</a>`;
     } else {
       const g = m.canonical_guess ? escapeHTML(m.canonical_guess) : "possible new measure";
       html += `<mark class="lk-miss" title="${g} · not in dictionary">${surf}</mark>`;
@@ -149,7 +153,7 @@ export function renderLinker(db) {
       if (!span.bbox) continue;
       const hit = res.mentions.find((m) => (m.id || m.related_id) && m.start < span.augEnd && m.end > span.augStart);
       if (!hit) continue; // unlinked equation → not boxed
-      eqBoxes.push({ page: span.page, bbox: span.bbox, id: hit.id || hit.related_id, variant: !hit.id && !!hit.related_id });
+      eqBoxes.push({ page: span.page, bbox: span.bbox, id: hit.id || hit.related_id, variant: !hit.id && !!hit.related_id, note: hit.note || null });
     }
 
     output.appendChild(el("p", { class: usedLLM ? "lk-mode ai" : "lk-mode light" }, [
@@ -231,6 +235,8 @@ export function renderLinker(db) {
     // related card, so e.g. the Shannon card shows up from the finite-sample eq.
     const ids = [...new Set(linkedMentions.map((m) => m.id || m.related_id))];
     if (ids.length) {
+      const noteByCard = new Map(); // first grounded note seen for each card
+      for (const m of linkedMentions) { const cid = m.id || m.related_id; if (m.note && !noteByCard.has(cid)) noteByCard.set(cid, m.note); }
       const sec = el("section", { class: "lk-section" });
       sec.appendChild(el("h2", {}, [`Detected measures (${ids.length})`]));
       ids.forEach((id) => {
@@ -238,6 +244,7 @@ export function renderLinker(db) {
         if (!meas) return;
         const card = el("div", { class: "lk-measure" });
         card.appendChild(el("h3", {}, [el("a", { href: `#/m/${id}` }, [meas.canonical_name])]));
+        if (noteByCard.has(id)) card.appendChild(el("p", { class: "lk-eq-note muted" }, [noteByCard.get(id)]));
         if (meas.formula_latex) {
           const eq = el("div", { class: "eq" });
           eq.textContent = `$$${meas.formula_latex}$$`;
@@ -331,6 +338,8 @@ export function renderLinker(db) {
             el("a", { class: "lk-eq-link", href: `#/m/${cardId}` }, [`→ ${rel}${name}`]),
           ]));
           row.appendChild(eqNode(span));
+          const noteText = hit.note || `${rel}${name}`;
+          row.appendChild(el("p", { class: "lk-eq-note muted" }, [noteText]));
           sec.appendChild(row);
         });
       }

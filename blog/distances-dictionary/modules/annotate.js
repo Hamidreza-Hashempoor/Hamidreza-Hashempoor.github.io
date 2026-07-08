@@ -45,6 +45,16 @@ function linkRef(doc, PDFString, rect, url, pad = 0) {
   }));
 }
 
+/** Build a sticky-note (text) annotation at the box's top-right corner. */
+function noteAnnot(doc, PDFString, rect, text) {
+  const [, , x2, y2] = rect;
+  return doc.context.register(doc.context.obj({
+    Type: "Annot", Subtype: "Text", Name: "Comment", Open: false,
+    Rect: [x2 - 12, y2 - 12, x2 + 12, y2 + 12],
+    Contents: PDFString.of(String(text || "")),
+  }));
+}
+
 /**
  * Annotate an existing PDF.
  * @param {ArrayBuffer} bytes  original PDF bytes
@@ -60,10 +70,10 @@ export async function annotatePdf(bytes, pages, mentions, boxes = []) {
   const doc = await PDFDocument.load(bytes instanceof ArrayBuffer ? bytes.slice(0) : bytes);
   const pdfPages = doc.getPages();
 
-  const perPage = new Map(); // pageNum -> [{rect, url, pad, variant}]
-  const add = (pageNum, rect, url, pad, variant) => {
+  const perPage = new Map(); // pageNum -> [{rect, url, pad, variant, note}]
+  const add = (pageNum, rect, url, pad, variant, note) => {
     const arr = perPage.get(pageNum) || [];
-    arr.push({ rect, url, pad, variant });
+    arr.push({ rect, url, pad, variant, note });
     perPage.set(pageNum, arr);
   };
 
@@ -95,7 +105,7 @@ export async function annotatePdf(bytes, pages, mentions, boxes = []) {
     const page = pdfPages[b.page - 1];
     if (!page || !b.bbox) continue;
     const { width, height } = page.getSize();
-    add(b.page, bboxToRect(b.bbox, width, height), b.id ? permalink(b.id) : null, 0, !!b.variant);
+    add(b.page, bboxToRect(b.bbox, width, height), b.id ? permalink(b.id) : null, 0, !!b.variant, b.note);
   }
 
   for (const [pageNum, entries] of perPage) {
@@ -105,6 +115,7 @@ export async function annotatePdf(bytes, pages, mentions, boxes = []) {
     for (const e of entries) {
       drawHighlight(page, rgb, e.rect, e.pad, e.variant ? HIGHLIGHT_VARIANT : HIGHLIGHT_EXACT);
       if (e.url) refs.push(linkRef(doc, PDFString, e.rect, e.url, e.pad));
+      if (e.note) refs.push(noteAnnot(doc, PDFString, e.rect, e.note));
     }
     if (refs.length) page.node.set(PDFName.of("Annots"), doc.context.obj(refs));
   }
@@ -138,7 +149,7 @@ export async function annotateImagesToPdf(images, boxes = []) {
     if (!page || !b.bbox) continue;
     const { width, height } = page.getSize();
     const arr = perPage.get(b.page) || [];
-    arr.push({ rect: bboxToRect(b.bbox, width, height), url: b.id ? permalink(b.id) : null, variant: !!b.variant });
+    arr.push({ rect: bboxToRect(b.bbox, width, height), url: b.id ? permalink(b.id) : null, variant: !!b.variant, note: b.note });
     perPage.set(b.page, arr);
   }
   for (const [idx, entries] of perPage) {
@@ -147,6 +158,7 @@ export async function annotateImagesToPdf(images, boxes = []) {
     for (const e of entries) {
       drawHighlight(page, rgb, e.rect, 0, e.variant ? HIGHLIGHT_VARIANT : HIGHLIGHT_EXACT);
       if (e.url) refs.push(linkRef(doc, PDFString, e.rect, e.url, 0));
+      if (e.note) refs.push(noteAnnot(doc, PDFString, e.rect, e.note));
     }
     if (refs.length) page.node.set(PDFName.of("Annots"), doc.context.obj(refs));
   }

@@ -214,9 +214,11 @@ const DETECT_SYSTEM =
   "\"id\": null (a possible new entry). " +
   "Return ONLY JSON (no prose, no markdown fences) of the form: " +
   "{\"mentions\":[{\"surface\":\"<exact substring of the chunk>\",\"char_start\":<int>,\"char_end\":<int>," +
-  "\"id\":\"<catalog id or null>\",\"canonical_guess\":\"<name if id is null, else null>\"," +
+  "\"id\":\"<catalog id or null>\",\"related_id\":\"<catalog id or null>\"," +
+  "\"relation\":\"<generalization|special_case|regularized|bound|reduces_to or null>\"," +
+  "\"canonical_guess\":\"<name if id AND related_id are null, else null>\",\"defines_measure\":<bool>," +
   "\"operand_type\":\"vector|spd_matrix|probability_distribution|function|string|quantum_state|unknown\"," +
-  "\"match_type\":\"exact|alias|symbol|formula|semantic|none\",\"confidence\":<0..1>," +
+  "\"match_type\":\"exact|alias|symbol|formula|variant|semantic|none\",\"confidence\":<0..1>," +
   "\"needs_human_review\":<bool>}]}. " +
   "Rules: choose ids ONLY from the catalog; never invent an id. char_start/char_end are 0-based offsets " +
   "into the CHUNK text. Set needs_human_review=true when confidence<0.75 or when argument-order/sign " +
@@ -224,7 +226,23 @@ const DETECT_SYSTEM =
   "Output rule: ESCAPE every backslash in JSON string values — write \"\\\\ln\", \"\\\\Gamma\", " +
   "\"\\\\sum\", never \"\\ln\". A chunk may contain a block delimited by [[EQUATIONS p<N>]] listing " +
   "transcribed LaTeX equations; treat each listed equation as candidate math to match, using its LaTeX " +
-  "as the surface, and set match_type:\"formula\" for those.";
+  "as the surface, and set match_type:\"formula\" for those. " +
+  "Semantic equation linking: for each equation in an [[EQUATIONS p<N>]] block, decide what it measures " +
+  "by MEANING, not string similarity — compare its operands (what objects it relates: two distributions, " +
+  "a distribution and itself, a matrix pair, points, strings, quantum states), its structure (a sum of " +
+  "p*log(p/q), an integral, a supremum, a norm), and any nearby name or defining sentence against each " +
+  "catalog entry's formula, aliases, symbols, and operand_type; tolerate notation differences (renamed " +
+  "symbols, transposed arguments, added normalization). " +
+  "Set \"id\" to the catalog id when the equation IS that measure (identical up to notation). " +
+  "Set \"related_id\"+\"relation\" when it is a VARIANT of a catalog measure (relation one of " +
+  "generalization|special_case|regularized|bound|reduces_to) — e.g. a finite-sample entropy that reduces " +
+  "to Shannon entropy as N grows → related_id = the Shannon-entropy card, relation \"reduces_to\". Use " +
+  "null/null when no related card fits. " +
+  "Set \"canonical_guess\" to a short name when the equation defines a measure that is neither an exact " +
+  "nor a variant match (a new measure). " +
+  "Set \"defines_measure\": false for math that is NOT a measure between objects (a probability " +
+  "distribution, a partition/normalization function, an algebraic identity) — leave these unlinked " +
+  "(id and related_id both null). This applies to named-in-prose mentions too, not only equations.";
 
 function detectUser(catalog, chunkText) {
   return `CATALOG (json):\n${JSON.stringify(catalog)}\n\nCHUNK (offsets are 0-based into this exact text):\n${chunkText}`;
@@ -251,25 +269,36 @@ function normalizeMention(raw, chunkText, base, ids) {
     end = idx + raw.surface.length;
   }
   const id = raw.id && ids.has(raw.id) ? raw.id : null;
+  // A variant links to related_id — a catalog card it generalizes / reduces to /
+  // bounds / is a special or regularized case of. Only when there's no exact id, and
+  // only if the related_id is a real catalog id.
+  const related_id = (!id && raw.related_id && ids.has(raw.related_id)) ? raw.related_id : null;
+  const relation = related_id ? (raw.relation || "variant") : null;
+  const linked = !!(id || related_id);
   const conf = typeof raw.confidence === "number" ? raw.confidence : 0.5;
   return {
     surface: raw.surface,
     start: base + start,
     end: base + end,
     id,
-    canonical_guess: id ? null : (raw.canonical_guess || null),
+    related_id,
+    relation,
+    canonical_guess: linked ? null : (raw.canonical_guess || null),
+    defines_measure: raw.defines_measure !== false, // default true unless the model says otherwise
     operand_type: raw.operand_type || "unknown",
-    match_type: id ? (raw.match_type || "semantic") : "none",
+    match_type: id ? (raw.match_type || "semantic") : (related_id ? "variant" : "none"),
     confidence: conf,
-    needs_review: !!raw.needs_human_review || !id || conf < 0.75,
+    needs_review: !!raw.needs_human_review || !linked || conf < 0.75,
     source: "llm",
   };
 }
 
-/** Priority for overlap resolution: lexical-exact > alias > llm-id > llm-null. */
+/** Priority for overlap resolution: lexical-exact > lexical-alias > llm-id > llm-variant > unlinked. */
 function rank(m) {
-  if (m.source === "lexical") return m.match_type === "exact" ? 4 : 3;
-  return m.id ? 2 : 1;
+  if (m.source === "lexical") return m.match_type === "exact" ? 5 : 4;
+  if (m.id) return 3;          // exact LLM link
+  if (m.related_id) return 2;  // variant LLM link (related card)
+  return 1;                    // unlinked
 }
 
 /**

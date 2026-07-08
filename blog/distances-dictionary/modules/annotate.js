@@ -21,7 +21,8 @@ function permalink(id) {
   return `${base}#/m/${id}`;
 }
 
-const HIGHLIGHT = [1, 0.92, 0.23]; // highlighter yellow
+const HIGHLIGHT_EXACT = [1, 0.92, 0.23];   // yellow — exact match
+const HIGHLIGHT_VARIANT = [0.55, 0.78, 1];  // blue — variant (related card)
 
 /** Normalized bbox [x0,y0,x1,y1] (top-left origin, 0..1) → PDF rect [x1,y1,x2,y2] (bottom-left origin). */
 function bboxToRect(bbox, width, height) {
@@ -30,9 +31,9 @@ function bboxToRect(bbox, width, height) {
 }
 
 /** Draw a translucent highlight over a rect (optionally padded vertically). */
-function drawHighlight(page, rgb, rect, pad = 0) {
+function drawHighlight(page, rgb, rect, pad = 0, color = HIGHLIGHT_EXACT) {
   const [x1, y1, x2, y2] = rect;
-  page.drawRectangle({ x: x1, y: y1 - pad, width: x2 - x1, height: (y2 - y1) + 2 * pad, color: rgb(...HIGHLIGHT), opacity: 0.33 });
+  page.drawRectangle({ x: x1, y: y1 - pad, width: x2 - x1, height: (y2 - y1) + 2 * pad, color: rgb(...color), opacity: 0.33 });
 }
 
 /** Build a URI Link annotation ref over a rect. */
@@ -59,10 +60,10 @@ export async function annotatePdf(bytes, pages, mentions, boxes = []) {
   const doc = await PDFDocument.load(bytes instanceof ArrayBuffer ? bytes.slice(0) : bytes);
   const pdfPages = doc.getPages();
 
-  const perPage = new Map(); // pageNum -> [{rect, url, pad}]
-  const add = (pageNum, rect, url, pad) => {
+  const perPage = new Map(); // pageNum -> [{rect, url, pad, variant}]
+  const add = (pageNum, rect, url, pad, variant) => {
     const arr = perPage.get(pageNum) || [];
-    arr.push({ rect, url, pad });
+    arr.push({ rect, url, pad, variant });
     perPage.set(pageNum, arr);
   };
 
@@ -83,17 +84,18 @@ export async function annotatePdf(bytes, pages, mentions, boxes = []) {
         seen.add(key);
         const cur = perPage.get(pg.page);
         if (cur && cur.length >= MAX_PER_PAGE) break;
-        add(pg.page, [x1, y1, x2, y2], url, (y2 - y1) * 0.18);
+        add(pg.page, [x1, y1, x2, y2], url, (y2 - y1) * 0.18, false);
       }
     }
   }
 
-  // (2) Equation measures: normalized bbox → PDF user space (y-flipped).
+  // (2) Equation measures: normalized bbox → PDF user space (y-flipped). Variants
+  // (a related card, not an exact id) get a distinct color.
   for (const b of boxes || []) {
     const page = pdfPages[b.page - 1];
     if (!page || !b.bbox) continue;
     const { width, height } = page.getSize();
-    add(b.page, bboxToRect(b.bbox, width, height), b.id ? permalink(b.id) : null, 0);
+    add(b.page, bboxToRect(b.bbox, width, height), b.id ? permalink(b.id) : null, 0, !!b.variant);
   }
 
   for (const [pageNum, entries] of perPage) {
@@ -101,7 +103,7 @@ export async function annotatePdf(bytes, pages, mentions, boxes = []) {
     if (!page) continue;
     const refs = [];
     for (const e of entries) {
-      drawHighlight(page, rgb, e.rect, e.pad);
+      drawHighlight(page, rgb, e.rect, e.pad, e.variant ? HIGHLIGHT_VARIANT : HIGHLIGHT_EXACT);
       if (e.url) refs.push(linkRef(doc, PDFString, e.rect, e.url, e.pad));
     }
     if (refs.length) page.node.set(PDFName.of("Annots"), doc.context.obj(refs));
@@ -130,20 +132,20 @@ export async function annotateImagesToPdf(images, boxes = []) {
     pageForIndex.push(page);
   }
 
-  const perPage = new Map(); // 1-based image index -> [{rect, url}]
+  const perPage = new Map(); // 1-based image index -> [{rect, url, variant}]
   for (const b of boxes || []) {
     const page = pageForIndex[b.page - 1];
     if (!page || !b.bbox) continue;
     const { width, height } = page.getSize();
     const arr = perPage.get(b.page) || [];
-    arr.push({ rect: bboxToRect(b.bbox, width, height), url: b.id ? permalink(b.id) : null });
+    arr.push({ rect: bboxToRect(b.bbox, width, height), url: b.id ? permalink(b.id) : null, variant: !!b.variant });
     perPage.set(b.page, arr);
   }
   for (const [idx, entries] of perPage) {
     const page = pageForIndex[idx - 1];
     const refs = [];
     for (const e of entries) {
-      drawHighlight(page, rgb, e.rect, 0);
+      drawHighlight(page, rgb, e.rect, 0, e.variant ? HIGHLIGHT_VARIANT : HIGHLIGHT_EXACT);
       if (e.url) refs.push(linkRef(doc, PDFString, e.rect, e.url, 0));
     }
     if (refs.length) page.node.set(PDFName.of("Annots"), doc.context.obj(refs));

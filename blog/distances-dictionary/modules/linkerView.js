@@ -134,16 +134,22 @@ export function renderLinker(db) {
     const { toOriginal = null, ocrEquations = [], ocrErrors = [], showReading = true, equationSpans = [], images: annotatedImages = null } = extra;
     const usedVision = ocrEquations.length > 0 || ocrErrors.length > 0;
     output.innerHTML = "";
-    const matched = res.mentions.filter((m) => m.id);
-    const unmatched = res.mentions.filter((m) => !m.id);
+    // "Linked" = exact id OR variant related_id. textMentions (exact ids) carry pdf.js
+    // text geometry; candidates are unlinked measure mentions in PROSE (not equations,
+    // which are shown in their own section).
+    const linkedMentions = res.mentions.filter((m) => m.id || m.related_id);
+    const textMentions = res.mentions.filter((m) => m.id);
+    const inEqSpan = (m) => equationSpans.some((s) => m.start < s.augEnd && m.end > s.augStart);
+    const candidates = res.mentions.filter((m) => !m.id && !m.related_id && m.defines_measure !== false && !inEqSpan(m));
 
-    // Equation highlight boxes for the annotated PDF: associate each vision-detected
-    // equation (with a bbox) to a linked card by offset overlap in the augmented text.
+    // Equation highlight boxes for the annotated PDF: box ONLY equations that link to a
+    // card (exact id or variant related_id), by offset overlap; variants get a color.
     const eqBoxes = [];
     for (const span of equationSpans) {
       if (!span.bbox) continue;
-      const hit = res.mentions.find((m) => m.id && m.start < span.augEnd && m.end > span.augStart);
-      eqBoxes.push({ page: span.page, bbox: span.bbox, id: hit ? hit.id : null });
+      const hit = res.mentions.find((m) => (m.id || m.related_id) && m.start < span.augEnd && m.end > span.augStart);
+      if (!hit) continue; // unlinked equation → not boxed
+      eqBoxes.push({ page: span.page, bbox: span.bbox, id: hit.id || hit.related_id, variant: !hit.id && !!hit.related_id });
     }
 
     output.appendChild(el("p", { class: usedLLM ? "lk-mode ai" : "lk-mode light" }, [
@@ -154,14 +160,16 @@ export function renderLinker(db) {
         : "Light mode — dictionary match only (no AI key)",
     ]));
 
-    const dict = matched.filter((m) => m.source === "lexical").length;
-    const ai = matched.length - dict;
+    const dict = linkedMentions.filter((m) => m.source === "lexical").length;
+    const ai = linkedMentions.length - dict;
     const srcParts = [];
     if (dict) srcParts.push(`${dict} from the dictionary`);
     if (ai) srcParts.push(`${ai} from AI`);
     const srcDetail = srcParts.length ? ` (${srcParts.join(", ")})` : "";
+    const nVariant = linkedMentions.filter((m) => !m.id && m.related_id).length;
+    const variantNote = nVariant ? `, ${nVariant} as variant${nVariant === 1 ? "" : "s"}` : "";
     const summary = el("p", { class: "lk-summary" }, [
-      `${matched.length} linked mention${matched.length === 1 ? "" : "s"}${srcDetail}, ${unmatched.length} unmatched.`,
+      `${linkedMentions.length} linked mention${linkedMentions.length === 1 ? "" : "s"}${srcDetail}${variantNote}, ${candidates.length} unmatched.`,
     ]);
     if (res.dropped > 0) summary.appendChild(el("span", { class: "muted" }, [` (only the first ${res.chunks - res.dropped} of ${res.chunks} chunks scanned)`]));
     output.appendChild(summary);
@@ -175,7 +183,7 @@ export function renderLinker(db) {
     // Annotated-PDF export. For PDFs: text highlights (+ equation boxes when the
     // vision reader ran). For image uploads: a PDF built from the images with the
     // equation boxes drawn on. Each highlight links to its #/m/:id card.
-    const canAnnotatePdf = pdfState && (matched.length || eqBoxes.length);
+    const canAnnotatePdf = pdfState && (textMentions.length || eqBoxes.length);
     const canAnnotateImages = annotatedImages && annotatedImages.length && eqBoxes.length;
     if (canAnnotatePdf || canAnnotateImages) {
       const annBtn = el("button", { type: "button", class: "chat-btn primary" }, ["Download annotated PDF"]);
@@ -188,7 +196,7 @@ export function renderLinker(db) {
           if (pdfState) {
             // When the vision pass augmented the text, text-mention offsets are in
             // augmented coordinates; translate them back so pdf.js geometry lines up.
-            const anno = toOriginal ? toOriginalMentions(matched, toOriginal) : matched;
+            const anno = toOriginal ? toOriginalMentions(textMentions, toOriginal) : textMentions;
             bytes = await annotatePdf(pdfState.bytes, pdfState.pages, anno, eqBoxes);
           } else {
             bytes = await annotateImagesToPdf(annotatedImages, eqBoxes);
@@ -219,8 +227,9 @@ export function renderLinker(db) {
       output.appendChild(view);
     }
 
-    // Detected measures (unique) with audited code.
-    const ids = [...new Set(matched.map((m) => m.id))];
+    // Detected measures (unique) with audited code. A variant contributes its
+    // related card, so e.g. the Shannon card shows up from the finite-sample eq.
+    const ids = [...new Set(linkedMentions.map((m) => m.id || m.related_id))];
     if (ids.length) {
       const sec = el("section", { class: "lk-section" });
       sec.appendChild(el("h2", {}, [`Detected measures (${ids.length})`]));
@@ -240,103 +249,134 @@ export function renderLinker(db) {
       output.appendChild(sec);
     }
 
-    // Equations detected by the vision reader (transcribed LaTeX). Each is linked to
-    // a card when the detector matched it — best-effort association by LaTeX/surface
-    // overlap, shown as a hint (the reading view above is authoritative).
-    const allEqs = ocrEquations.flatMap((o) => (o.equations || []).map((e) => ({ ...e, page: o.page })));
-    if (allEqs.length) {
-      const norm = (s) => String(s || "").replace(/\$/g, "").replace(/\s+/g, "").toLowerCase();
-      const findLink = (latex) => {
-        const L = norm(latex);
-        if (L.length < 4) return null;
-        for (const m of res.mentions) {
-          const S = norm(m.surface);
-          if (S.length >= 6 && (S.includes(L) || L.includes(S))) return m;
+    // Reusable "draft a new card" control (used by equation candidates and the prose
+    // Unmatched section). Drafting requires the LLM.
+    const makeDraftBlock = (m) => {
+      const draftBtn = el("button", { type: "button", class: "chat-btn" }, ["Draft entry"]);
+      const out = el("div", { class: "lk-draft" });
+      draftBtn.addEventListener("click", async () => {
+        if (!hasFullCreds()) { out.textContent = "Set your AI provider key and model above first."; return; }
+        draftBtn.disabled = true;
+        out.textContent = "Drafting…";
+        try {
+          const entry = await draftEntry({ mention: m, context: contextAround(text, m), call });
+          out.innerHTML = "";
+          out.appendChild(el("pre", { class: "code-block" }, [el("code", {}, [JSON.stringify(entry, null, 2)])]));
+          const dl = el("button", { type: "button", class: "chat-btn" }, ["Download JSON"]);
+          dl.addEventListener("click", () => downloadJSON(entry, `${entry.id || "draft-entry"}.json`));
+          const propose = el("a", { class: "chat-btn", href: newCardIssueUrl(entry), target: "_blank", rel: "noopener" }, ["Propose via GitHub issue"]);
+          const verifyBtn = el("button", { type: "button", class: "chat-btn" }, ["Verify code"]);
+          const verifyOut = el("div", { class: "lk-verify" });
+          verifyBtn.addEventListener("click", async () => {
+            verifyBtn.disabled = true;
+            verifyOut.textContent = "Loading Python & running checks…";
+            const r = await verifyDraft(entry, (p) => { if (p.status && p.status !== "ready") verifyOut.textContent = p.status; });
+            verifyOut.innerHTML = "";
+            if (r.error) {
+              verifyOut.appendChild(el("p", { class: "chat-error" }, [`Verification error: ${r.error}`]));
+            } else {
+              verifyOut.appendChild(el("p", { class: r.ok ? "lk-pass" : "lk-fail" }, [
+                r.ok ? "✓ Passed checks" : "✗ Some checks failed",
+                r.value != null ? ` (value ${Number(r.value).toPrecision(4)})` : "",
+              ]));
+              const ul = el("ul", { class: "lk-checks" });
+              (r.checks || []).forEach((c) => ul.appendChild(el("li", { class: c.pass ? "lk-pass" : "lk-fail" }, [`${c.pass ? "✓" : "✗"} ${c.name}${c.detail ? " — " + c.detail : ""}`])));
+              verifyOut.appendChild(ul);
+            }
+            verifyBtn.disabled = false;
+          });
+          out.appendChild(el("div", { class: "chat-actions" }, [dl, propose, verifyBtn]));
+          out.appendChild(verifyOut);
+        } catch (e) {
+          out.textContent = "Draft failed: " + (e && e.message ? e.message : e);
+        } finally {
+          draftBtn.disabled = false;
         }
-        return null;
-      };
-      const sec = el("section", { class: "lk-section" });
-      sec.appendChild(el("h2", {}, [`Equations detected (${allEqs.length})`]));
-      sec.appendChild(el("p", { class: "muted" }, [
-        "Transcribed from the page images by your vision model. Arrows are best-effort links to dictionary cards.",
-      ]));
-      allEqs.forEach((e) => {
-        const row = el("div", { class: "lk-equation" });
-        const head = el("div", { class: "lk-eq-head" }, [
-          el("span", { class: "muted" }, [`p${e.page}${e.eq_number ? " · " + e.eq_number : ""}`]),
-        ]);
-        const link = findLink(e.latex);
-        if (link && link.id) {
-          const meas = db.byId.get(link.id);
-          head.appendChild(el("a", { class: "lk-eq-link", href: `#/m/${link.id}` }, [`→ ${meas ? meas.canonical_name : link.id}`]));
-        } else if (link && !link.id) {
-          head.appendChild(el("span", { class: "lk-eq-link muted" }, [`→ ${link.canonical_guess || "possible new measure"}`]));
-        }
-        row.appendChild(head);
-        const eq = el("div", { class: "eq" });
-        eq.textContent = `$$${String(e.latex).replace(/^\$+|\$+$/g, "")}$$`;
-        row.appendChild(eq);
-        sec.appendChild(row);
       });
+      return el("div", { class: "lk-draftblock" }, [draftBtn, out]);
+    };
+
+    // Equations detected by the vision reader, grouped by how they link. Only the
+    // Linked group is highlighted on the annotated PDF.
+    if (equationSpans.length) {
+      const relationPhrase = {
+        reduces_to: "reduces to", generalization: "generalizes", special_case: "special case of",
+        regularized: "regularized form of", bound: "bounds", variant: "variant of",
+      };
+      const linkedEqs = [], newEqs = [], otherEqs = [];
+      for (const span of equationSpans) {
+        const hit = res.mentions.find((m) => m.start < span.augEnd && m.end > span.augStart);
+        if (hit && (hit.id || hit.related_id)) linkedEqs.push({ span, hit });
+        else if (hit && hit.defines_measure !== false && hit.canonical_guess) newEqs.push({ span, hit });
+        else otherEqs.push({ span });
+      }
+
+      const sec = el("section", { class: "lk-section" });
+      sec.appendChild(el("h2", {}, [`Equations detected (${equationSpans.length})`]));
+      sec.appendChild(el("p", { class: "muted" }, ["Transcribed from the page image(s) by your vision model. Only equations that link to a card are highlighted on the PDF."]));
+
+      const label = (span) => `p${span.page}${span.eq_number ? " · " + span.eq_number : ""}`;
+      const eqNode = (span) => { const eq = el("div", { class: "eq" }); eq.textContent = `$$${String(span.latex).replace(/^\$+|\$+$/g, "")}$$`; return eq; };
+
+      if (linkedEqs.length) {
+        sec.appendChild(el("h3", { class: "lk-eq-group" }, [`Linked to a card (${linkedEqs.length})`]));
+        linkedEqs.forEach(({ span, hit }) => {
+          const cardId = hit.id || hit.related_id;
+          const meas = db.byId.get(cardId);
+          const name = meas ? meas.canonical_name : cardId;
+          const rel = hit.id ? "= " : `${relationPhrase[hit.relation] || "variant of"} `;
+          const row = el("div", { class: "lk-equation" + (hit.id ? "" : " variant") });
+          row.appendChild(el("div", { class: "lk-eq-head" }, [
+            el("span", { class: "muted" }, [label(span)]),
+            el("a", { class: "lk-eq-link", href: `#/m/${cardId}` }, [`→ ${rel}${name}`]),
+          ]));
+          row.appendChild(eqNode(span));
+          sec.appendChild(row);
+        });
+      }
+
+      if (newEqs.length) {
+        sec.appendChild(el("h3", { class: "lk-eq-group" }, [`Possible new measures (${newEqs.length})`]));
+        newEqs.forEach(({ span, hit }) => {
+          const row = el("div", { class: "lk-equation" });
+          row.appendChild(el("div", { class: "lk-eq-head" }, [
+            el("span", { class: "muted" }, [label(span)]),
+            el("strong", {}, [hit.canonical_guess || "possible new measure"]),
+          ]));
+          row.appendChild(eqNode(span));
+          row.appendChild(makeDraftBlock(hit));
+          sec.appendChild(row);
+        });
+      }
+
+      if (otherEqs.length) {
+        const det = el("details", { class: "lk-other-math" });
+        det.appendChild(el("summary", {}, [`Other transcribed math (${otherEqs.length}) — not a measure`]));
+        otherEqs.forEach(({ span }) => {
+          const row = el("div", { class: "lk-equation" });
+          row.appendChild(el("div", { class: "lk-eq-head" }, [el("span", { class: "muted" }, [label(span)])]));
+          row.appendChild(eqNode(span));
+          det.appendChild(row);
+        });
+        sec.appendChild(det);
+      }
+
       output.appendChild(sec);
     }
 
-    // Unmatched -> draft new entries.
-    if (unmatched.length) {
+    // Prose measures that look real but match no card → draft new entries. (Equation
+    // candidates are shown in the Equations section above, not duplicated here.)
+    if (candidates.length) {
       const sec = el("section", { class: "lk-section" });
-      sec.appendChild(el("h2", {}, [`Unmatched / possible new measures (${unmatched.length})`]));
-      sec.appendChild(el("p", { class: "muted" }, ["These look like measures but aren't in the dictionary. Draft an entry (for your review — nothing is committed automatically)."]));
-      unmatched.forEach((m) => {
+      sec.appendChild(el("h2", {}, [`Unmatched / possible new measures (${candidates.length})`]));
+      sec.appendChild(el("p", { class: "muted" }, ["Named in the text but not in the dictionary. Draft an entry (for your review — nothing is committed automatically)."]));
+      candidates.forEach((m) => {
         const row = el("div", { class: "lk-unmatched" });
-        const head = el("div", {}, [
+        row.appendChild(el("div", {}, [
           el("strong", {}, [m.canonical_guess || m.surface]),
           el("span", { class: "muted" }, [` — “${m.surface}” · ${Math.round(m.confidence * 100)}%`]),
-        ]);
-        const draftBtn = el("button", { type: "button", class: "chat-btn" }, ["Draft entry"]);
-        const out = el("div", { class: "lk-draft" });
-        draftBtn.addEventListener("click", async () => {
-          if (!hasFullCreds()) { out.textContent = "Set your AI provider key and model above first."; return; }
-          draftBtn.disabled = true;
-          out.textContent = "Drafting…";
-          try {
-            const entry = await draftEntry({ mention: m, context: contextAround(text, m), call });
-            out.innerHTML = "";
-            out.appendChild(el("pre", { class: "code-block" }, [el("code", {}, [JSON.stringify(entry, null, 2)])]));
-            const dl = el("button", { type: "button", class: "chat-btn" }, ["Download JSON"]);
-            dl.addEventListener("click", () => downloadJSON(entry, `${entry.id || "draft-entry"}.json`));
-            const propose = el("a", { class: "chat-btn", href: newCardIssueUrl(entry), target: "_blank", rel: "noopener" }, ["Propose via GitHub issue"]);
-            // Optional: verify the drafted reference code in Pyodide (lazy).
-            const verifyBtn = el("button", { type: "button", class: "chat-btn" }, ["Verify code"]);
-            const verifyOut = el("div", { class: "lk-verify" });
-            verifyBtn.addEventListener("click", async () => {
-              verifyBtn.disabled = true;
-              verifyOut.textContent = "Loading Python & running checks…";
-              const res = await verifyDraft(entry, (p) => { if (p.status && p.status !== "ready") verifyOut.textContent = p.status; });
-              verifyOut.innerHTML = "";
-              if (res.error) {
-                verifyOut.appendChild(el("p", { class: "chat-error" }, [`Verification error: ${res.error}`]));
-              } else {
-                verifyOut.appendChild(el("p", { class: res.ok ? "lk-pass" : "lk-fail" }, [
-                  res.ok ? "✓ Passed checks" : "✗ Some checks failed",
-                  res.value != null ? ` (value ${Number(res.value).toPrecision(4)})` : "",
-                ]));
-                const ul = el("ul", { class: "lk-checks" });
-                (res.checks || []).forEach((c) => ul.appendChild(el("li", { class: c.pass ? "lk-pass" : "lk-fail" }, [`${c.pass ? "✓" : "✗"} ${c.name}${c.detail ? " — " + c.detail : ""}`])));
-                verifyOut.appendChild(ul);
-              }
-              verifyBtn.disabled = false;
-            });
-            out.appendChild(el("div", { class: "chat-actions" }, [dl, propose, verifyBtn]));
-            out.appendChild(verifyOut);
-          } catch (e) {
-            out.textContent = "Draft failed: " + (e && e.message ? e.message : e);
-          } finally {
-            draftBtn.disabled = false;
-          }
-        });
-        row.appendChild(head);
-        row.appendChild(draftBtn);
-        row.appendChild(out);
+        ]));
+        row.appendChild(makeDraftBlock(m));
         sec.appendChild(row);
       });
       output.appendChild(sec);

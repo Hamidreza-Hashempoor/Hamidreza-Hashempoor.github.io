@@ -532,6 +532,11 @@ a.chip:hover { text-decoration: none; border-color: var(--accent); color: var(--
 .lk-eq-link { color: var(--accent); text-decoration: none; }
 .lk-eq-link:hover { text-decoration: underline; }
 .lk-equation .eq { margin: 0; overflow-x: auto; }
+.lk-equation.variant { border-style: dashed; border-color: #6aa3d8; background: #eef4fb; }
+.lk-eq-group { font-size: 1rem; margin: 16px 0 6px; }
+.lk-other-math { margin-top: 12px; }
+.lk-other-math > summary { cursor: pointer; font-family: var(--sans); font-size: 0.9rem; }
+.lk-draftblock { margin-top: 6px; }
 
 /* ------------------------------ browse by type ---------------------------- */
 

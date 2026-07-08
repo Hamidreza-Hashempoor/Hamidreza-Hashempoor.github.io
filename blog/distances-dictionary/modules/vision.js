@@ -10,12 +10,12 @@
 // failure is non-fatal (recorded and skipped), so lexical + text results survive.
 
 import { renderPageImage } from "./pdf.js";
-import { callJSON } from "./llm.js";
+import { callJSON, beginRun, endRun, pastDeadline } from "./llm.js";
 
 // The global request pacer in llm.js spaces ALL calls (pages, text chunks, retries) to
 // stay under the free-tier RPM, so no per-page gap is needed here. A failed-page sweep
 // after the main loop rides out transient 503 "high demand" spikes.
-const SWEEP_WAIT_MS = 15000;
+const SWEEP_WAIT_MS = 5000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const OCR_SYSTEM =
@@ -68,15 +68,20 @@ async function _ocrDataUrl(dataUrl, pageNumber) {
  * @param {(pageNum:number)=>Promise<object>} attempt  re-run one item by 1-based page number
  */
 async function sweepFailed(out, attempt, onProgress) {
+  if (pastDeadline()) return;                        // out of run budget — don't start a sweep
   const failed = out.map((o, idx) => ({ o, idx })).filter((x) => x.o && x.o.error);
   if (!failed.length) return;
+  // Mass overload: if most failures are 503-ish, a retry seconds later won't help — skip
+  // the whole sweep instead of running a second long cycle (this is the 10-min-hang case).
+  const overloaded = failed.filter((x) => /503|high demand|overload|unavailable/i.test(x.o.error || ""));
+  if (overloaded.length >= Math.ceil(failed.length * 0.6)) return;
+
   onProgress({ stage: "ocr", retry: true, page: 0, total: failed.length });
   await sleep(SWEEP_WAIT_MS);
-  for (let k = 0; k < failed.length; k++) {
-    const { o, idx } = failed[k];
-    onProgress({ stage: "ocr", retry: true, page: k + 1, total: failed.length });
-    out[idx] = await attempt(o.page);
-  }
+  let done = 0;
+  await Promise.all(failed.map(({ o, idx }) =>
+    attempt(o.page).then((r) => { out[idx] = r; onProgress({ stage: "ocr", retry: true, page: ++done, total: failed.length }); })
+  ));
 }
 
 /**
@@ -101,14 +106,20 @@ export async function ocrPagesToLatex({ bytes, numPages, maxPages = 15, onProgre
 
   // Fire pages concurrently; the pacer's pool throttles how many actually run at once
   // (serial on free, up to ~5 on paid). Promise.all preserves order, so out[i] is page i+1.
-  let done = 0;
-  const out = await Promise.all(
-    Array.from({ length: n }, (_, i) => i + 1).map((p) =>
-      attemptPage(p).then((r) => { onProgress({ stage: "ocr", page: ++done, total: n }); return r; })
-    )
-  );
-  await sweepFailed(out, attemptPage, onProgress);
-  return out;
+  // beginRun sets a hard budget so a persistently-503 model can't hang the run for minutes.
+  beginRun(75000);
+  try {
+    let done = 0;
+    const out = await Promise.all(
+      Array.from({ length: n }, (_, i) => i + 1).map((p) =>
+        attemptPage(p).then((r) => { onProgress({ stage: "ocr", page: ++done, total: n }); return r; })
+      )
+    );
+    await sweepFailed(out, attemptPage, onProgress);
+    return out;
+  } finally {
+    endRun();
+  }
 }
 
 /**
@@ -119,12 +130,17 @@ export async function ocrPagesToLatex({ bytes, numPages, maxPages = 15, onProgre
 export async function ocrImagesToLatex({ images, maxPages = 15, onProgress = () => {} }) {
   const list = (images || []).slice(0, maxPages);
   const attemptImage = (pageNum) => _ocrDataUrl(list[pageNum - 1], pageNum);
-  let done = 0;
-  const out = await Promise.all(
-    list.map((_, i) => attemptImage(i + 1).then((r) => { onProgress({ stage: "ocr", page: ++done, total: list.length }); return r; }))
-  );
-  await sweepFailed(out, attemptImage, onProgress);
-  return out;
+  beginRun(75000);
+  try {
+    let done = 0;
+    const out = await Promise.all(
+      list.map((_, i) => attemptImage(i + 1).then((r) => { onProgress({ stage: "ocr", page: ++done, total: list.length }); return r; }))
+    );
+    await sweepFailed(out, attemptImage, onProgress);
+    return out;
+  } finally {
+    endRun();
+  }
 }
 
 /**

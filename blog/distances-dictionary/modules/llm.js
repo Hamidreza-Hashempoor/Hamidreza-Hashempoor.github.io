@@ -179,8 +179,17 @@ export function providerSupportsImages(provider = getProvider()) {
 /* --------------------------------- calls ---------------------------------- */
 
 const RETRYABLE = new Set([429, 500, 502, 503, 504]); // transient; back off and retry
-const MAX_RETRIES = 5; // patient enough to ride out Gemini 503 "high demand" spikes
+const MAX_RETRIES = 5;      // for 429 / other transient
+const MAX_503_RETRIES = 2;  // 503 = server overload; a small budget — don't grind on it
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Hard run budget: after the deadline, stop starting NEW retries so a persistently
+// failing model (e.g. a 503-storming Gemini) can't hang the run for minutes. In-flight
+// calls still finish; remaining pages are reported failed and the run completes.
+let _runDeadline = 0;
+export function beginRun(budgetMs = 75000) { _runDeadline = Date.now() + budgetMs; }
+export function endRun() { _runDeadline = 0; }
+export function pastDeadline() { return _runDeadline > 0 && Date.now() > _runDeadline; }
 
 /* --- free-tier 429s: tell a per-DAY limit (RPD — no retry until it resets) from a
    per-MINUTE limit (RPM, rolling 60s window — wait and retry). --- */
@@ -237,6 +246,7 @@ function describeError(status, providerLabel, detail = "") {
     if (is429PerDay(detail)) return `${p}: daily free quota reached (resets ~midnight Pacific). Try later, or switch model (e.g. gemini-2.5-flash) / provider.`;
     return `${p}: per-minute rate limit — pausing and retrying. If it persists, wait a moment or switch model/provider.`;
   }
+  if (status === 503) return `${p} is overloaded right now ("high demand"). Try again shortly, or switch to a less-busy model like gemini-2.5-flash.`;
   if (status === 404) return `${p}: model not found (${status}). Check the model id.`;
   if (status === 400) return `${p}: bad request (400). ${String(detail).slice(0, 200)}`;
   if (status === 0)   return `${p}: blocked (CORS or network).`;
@@ -289,21 +299,26 @@ export async function callLLM({ system = "", user = "", maxTokens = 1500, temper
       // ~15→30→60s) and retry.
       if (e && e.status === 429) {
         if (is429PerDay(e.detail || e.message)) throw e;
-        if (i < MAX_RETRIES) {
+        if (i < MAX_RETRIES && !pastDeadline()) {
           const rd = e.retryAfter || retryDelayFromBody(e.detail || e.message);
           const wait = rd > 0 ? rd * 1000 : Math.min(60000, 15000 * 2 ** i) + Math.random() * 1000;
           await sleep(wait);
           continue;
         }
       }
-      // Other transient (5xx capacity — e.g. Gemini 503 "high demand"): patient backoff.
-      if (e && RETRYABLE.has(e.status) && i < MAX_RETRIES) {
-        const base = e.status === 503 ? 2000 : 1000;
-        const wait = e.retryAfter > 0 ? e.retryAfter * 1000 : Math.min(25000, base * 2 ** i) + Math.random() * 600;
-        await sleep(wait);
-        continue;
+      // Other transient (5xx capacity). 503 = server overload: a small retry budget and a
+      // low ceiling — grinding on an overloaded server for a minute is counter-productive.
+      if (e && RETRYABLE.has(e.status)) {
+        const cap = e.status === 503 ? MAX_503_RETRIES : MAX_RETRIES;
+        if (i < cap && !pastDeadline()) {
+          const base = e.status === 503 ? 1500 : 1000;
+          const ceil = e.status === 503 ? 6000 : 25000;
+          const wait = e.retryAfter > 0 ? e.retryAfter * 1000 : Math.min(ceil, base * 2 ** i) + Math.random() * 400;
+          await sleep(wait);
+          continue;
+        }
       }
-      throw e; // fatal: 400/401/402/403/404, or retries exhausted
+      throw e; // fatal: 400/401/402/403/404, or retries exhausted / past deadline
     }
   }
 }

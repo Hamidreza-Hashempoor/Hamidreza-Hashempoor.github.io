@@ -12,6 +12,10 @@
 import { renderPageImage } from "./pdf.js";
 import { callJSON } from "./llm.js";
 
+// Small gap between per-page calls to avoid bursting free-tier per-minute limits.
+const PAGE_GAP_MS = 700;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 const OCR_SYSTEM =
   "You are given an IMAGE of ONE page from an academic paper and its PAGE NUMBER. " +
   "Transcribe ALL mathematical content (displayed and inline) into LaTeX, preserving " +
@@ -64,6 +68,7 @@ export async function ocrPagesToLatex({ bytes, numPages, maxPages = 15, onProgre
   const n = Math.min(numPages, maxPages);
   for (let p = 1; p <= n; p++) {
     onProgress({ stage: "ocr", page: p, total: n });
+    if (p > 1) await sleep(PAGE_GAP_MS);
     let img;
     try {
       img = await renderPageImage(bytes, p, { type: "image/jpeg", quality: 0.8, scale: 1.75, maxDim: 1600 });
@@ -86,6 +91,7 @@ export async function ocrImagesToLatex({ images, maxPages = 15, onProgress = () 
   const list = (images || []).slice(0, maxPages);
   for (let i = 0; i < list.length; i++) {
     onProgress({ stage: "ocr", page: i + 1, total: list.length });
+    if (i > 0) await sleep(PAGE_GAP_MS);
     out.push(await _ocrDataUrl(list[i], i + 1));
   }
   return out;

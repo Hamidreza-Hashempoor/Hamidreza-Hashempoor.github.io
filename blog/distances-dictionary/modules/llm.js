@@ -35,8 +35,10 @@ export const PROVIDERS = {
     label: "OpenRouter",
     defaultModel: "openrouter/auto",
     keyHint: "sk-or-…",
+    supportsImages: true,
+    modelHint: "\":free\" models are genuinely free but rate-limited (~20/min). Pick a vision model for the equation reader.",
     corsNote: "One key fronts many models (Claude, GPT, Gemini, Llama…). Browser-friendly.",
-    buildRequest({ key, model, system, user, maxTokens, temperature, json, images }) {
+    buildRequest({ key, model, system, user, maxTokens, temperature, json, images, reasoningOff }) {
       const content = (images && images.length)
         ? [{ type: "text", text: user }, ...images.map((url) => ({ type: "image_url", image_url: { url } }))]
         : user;
@@ -46,6 +48,7 @@ export const PROVIDERS = {
         body: {
           model, max_tokens: maxTokens, temperature,
           ...(json ? { response_format: { type: "json_object" } } : {}),
+          ...(reasoningOff ? { reasoning: { enabled: false } } : {}),
           messages: [{ role: "system", content: system }, { role: "user", content }],
         },
       };
@@ -55,30 +58,39 @@ export const PROVIDERS = {
 
   gemini: {
     label: "Google Gemini",
-    defaultModel: "gemini-2.0-flash",
+    defaultModel: "gemini-2.5-flash",
     keyHint: "AIza… (Google AI Studio key)",
-    corsNote: "Gemini REST API, callable from the browser with your key.",
-    buildRequest({ key, model, system, user, maxTokens, temperature, json, images }) {
-      if (images && images.length) throw new Error("Gemini image input isn't wired in this app — pick OpenRouter or Hugging Face for the vision (equation) pass.");
+    supportsImages: true,
+    modelHint: "gemini-2.5-flash — free tier ≈ 1,500 requests/day, no card. (Newer Flash ids like gemini-3.5-flash also work.)",
+    corsNote: "Google's OpenAI-compatible endpoint, callable from the browser with your key.",
+    // OpenAI-compatible surface: same messages/image_url/response_format shape as
+    // OpenRouter & HF, so Gemini shares the exact code path (incl. the vision pass).
+    buildRequest({ key, model, system, user, maxTokens, temperature, json, images, reasoningOff }) {
+      const content = (images && images.length)
+        ? [{ type: "text", text: user }, ...images.map((url) => ({ type: "image_url", image_url: { url } }))]
+        : user;
       return {
-        url: `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,
-        headers: { "content-type": "application/json" },
+        url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        headers: { Authorization: `Bearer ${key}`, "content-type": "application/json" },
         body: {
-          systemInstruction: { parts: [{ text: system }] },
-          contents: [{ role: "user", parts: [{ text: user }] }],
-          generationConfig: { maxOutputTokens: maxTokens, temperature, ...(json ? { responseMimeType: "application/json" } : {}) },
+          model, max_tokens: maxTokens, temperature,
+          ...(json ? { response_format: { type: "json_object" } } : {}),
+          ...(reasoningOff ? { reasoning_effort: "none" } : {}), // disable thinking on 2.5 Flash
+          messages: [{ role: "system", content: system }, { role: "user", content }],
         },
       };
     },
-    parseText: (d) => (d.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join(""),
+    parseText: (d) => d.choices?.[0]?.message?.content || "",
   },
 
   huggingface: {
     label: "Hugging Face",
     defaultModel: "meta-llama/Llama-3.2-3B-Instruct",
     keyHint: "hf_…",
+    supportsImages: true,
+    modelHint: "Included credit is small; use a small VLM for the equation reader (e.g. Qwen/Qwen2.5-VL-7B-Instruct) and enable a provider in HF settings.",
     corsNote: "Free-tier friendly HF Inference router (OpenAI-compatible).",
-    buildRequest({ key, model, system, user, maxTokens, temperature, json, images }) {
+    buildRequest({ key, model, system, user, maxTokens, temperature, json, images, reasoningOff }) {
       const content = (images && images.length)
         ? [{ type: "text", text: user }, ...images.map((url) => ({ type: "image_url", image_url: { url } }))]
         : user;
@@ -88,6 +100,7 @@ export const PROVIDERS = {
         body: {
           model, max_tokens: maxTokens, temperature,
           ...(json ? { response_format: { type: "json_object" } } : {}),
+          ...(reasoningOff ? { chat_template_kwargs: { enable_thinking: false } } : {}),
           messages: [{ role: "system", content: system }, { role: "user", content }],
         },
       };
@@ -150,15 +163,36 @@ export function hasCreds(provider = getProvider()) {
 export function hasFullCreds(provider = getProvider()) {
   return !!getKey(provider) && !!getModel(provider);
 }
+/** Does the selected provider accept image input (the vision equation pass)? */
+export function providerSupportsImages(provider = getProvider()) {
+  return !!(PROVIDERS[provider] && PROVIDERS[provider].supportsImages);
+}
 
 /* --------------------------------- calls ---------------------------------- */
 
+const RETRYABLE = new Set([429, 500, 502, 503, 504]); // transient; back off and retry
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Actionable, provider-aware error message so failures tell the user what to do. */
+function describeError(status, providerLabel, detail = "") {
+  const p = providerLabel;
+  if (status === 401 || status === 403) return `Auth failed for ${p} (${status}). Check your key and that your key/plan can use this model.`;
+  if (status === 402) return `${p}: included credits/quota are used up. Switch to a smaller/cheaper model, change provider, or add credits.`;
+  if (status === 429) return `${p}: rate limit or quota hit — retried and still limited. Wait a moment and retry, or switch model/provider.`;
+  if (status === 404) return `${p}: model not found (${status}). Check the model id.`;
+  if (status === 400) return `${p}: bad request (400). ${String(detail).slice(0, 200)}`;
+  if (status === 0)   return `${p}: blocked (CORS or network).`;
+  return `${p} request failed (${status}). ${String(detail).slice(0, 200)}`;
+}
+
 /**
  * Call the selected provider. Returns the assistant text. Throws on error.
- * `images` (array of data URLs) is threaded to providers that support vision
- * (OpenRouter / Hugging Face, OpenAI-style content); others reject it clearly.
+ * `images` (array of data URLs) is threaded to vision providers (OpenRouter / HF /
+ * Gemini, OpenAI-style content); Anthropic rejects them. `reasoningOff` disables
+ * thinking so JSON isn't corrupted/truncated. Transient failures (429/5xx) back off
+ * and retry (honoring Retry-After); fatal ones (400/401/402/403/404) fail fast.
  */
-export async function callLLM({ system = "", user = "", maxTokens = 1500, temperature = 0.2, json = false, images = null, signal } = {}) {
+export async function callLLM({ system = "", user = "", maxTokens = 1500, temperature = 0.2, json = false, images = null, reasoningOff = false, signal } = {}) {
   const pid = getProvider();
   const p = PROVIDERS[pid];
   if (!p) throw new Error(`Unknown provider: ${pid}`);
@@ -166,34 +200,40 @@ export async function callLLM({ system = "", user = "", maxTokens = 1500, temper
   if (!key) throw new Error(`No API key set for ${p.label}.`);
   const model = getModel(pid);
 
-  const attempt = async (useJson) => {
-    const { url, headers, body } = p.buildRequest({ key, model, system, user, maxTokens, temperature, json: useJson, images });
+  const attempt = async (useJson, useReason) => {
+    const { url, headers, body } = p.buildRequest({ key, model, system, user, maxTokens, temperature, json: useJson, images, reasoningOff: useReason });
     const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal });
     if (!res.ok) {
       let detail = "";
       try { const j = await res.json(); detail = j.error?.message || (typeof j.error === "string" ? j.error : "") || JSON.stringify(j).slice(0, 300); }
       catch (_) { detail = await res.text().catch(() => ""); }
-      let msg;
-      if (res.status === 401 || res.status === 403) msg = `Auth failed (${res.status}) for ${p.label}. Check your API key / model access. ${detail}`;
-      else if (res.status === 0) msg = `${p.label} call blocked (CORS or network). ${p.corsNote || ""}`;
-      else msg = `${p.label} request failed (${res.status}). ${detail}`;
-      const err = new Error(msg);
+      const err = new Error(describeError(res.status, p.label, detail));
       err.status = res.status;
       err.detail = detail;
+      err.retryAfter = Number(res.headers.get("retry-after")) || 0;
       throw err;
     }
     return p.parseText(await res.json());
   };
 
-  try {
-    return await attempt(json);
-  } catch (e) {
-    // Defensive: if JSON mode is what the model/route rejected, retry without it.
-    const d = `${e && e.detail || ""} ${e && e.message || ""}`.toLowerCase();
-    if (json && e && e.status >= 400 && e.status < 500 && /response_format|json|unsupported|not support/.test(d)) {
-      return attempt(false);
+  for (let i = 0; ; i++) {
+    try {
+      return await attempt(json, reasoningOff);
+    } catch (e) {
+      const d = `${e && e.detail || ""} ${e && e.message || ""}`.toLowerCase();
+      // If a param (JSON mode or the reasoning knob) was rejected, retry once without both.
+      if ((json || reasoningOff) && e && e.status >= 400 && e.status < 500 &&
+          /response_format|json|reasoning|effort|thinking|unsupported|not support/.test(d)) {
+        return attempt(false, false);
+      }
+      // Transient (rate limit / overload): back off and retry, capped.
+      if (e && RETRYABLE.has(e.status) && i < 3) {
+        const wait = e.retryAfter > 0 ? e.retryAfter * 1000 : Math.min(8000, 1000 * 2 ** i) + Math.random() * 400;
+        await sleep(wait);
+        continue;
+      }
+      throw e; // fatal: 400/401/402/403/404, or retries exhausted
     }
-    throw e;
   }
 }
 
@@ -233,9 +273,9 @@ export function parseJsonLoose(text) {
   throw new Error("Model did not return valid JSON.");
 }
 
-/** Call expecting strict JSON; requests JSON mode, one stronger retry on failure. */
+/** Call expecting strict JSON; requests JSON mode + reasoning-off, one stronger retry. */
 export async function callJSON(opts, _retry = true) {
-  const text = await callLLM({ json: true, ...opts });
+  const text = await callLLM({ json: true, reasoningOff: true, ...opts });
   try {
     return parseJsonLoose(text);
   } catch (e) {
@@ -274,6 +314,7 @@ export function renderProviderSettings(onChange = () => {}) {
   const remember = el("input", { type: "checkbox", id: "llm-remember" });
   const rememberLabel = el("label", { for: "llm-remember", class: "chat-consent" }, [remember, el("span", {}, [" Remember on this device (less safe than session-only)"])]);
   const corsNote = el("p", { class: "muted llm-cors" }, []);
+  const modelHint = el("p", { class: "muted llm-hint" }, []);
   const status = el("span", { class: "chat-status" });
 
   function sync() {
@@ -283,6 +324,7 @@ export function renderProviderSettings(onChange = () => {}) {
     keyInput.placeholder = p.keyHint || "API key";
     modelInput.value = getModel(pid);
     corsNote.textContent = p.corsNote || "";
+    modelHint.textContent = p.modelHint || "";
     summary.textContent = hasCreds(pid) ? `AI provider: ${p.label} (key set)` : `AI provider: ${p.label} — add your key`;
   }
   provSel.addEventListener("change", () => { setProvider(provSel.value); sync(); onChange(); });
@@ -306,6 +348,7 @@ export function renderProviderSettings(onChange = () => {}) {
   wrap.appendChild(keyInput);
   wrap.appendChild(el("label", { class: "field-label" }, ["Model"]));
   wrap.appendChild(modelInput);
+  wrap.appendChild(modelHint);
   wrap.appendChild(rememberLabel);
   wrap.appendChild(corsNote);
   wrap.appendChild(el("div", { class: "chat-actions" }, [saveBtn, clearBtn, status]));

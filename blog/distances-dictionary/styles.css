@@ -483,6 +483,7 @@ a.chip:hover { text-decoration: none; border-color: var(--accent); color: var(--
 .llm-settings summary { cursor: pointer; font-weight: 700; font-size: 0.92rem; }
 .llm-field { width: 100%; font-family: var(--sans); font-size: 0.95rem; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; margin-bottom: 4px; }
 .llm-cors { font-size: 0.8rem; margin: 4px 0; }
+.llm-hint { font-size: 0.8rem; margin: 0 0 8px; font-style: italic; }
 
 .lk-input { margin: 14px 0; }
 .lk-file { display: block; font-family: var(--sans); margin-bottom: 8px; }

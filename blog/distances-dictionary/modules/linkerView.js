@@ -3,7 +3,7 @@
 // Everything runs client-side; the LLM is the user's own provider (llm.js).
 
 import { el, escapeHTML } from "./util.js";
-import { renderProviderSettings, callJSON, hasFullCreds } from "./llm.js";
+import { renderProviderSettings, callJSON, hasFullCreds, providerSupportsImages } from "./llm.js";
 import { extractDocument } from "./pdf.js";
 import { detectAndLink, draftEntry } from "./linker.js";
 import { verifyDraft } from "./verify.js";
@@ -407,6 +407,13 @@ export function renderLinker(db) {
     let showReading = true;
     let equationSpans = []; // {page, augStart, augEnd, bbox} per injected equation
     let annotatedImages = null; // [{dataUrl,width,height}] for the image annotated-PDF export
+
+    // Guard: the vision pass (PDF equation toggle OR any image upload) needs a
+    // provider that accepts images — catch it before spending a call.
+    if ((useVision.checked || images.length) && !providerSupportsImages()) {
+      setProgress("The selected provider can't read images. Choose Google Gemini, OpenRouter, or Hugging Face, and a vision-capable model.");
+      return;
+    }
 
     if (pdf) {
       let bytes;

@@ -11,7 +11,7 @@ import { converse, renderAnswer } from "./assistant.js";
 import { hasToken } from "./chat.js";
 import { applyFilters, isFilterActive, filterCount } from "./filters.js";
 import { renderCodePanel } from "./codegen.js";
-import { renderGraph } from "./graph.js";
+import { renderGraph, svg } from "./graph.js";
 import { editUrl, editCardIssueUrl, newCardIssueUrl, blobUrl } from "./config.js";
 import { parseHash, buildHash } from "./router.js";
 
@@ -863,90 +863,110 @@ export function renderPipeline(db) {
   const root = el("div", { class: "pipeline" });
   root.appendChild(el("a", { class: "back-link", href: "#/" }, ["← Back to search"]));
   root.appendChild(el("h1", { tabindex: "-1", id: "route-heading" }, ["How this project works"]));
-  root.appendChild(el("p", { class: "detail-lead" }, [
-    "A map of the whole pipeline — from the dictionary data to search, the optional AI layers, the PDF linker, and the collaborative flow. ",
-    "Click any stage to see how it is used. This page is informational only; it runs nothing.",
+  root.appendChild(el("p", { class: "detail-lead pipe-lead" }, [
+    "A landscape map of the whole pipeline — click any stage to see how it works. Informational only; it runs nothing.",
   ]));
 
-  // Legend: one accent color per stage role.
-  const swatch = (cat, label) => el("span", { class: "pipe-legend-item" }, [
-    el("span", { class: `pipe-swatch cat-${cat}`, "aria-hidden": "true" }),
-    label,
-  ]);
-  root.appendChild(el("div", { class: "pipe-legend" }, [
-    swatch("model", "Model (LLM / on-device AI)"),
-    swatch("browser", "In-browser (deterministic)"),
-    swatch("data", "Data / collaborate"),
+  // Legends: node SHAPE (role) + COLOR (compute tier), plus the provider-layer note.
+  root.appendChild(el("div", { class: "pipe-legends" }, [
+    el("div", { class: "pipe-legend pipe-legend-shapes" }, [
+      miniShape("cylinder", "Data store"),
+      miniShape("rect", "In-browser"),
+      miniShape("hexagon", "Model / AI"),
+      miniShape("parallelogram", "Input / output"),
+      miniShape("diamond", "Decision"),
+      miniShape("stadium", "Contribute"),
+    ]),
+    el("div", { class: "pipe-legend pipe-legend-colors" }, [
+      el("span", { class: "pipe-legend-item" }, [el("span", { class: "pipe-swatch cat-model", "aria-hidden": "true" }), "Model"]),
+      el("span", { class: "pipe-legend-item" }, [el("span", { class: "pipe-swatch cat-browser", "aria-hidden": "true" }), "In-browser"]),
+      el("span", { class: "pipe-legend-item" }, [el("span", { class: "pipe-swatch cat-data", "aria-hidden": "true" }), "Data"]),
+    ]),
+  ]));
+  root.appendChild(el("p", { class: "muted pipe-caption" }, [
+    "Model steps (hexagons) run through the provider layer — request pacing, 503/429 backoff, and your own BYOK key.",
   ]));
 
   const layout = el("div", { class: "pipe-layout" });
   const diagram = el("div", { class: "pipe-diagram" });
   const panel = el("aside", { class: "pipe-panel", id: "pipe-panel", "aria-live": "polite" });
 
-  const boxes = [];            // every .pipe-box button in DOM order (arrow-key nav)
-  const blockOf = new Map();   // button -> its block
+  // Single inline SVG that scales to fit its pane (preserveAspectRatio=meet).
+  const diag = svg("svg", {
+    class: "pipe-svg", viewBox: "0 0 1180 600", preserveAspectRatio: "xMidYMid meet",
+    role: "group", "aria-label": "Project pipeline diagram",
+  });
+  diag.appendChild(svg("defs", {}, [
+    svg("marker", { id: "pipe-arrow", markerWidth: "9", markerHeight: "9", refX: "7", refY: "3", orient: "auto", markerUnits: "userSpaceOnUse" }, [
+      svg("path", { d: "M0,0 L7,3 L0,6 z", class: "pipe-arrowhead" }),
+    ]),
+  ]));
 
-  const select = (block, btn) => {
-    boxes.forEach((b) => { b.classList.remove("selected"); b.setAttribute("aria-pressed", "false"); });
-    btn.classList.add("selected");
-    btn.setAttribute("aria-pressed", "true");
-    diagram.classList.add("has-selection");
-    // Fresh content node so the pipeZoom animation replays and aria-live announces the change.
-    const content = renderStageDetail(block);
-    panel.replaceChildren(content);
+  // Edges first (drawn under the nodes).
+  pipeEdges().forEach((ed) => {
+    diag.appendChild(svg("path", {
+      class: "pipe-edge" + (ed.dashed ? " dashed" : ""), d: ed.d,
+      "data-from": ed.from, "data-to": ed.to, "marker-end": "url(#pipe-arrow)",
+    }));
+    if (ed.label) diag.appendChild(svg("text", { x: ed.lx, y: ed.ly, class: "pipe-edge-label", "text-anchor": "middle" }, [ed.label]));
+  });
+
+  const clickable = [];         // interactive <g> nodes in order (arrow-key nav)
+  const blockOfG = new Map();   // <g> -> its block
+
+  const select = (block, g) => {
+    clickable.forEach((x) => { x.classList.remove("selected"); x.setAttribute("aria-pressed", "false"); });
+    g.classList.add("selected");
+    g.setAttribute("aria-pressed", "true");
+    diag.classList.add("has-selection");
+    // Highlight the connectors touching this node.
+    diag.querySelectorAll(".pipe-edge").forEach((p) => {
+      p.classList.toggle("active", p.getAttribute("data-from") === block.id || p.getAttribute("data-to") === block.id);
+    });
+    // Fresh content node → replays the pipeZoom animation; aria-live announces the change.
+    panel.replaceChildren(renderStageDetail(block));
     // Shareable URL without a full re-render (replaceState does NOT fire hashchange).
     try { history.replaceState(null, "", buildHash(["pipeline", block.id])); } catch (_) { /* ignore */ }
     // On mobile the panel sits below the diagram — bring it into view (no-op while detached on load).
-    if (window.matchMedia && window.matchMedia("(max-width: 800px)").matches) {
-      content.scrollIntoView({ block: "start", behavior: "smooth" });
-    }
+    if (window.matchMedia && window.matchMedia("(max-width: 820px)").matches) panel.scrollIntoView({ block: "start", behavior: "smooth" });
   };
 
-  PIPELINE_GROUPS.forEach((g, gi) => {
-    if (gi > 0) diagram.appendChild(el("div", { class: "pipe-arrow", "aria-hidden": "true" }, ["↓"]));
-    const sec = el("section", { class: "pipe-group" });
-    sec.appendChild(el("h2", { class: "pipe-group-title" }, [g.label]));
-
-    g.blocks.forEach((b) => {
-      const btn = el("button", {
-        type: "button", class: `pipe-box cat-${b.cat || "browser"}`,
-        "aria-pressed": "false", "aria-controls": "pipe-panel",
-      }, [
-        el("span", { class: "pipe-title" }, [b.title]),
-        el("span", { class: "pipe-short" }, [b.short]),
-      ]);
-      btn.addEventListener("click", () => select(b, btn));
-      btn.addEventListener("keydown", (e) => {
-        const i = boxes.indexOf(btn);
-        let j = -1;
-        if (e.key === "ArrowRight" || e.key === "ArrowDown") j = Math.min(boxes.length - 1, i + 1);
+  pipeNodes(db.byId).forEach((n) => {
+    const cx = n.x + n.w / 2, cy = n.y + n.h / 2;
+    const clickableNode = !!n.block;
+    const g = svg("g", clickableNode
+      ? { class: `pipe-node shape-${n.shape} cat-${n.cat}`, role: "button", tabindex: "0", "aria-pressed": "false", "aria-controls": "pipe-panel", "data-id": n.id, "aria-label": n.block.title }
+      : { class: `pipe-endpoint shape-${n.shape}`, "aria-hidden": "true" });
+    shape(n.shape, n.x, n.y, n.w, n.h).forEach((p) => g.appendChild(p));
+    g.appendChild(nodeLabel(n.label, cx, n.shape === "cylinder" ? cy + 5 : cy));
+    if (clickableNode) {
+      g.addEventListener("click", () => select(n.block, g));
+      g.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(n.block, g); return; }
+        const i = clickable.indexOf(g); let j = -1;
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") j = Math.min(clickable.length - 1, i + 1);
         else if (e.key === "ArrowLeft" || e.key === "ArrowUp") j = Math.max(0, i - 1);
-        if (j >= 0 && j !== i) {
-          e.preventDefault();
-          const target = boxes[j];
-          target.focus();
-          select(blockOf.get(target), target);
-        }
+        if (j >= 0 && j !== i) { e.preventDefault(); const t = clickable[j]; if (t.focus) t.focus(); select(blockOfG.get(t), t); }
       });
-      boxes.push(btn);
-      blockOf.set(btn, b);
-      sec.appendChild(btn);
-    });
-    diagram.appendChild(sec);
+      clickable.push(g);
+      blockOfG.set(g, n.block);
+    }
+    diag.appendChild(g);
   });
 
+  diagram.appendChild(diag);
   layout.append(diagram, panel);
   root.appendChild(layout);
 
-  // Deep link: preselect #/pipeline/<id> when it names a real block; else show a short overview.
+  // Deep link: preselect #/pipeline/<id> when it names a real block; else a short overview.
   const wanted = parseHash().parts[1];
-  const startBtn = wanted ? boxes.find((b) => blockOf.get(b).id === wanted) : null;
-  if (startBtn) {
-    select(blockOf.get(startBtn), startBtn);
+  const startG = wanted ? clickable.find((g) => blockOfG.get(g).id === wanted) : null;
+  if (startG) {
+    select(blockOfG.get(startG), startG);
   } else {
     panel.replaceChildren(el("div", { class: "pipe-panel-content" }, [
       el("h2", {}, ["Overview"]),
-      el("p", {}, ["Select a stage on the left to see the modules it uses and how it works. Everything here runs in your browser — nothing executes."]),
+      el("p", {}, ["Select a stage in the diagram to see the modules it uses and how it works. Everything here runs in your browser — nothing executes."]),
     ]));
   }
 
@@ -966,6 +986,108 @@ function renderStageDetail(b) {
   }
   if (b.link) content.appendChild(el("p", {}, [el("a", { class: "answer-cta", href: b.link.href }, [`${b.link.label} →`])]));
   return content;
+}
+
+/* -------- pipeline diagram: shapes, node layout, connectors (SVG) --------- */
+
+/** SVG shape element(s) for a node type; fill/stroke come from the cat-* CSS vars. */
+function shape(type, x, y, w, h) {
+  if (type === "stadium") return [svg("rect", { x, y, width: w, height: h, rx: h / 2, class: "shape" })];
+  if (type === "parallelogram") {
+    const s = 16;
+    return [svg("polygon", { points: `${x + s},${y} ${x + w},${y} ${x + w - s},${y + h} ${x},${y + h}`, class: "shape" })];
+  }
+  if (type === "hexagon") {
+    const c = 16;
+    return [svg("polygon", { points: `${x + c},${y} ${x + w - c},${y} ${x + w},${y + h / 2} ${x + w - c},${y + h} ${x + c},${y + h} ${x},${y + h / 2}`, class: "shape" })];
+  }
+  if (type === "diamond") {
+    return [svg("polygon", { points: `${x + w / 2},${y} ${x + w},${y + h / 2} ${x + w / 2},${y + h} ${x},${y + h / 2}`, class: "shape" })];
+  }
+  if (type === "cylinder") {
+    const ry = Math.max(3, Math.min(9, h * 0.16));
+    return [
+      svg("path", { d: `M ${x},${y + ry} V ${y + h - ry} A ${w / 2},${ry} 0 0 0 ${x + w},${y + h - ry} V ${y + ry}`, class: "shape" }),
+      svg("ellipse", { cx: x + w / 2, cy: y + ry, rx: w / 2, ry, class: "shape" }),
+    ];
+  }
+  return [svg("rect", { x, y, width: w, height: h, rx: 8, class: "shape" })]; // rect / default
+}
+
+/** Centered SVG label; wraps a long label onto two balanced lines. */
+function nodeLabel(label, cx, cy) {
+  if (label.length <= 15 || label.indexOf(" ") < 0) {
+    return svg("text", { x: cx, y: cy, class: "pipe-node-label", "text-anchor": "middle", "dominant-baseline": "central" }, [label]);
+  }
+  const words = label.split(" ");
+  let i = 0, len = 0;
+  for (; i < words.length - 1; i++) { len += words[i].length + 1; if (len >= label.length / 2) { i++; break; } }
+  const t = svg("text", { x: cx, y: cy, class: "pipe-node-label", "text-anchor": "middle", "dominant-baseline": "central" });
+  t.appendChild(svg("tspan", { x: cx, dy: "-0.55em" }, [words.slice(0, i).join(" ")]));
+  t.appendChild(svg("tspan", { x: cx, dy: "1.1em" }, [words.slice(i).join(" ")]));
+  return t;
+}
+
+/** A tiny legend icon of a shape + its label. */
+function miniShape(type, label) {
+  const s = svg("svg", { class: "pipe-mini", viewBox: "0 0 34 20", width: "34", height: "20", "aria-hidden": "true" });
+  shape(type, 2, 3, 30, 14).forEach((p) => s.appendChild(p));
+  return el("span", { class: "pipe-legend-item" }, [s, label]);
+}
+
+/**
+ * Diagram nodes (viewBox 1180×600). Clickable nodes carry a real block (looked up by id);
+ * the rest (I/O endpoints, the decision diamond) are non-clickable labels.
+ */
+function pipeNodes(byId) {
+  const N = (key, id, label, sh, cat, x, y, w, h) => ({ key, id, label, shape: sh, cat, x, y, w, h, block: id ? byId.get(id) : null });
+  return [
+    N("data", "data", "Dictionary data", "cylinder", "data", 26, 242, 118, 96),
+    // explore lane (top)
+    N("search", "search", "Search & filter", "rect", "browser", 181, 71, 138, 48),
+    N("assistant", "assistant", "Rule-based assistant", "rect", "browser", 181, 151, 138, 48),
+    N("gate", null, "Key + model set?", "diamond", "neutral", 372, 87, 96, 96),
+    N("lightai", "lightai", "Light in-browser AI", "hexagon", "model", 516, 71, 138, 48),
+    N("byok", "byok", "BYOK LLM", "hexagon", "model", 516, 151, 138, 48),
+    N("render", "render", "Rendering", "rect", "browser", 691, 111, 138, 48),
+    N("answers", null, "Answers / results", "parallelogram", "io", 865, 111, 140, 48),
+    // linker lane (bottom)
+    N("upload", null, "Upload PDF", "parallelogram", "io", 140, 386, 140, 48),
+    N("extract", "extract", "Extract text", "rect", "browser", 316, 386, 138, 48),
+    N("match", "match", "Dictionary match", "rect", "browser", 491, 386, 138, 48),
+    N("detect", "detect", "AI detect", "hexagon", "model", 666, 386, 138, 48),
+    N("present", "present", "Reading view", "rect", "browser", 841, 386, 138, 48),
+    N("annot", null, "Annotated PDF", "parallelogram", "io", 1015, 386, 140, 48),
+    // contribute
+    N("collaborate", "collaborate", "Contribute", "stadium", "data", 26, 498, 150, 44),
+  ];
+}
+
+/** Orthogonal L-shaped connectors (main flow only, chosen to avoid crossing nodes). */
+function pipeEdges() {
+  const e = [];
+  const push = (from, to, d, opts = {}) => e.push({ from, to, d, dashed: !!opts.dashed, label: opts.label || null, lx: opts.lx, ly: opts.ly });
+  // data store feeds: fork up into the explore lane, down into the linker catalog
+  push("data", "search", "M 144,290 H 160 V 95 H 181");
+  push("data", "assistant", "M 144,290 H 160 V 175 H 181");
+  push("data", "match", "M 85,338 V 360 H 560 V 386", { dashed: true, label: "catalog", lx: 300, ly: 352 });
+  // explore lane
+  push("search", "gate", "M 319,95 V 135 H 372");
+  push("gate", "lightai", "M 468,135 V 95 H 516", { label: "no", lx: 492, ly: 108 });
+  push("gate", "byok", "M 468,135 V 175 H 516", { label: "yes", lx: 492, ly: 162 });
+  push("lightai", "render", "M 654,95 V 135 H 691");
+  push("byok", "render", "M 654,175 V 135 H 691");
+  push("assistant", "render", "M 319,175 V 235 H 760 V 159");
+  push("render", "answers", "M 829,135 H 873");
+  // linker lane (left → right)
+  push("upload", "extract", "M 264,410 H 316");
+  push("extract", "match", "M 454,410 H 491");
+  push("match", "detect", "M 629,410 H 666");
+  push("detect", "present", "M 804,410 H 841");
+  push("present", "annot", "M 979,410 H 1015");
+  // contribute feedback loop
+  push("collaborate", "data", "M 101,498 V 338 H 85", { dashed: true, label: "feedback", lx: 124, ly: 430 });
+  return e;
 }
 
 /* ------------------------------- not found -------------------------------- */

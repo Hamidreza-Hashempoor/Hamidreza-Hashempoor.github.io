@@ -3,7 +3,8 @@
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
-function svg(tag, attrs = {}, children = []) {
+/** Create an SVG element (namespaced) with attrs + children. Shared with render.js. */
+export function svg(tag, attrs = {}, children = []) {
   const node = document.createElementNS(SVG_NS, tag);
   for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
   (Array.isArray(children) ? children : [children]).forEach((c) => {

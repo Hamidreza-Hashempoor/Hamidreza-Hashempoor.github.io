@@ -893,7 +893,7 @@ export function renderPipeline(db) {
 
   // Single inline SVG that scales to fit its pane (preserveAspectRatio=meet).
   const diag = svg("svg", {
-    class: "pipe-svg", viewBox: "0 0 1180 600", preserveAspectRatio: "xMidYMid meet",
+    class: "pipe-svg", viewBox: "0 0 760 980", preserveAspectRatio: "xMidYMid meet",
     role: "group", "aria-label": "Project pipeline diagram",
   });
   diag.appendChild(svg("defs", {}, [
@@ -1042,51 +1042,54 @@ function miniShape(type, label) {
 function pipeNodes(byId) {
   const N = (key, id, label, sh, cat, x, y, w, h) => ({ key, id, label, shape: sh, cat, x, y, w, h, block: id ? byId.get(id) : null });
   return [
-    N("data", "data", "Dictionary data", "cylinder", "data", 26, 242, 118, 96),
-    // explore lane (top)
-    N("search", "search", "Search & filter", "rect", "browser", 181, 71, 138, 48),
-    N("assistant", "assistant", "Rule-based assistant", "rect", "browser", 181, 151, 138, 48),
-    N("gate", null, "Key + model set?", "diamond", "neutral", 372, 87, 96, 96),
-    N("lightai", "lightai", "Light in-browser AI", "hexagon", "model", 516, 71, 138, 48),
-    N("byok", "byok", "BYOK LLM", "hexagon", "model", 516, 151, 138, 48),
-    N("render", "render", "Rendering", "rect", "browser", 691, 111, 138, 48),
-    N("answers", null, "Answers / results", "parallelogram", "io", 865, 111, 140, 48),
-    // linker lane (bottom)
-    N("upload", null, "Upload PDF", "parallelogram", "io", 140, 386, 140, 48),
-    N("extract", "extract", "Extract text", "rect", "browser", 316, 386, 138, 48),
-    N("match", "match", "Dictionary match", "rect", "browser", 491, 386, 138, 48),
-    N("detect", "detect", "AI detect", "hexagon", "model", 666, 386, 138, 48),
-    N("present", "present", "Reading view", "rect", "browser", 841, 386, 138, 48),
-    N("annot", null, "Annotated PDF", "parallelogram", "io", 1015, 386, 140, 48),
+    N("data", "data", "Dictionary data", "cylinder", "data", 230, 30, 300, 130),
+    // explore lane (left column, top → bottom)
+    N("search", "search", "Search & filter", "rect", "browser", 45, 220, 145, 80),
+    N("assistant", "assistant", "Rule-based assistant", "rect", "browser", 200, 220, 145, 80),
+    N("gate", null, "Key + model set?", "diamond", "neutral", 140, 340, 110, 110),
+    N("lightai", "lightai", "Light in-browser AI", "hexagon", "model", 45, 490, 145, 80),
+    N("byok", "byok", "BYOK LLM", "hexagon", "model", 200, 490, 145, 80),
+    N("render", "render", "Rendering", "rect", "browser", 45, 610, 300, 80),
+    N("answers", null, "Answers / results", "parallelogram", "io", 45, 720, 300, 80),
+    // linker lane (right column, top → bottom)
+    N("upload", null, "Upload PDF", "parallelogram", "io", 415, 220, 300, 80),
+    N("extract", "extract", "Extract text", "rect", "browser", 415, 330, 300, 80),
+    N("match", "match", "Dictionary match", "rect", "browser", 415, 440, 300, 80),
+    N("detect", "detect", "AI detect", "hexagon", "model", 415, 550, 300, 80),
+    N("present", "present", "Reading view", "rect", "browser", 415, 660, 300, 80),
+    N("annot", null, "Annotated PDF", "parallelogram", "io", 415, 770, 300, 80),
     // contribute
-    N("collaborate", "collaborate", "Contribute", "stadium", "data", 26, 498, 150, 44),
+    N("collaborate", "collaborate", "Contribute", "stadium", "data", 45, 850, 300, 72),
   ];
 }
 
-/** Orthogonal L-shaped connectors (main flow only, chosen to avoid crossing nodes). */
+/** Orthogonal L-shaped connectors (main flow only; long runs hug the outer margins so
+    they never cross a node). Coordinates match the viewBox 760×980 layout above. */
 function pipeEdges() {
   const e = [];
   const push = (from, to, d, opts = {}) => e.push({ from, to, d, dashed: !!opts.dashed, label: opts.label || null, lx: opts.lx, ly: opts.ly });
-  // data store feeds: fork up into the explore lane, down into the linker catalog
-  push("data", "search", "M 144,290 H 160 V 95 H 181");
-  push("data", "assistant", "M 144,290 H 160 V 175 H 181");
-  push("data", "match", "M 85,338 V 360 H 560 V 386", { dashed: true, label: "catalog", lx: 300, ly: 352 });
-  // explore lane
-  push("search", "gate", "M 319,95 V 135 H 372");
-  push("gate", "lightai", "M 468,135 V 95 H 516", { label: "no", lx: 492, ly: 108 });
-  push("gate", "byok", "M 468,135 V 175 H 516", { label: "yes", lx: 492, ly: 162 });
-  push("lightai", "render", "M 654,95 V 135 H 691");
-  push("byok", "render", "M 654,175 V 135 H 691");
-  push("assistant", "render", "M 319,175 V 235 H 760 V 159");
-  push("render", "answers", "M 829,135 H 873");
-  // linker lane (left → right)
-  push("upload", "extract", "M 264,410 H 316");
-  push("extract", "match", "M 454,410 H 491");
-  push("match", "detect", "M 629,410 H 666");
-  push("detect", "present", "M 804,410 H 841");
-  push("present", "annot", "M 979,410 H 1015");
-  // contribute feedback loop
-  push("collaborate", "data", "M 101,498 V 338 H 85", { dashed: true, label: "feedback", lx: 124, ly: 430 });
+  // data store → the two lanes
+  push("data", "search", "M 380,160 V 190 H 118 V 220");
+  push("data", "assistant", "M 380,160 V 190 H 273 V 220");
+  // explore lane (top → bottom)
+  push("search", "gate", "M 118,300 V 320 H 195 V 340");
+  push("gate", "lightai", "M 195,450 V 470 H 118 V 490", { label: "no", lx: 150, ly: 465 });
+  push("gate", "byok", "M 195,450 V 470 H 273 V 490", { label: "yes", lx: 244, ly: 465 });
+  push("lightai", "render", "M 118,570 V 610");
+  push("byok", "render", "M 273,570 V 610");
+  push("search", "render", "M 45,260 H 25 V 650 H 45");        // left rail: keyword results
+  push("assistant", "render", "M 345,260 H 365 V 650 H 345");  // mid rail: assistant results
+  push("render", "answers", "M 195,690 V 720");
+  // linker lane (straight vertical chain)
+  push("upload", "extract", "M 565,300 V 330");
+  push("extract", "match", "M 565,410 V 440");
+  push("match", "detect", "M 565,520 V 550");
+  push("detect", "present", "M 565,630 V 660");
+  push("present", "annot", "M 565,740 V 770");
+  // data catalog → match (dashed, right rail)
+  push("data", "match", "M 530,95 H 735 V 480 H 715", { dashed: true, label: "catalog", lx: 690, ly: 290 });
+  // contribute feedback loop (dashed, far-left rail)
+  push("collaborate", "data", "M 195,850 H 15 V 95 H 230", { dashed: true, label: "feedback", lx: 44, ly: 470 });
   return e;
 }
 

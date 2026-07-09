@@ -931,7 +931,7 @@ export function renderPipeline(db) {
     if (window.matchMedia && window.matchMedia("(max-width: 820px)").matches) panel.scrollIntoView({ block: "start", behavior: "smooth" });
   };
 
-  pipeNodes(db.byId).forEach((n) => {
+  pipeNodes().forEach((n) => {
     const cx = n.x + n.w / 2, cy = n.y + n.h / 2;
     const clickableNode = !!n.block;
     const g = svg("g", clickableNode
@@ -1039,7 +1039,11 @@ function miniShape(type, label) {
  * Diagram nodes (viewBox 1180×600). Clickable nodes carry a real block (looked up by id);
  * the rest (I/O endpoints, the decision diamond) are non-clickable labels.
  */
-function pipeNodes(byId) {
+function pipeNodes() {
+  // Resolve clickable nodes against PIPELINE_GROUPS (the pipeline blocks) — NOT db.byId,
+  // which is the measures map and has none of these ids.
+  const byId = new Map();
+  PIPELINE_GROUPS.forEach((g) => g.blocks.forEach((b) => byId.set(b.id, b)));
   const N = (key, id, label, sh, cat, x, y, w, h) => ({ key, id, label, shape: sh, cat, x, y, w, h, block: id ? byId.get(id) : null });
   return [
     N("data", "data", "Dictionary data", "cylinder", "data", 230, 30, 300, 130),
@@ -1087,7 +1091,7 @@ function pipeEdges() {
   push("detect", "present", "M 565,630 V 660");
   push("present", "annot", "M 565,740 V 770");
   // data catalog → match (dashed, right rail)
-  push("data", "match", "M 530,95 H 735 V 480 H 715", { dashed: true, label: "catalog", lx: 690, ly: 290 });
+  push("data", "match", "M 530,95 H 735 V 480 H 715", { dashed: true, label: "catalog", lx: 632, ly: 84 });
   // contribute feedback loop (dashed, far-left rail)
   push("collaborate", "data", "M 195,850 H 15 V 95 H 230", { dashed: true, label: "feedback", lx: 44, ly: 470 });
   return e;

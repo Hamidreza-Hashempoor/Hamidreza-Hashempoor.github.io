@@ -74,6 +74,13 @@ async function normalizeToJpeg(dataUrl, maxDim = 1600) {
 const isPdf = (f) => f && (f.type === "application/pdf" || /\.pdf$/i.test(f.name || ""));
 const isImage = (f) => f && (/^image\//.test(f.type || "") || /\.(png|jpe?g|webp|gif|bmp)$/i.test(f.name || ""));
 
+// Human-readable phrase for each variant relation. Module-scoped so the equations list and
+// the synthesized fallback note (eqFallbackNote) share one definition.
+const relationPhrase = {
+  reduces_to: "reduces to", generalization: "generalizes", special_case: "special case of",
+  regularized: "regularized form of", bound: "bounds", variant: "variant of",
+};
+
 /** Display name for a card id, falling back to a prettified id when the card is missing. */
 function cardLabel(db, id) {
   const c = db && db.byId && db.byId.get ? db.byId.get(id) : null;
@@ -89,8 +96,7 @@ function eqFallbackNote(db, m) {
   const id = m.id || m.related_id;
   const name = cardLabel(db, id);
   if (m.id) return `This equation is the ${name}.`;
-  const rel = String(m.relation || "variant").replace(/_/g, " ");
-  return `This equation is a ${rel} of ${name}.`; // e.g. "a special case of Kullback–Leibler divergence"
+  return `This equation relates to the ${name} (${relationPhrase[m.relation] || "variant"}).`;
 }
 
 /** Build the linkified reading-view HTML from full text + sorted mentions. */
@@ -339,10 +345,6 @@ export function renderLinker(db) {
     // Equations detected by the vision reader, grouped by how they link. Only the
     // Linked group is highlighted on the annotated PDF.
     if (equationSpans.length) {
-      const relationPhrase = {
-        reduces_to: "reduces to", generalization: "generalizes", special_case: "special case of",
-        regularized: "regularized form of", bound: "bounds", variant: "variant of",
-      };
       const linkedEqs = [], newEqs = [], otherEqs = [];
       for (const span of equationSpans) {
         const hit = res.mentions.find((m) => m.start < span.augEnd && m.end > span.augStart);

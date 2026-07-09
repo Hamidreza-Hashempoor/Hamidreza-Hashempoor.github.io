@@ -260,14 +260,15 @@ const DETECT_SYSTEM =
   "mathematical relationship (limit / special case / generalization / bound / regularization), NOT mere " +
   "topical similarity (\"also an entropy\", \"also a distance\"). For a superficial resemblance, leave " +
   "both null. " +
-  "Notes: for every LINKED mention (one with an \"id\" or a \"related_id\") you MUST return a non-empty " +
-  "\"note\": ONE short sentence (max ~25 words) that (a) says what this equation or term is IN THIS PAPER, " +
-  "grounded in the surrounding text (e.g. \"the paper's proposed per-event entropy\", \"the classic " +
-  "baseline (1)\"), and (b) states its relationship to the linked card with a plain verb (is / generalizes " +
-  "/ reduces to / special case of / bounds / regularizes) plus a brief reason when it fits. Base the note " +
-  "ONLY on the visible text; do not invent facts or numbers. Never leave \"note\" empty or null when " +
-  "\"id\" or \"related_id\" is set; use null for \"note\" ONLY when the mention is unlinked. Escape " +
-  "backslashes if the note contains LaTeX.";
+  "Notes: for every LINKED mention (has an id or related_id) you MUST return a non-empty " +
+  "\"note\": ONE short PLAIN-TEXT sentence (max ~25 words) that (a) says what this equation " +
+  "or term is IN THIS PAPER, grounded in the surrounding text (e.g. \"the paper's proposed " +
+  "per-event entropy\", \"the classic baseline\"), and (b) states its relationship to the " +
+  "linked card with a plain verb (is / generalizes / reduces to / special case of / bounds / " +
+  "regularizes) plus a brief reason when it fits. The note MUST be PLAIN TEXT ONLY: describe " +
+  "in words; do NOT put LaTeX, backslashes, math symbols, or double-quote characters inside " +
+  "the note. Base it ONLY on the visible text; do not invent facts or numbers. NEVER leave " +
+  "\"note\" empty or null when id or related_id is set; use null ONLY for unlinked mentions.";
 
 function detectUser(catalog, chunkText) {
   return `CATALOG (json):\n${JSON.stringify(catalog)}\n\nCHUNK (offsets are 0-based into this exact text):\n${chunkText}`;

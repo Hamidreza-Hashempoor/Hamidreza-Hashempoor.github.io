@@ -864,7 +864,12 @@ export function renderPipeline(db) {
   root.appendChild(el("a", { class: "back-link", href: "#/" }, ["← Back to search"]));
   root.appendChild(el("h1", { tabindex: "-1", id: "route-heading" }, ["How this project works"]));
   root.appendChild(el("p", { class: "detail-lead pipe-lead" }, [
-    "A landscape map of the whole pipeline — click any stage to see how it works. Informational only; it runs nothing.",
+    "A map of the whole pipeline — click any stage to see how it works. Informational only; it runs nothing.",
+  ]));
+  root.appendChild(el("p", { class: "muted pipe-credit" }, [
+    "The original idea for this project — a taxonomy of distances & divergences — was suggested by ",
+    el("a", { href: "https://franknielsen.github.io/Divergence/index.html", target: "_blank", rel: "noopener" }, ["Frank Nielsen"]),
+    ".",
   ]));
 
   // Legends: node SHAPE (role) + COLOR (compute tier), plus the provider-layer note.

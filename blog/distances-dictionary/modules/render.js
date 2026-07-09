@@ -13,6 +13,7 @@ import { applyFilters, isFilterActive, filterCount } from "./filters.js";
 import { renderCodePanel } from "./codegen.js";
 import { renderGraph } from "./graph.js";
 import { editUrl, editCardIssueUrl, newCardIssueUrl, blobUrl } from "./config.js";
+import { parseHash, buildHash } from "./router.js";
 
 const KEY_PROPERTIES = ["symmetric", "bounded", "metric", "nonnegative"];
 
@@ -721,6 +722,7 @@ const PIPELINE_GROUPS = [
     label: "Dictionary data",
     blocks: [{
       id: "data",
+      cat: "data",
       title: "Dictionary data",
       short: "Curated cards in JSON, indexed & validated on load",
       modules: ["data.js", "measures.json", "aliases.json"],
@@ -736,6 +738,7 @@ const PIPELINE_GROUPS = [
     blocks: [
       {
         id: "search",
+        cat: "browser",
         title: "Search & filter",
         short: "Instant lexical search + faceted filters (no key)",
         modules: ["search.js", "fuzzy.js", "aliasResolver.js", "filters.js"],
@@ -747,6 +750,7 @@ const PIPELINE_GROUPS = [
       },
       {
         id: "lightai",
+        cat: "model",
         title: "Light in-browser AI (optional)",
         short: "Free semantic search — MiniLM, no key, on your device",
         modules: ["embeddings.js", "Transformers.js"],
@@ -758,6 +762,7 @@ const PIPELINE_GROUPS = [
       },
       {
         id: "assistant",
+        cat: "browser",
         title: "Rule-based assistant",
         short: "Deterministic Q&A — always on, no model",
         modules: ["assistant.js"],
@@ -768,6 +773,7 @@ const PIPELINE_GROUPS = [
       },
       {
         id: "byok",
+        cat: "model",
         title: "BYOK LLM (optional) — where the LLM is used",
         short: "Your OWN Claude / Gemini / OpenRouter / HF key + model",
         modules: ["llm.js", "chat.js"],
@@ -784,6 +790,7 @@ const PIPELINE_GROUPS = [
     blocks: [
       {
         id: "extract",
+        cat: "browser",
         title: "1 · Extract text",
         short: "pdf.js reads the PDF in your browser",
         modules: ["pdf.js"],
@@ -793,6 +800,7 @@ const PIPELINE_GROUPS = [
       },
       {
         id: "match",
+        cat: "browser",
         title: "2 · Dictionary match",
         short: "Deterministically link measures named in our cards",
         modules: ["linker.js"],
@@ -802,6 +810,7 @@ const PIPELINE_GROUPS = [
       },
       {
         id: "detect",
+        cat: "model",
         title: "3 · LLM detect (optional)",
         short: "Find unnamed / formula-defined measures",
         modules: ["linker.js", "llm.js"],
@@ -811,6 +820,7 @@ const PIPELINE_GROUPS = [
       },
       {
         id: "present",
+        cat: "browser",
         title: "4 · Reading view + export",
         short: "Linkified text, code, and a highlighted annotated PDF",
         modules: ["linkerView.js", "annotate.js", "verify.js"],
@@ -826,6 +836,7 @@ const PIPELINE_GROUPS = [
     blocks: [
       {
         id: "render",
+        cat: "browser",
         title: "Rendering",
         short: "Cards, MathJax formulas, audited code, relation graph",
         modules: ["render.js", "mathjax.js", "codegen.js", "graph.js"],
@@ -835,6 +846,7 @@ const PIPELINE_GROUPS = [
       },
       {
         id: "collaborate",
+        cat: "data",
         title: "Collaborate",
         short: "Data-driven cards, GitHub PR + CI, stable permalinks",
         modules: ["config.js", "GitHub Actions"],
@@ -853,51 +865,107 @@ export function renderPipeline(db) {
   root.appendChild(el("h1", { tabindex: "-1", id: "route-heading" }, ["How this project works"]));
   root.appendChild(el("p", { class: "detail-lead" }, [
     "A map of the whole pipeline — from the dictionary data to search, the optional AI layers, the PDF linker, and the collaborative flow. ",
-    "Click any block to see how it is used. This page is informational only; it runs nothing.",
+    "Click any stage to see how it is used. This page is informational only; it runs nothing.",
   ]));
 
-  const flow = el("div", { class: "pipeline-flow" });
-  const allBlocks = [];
+  // Legend: one accent color per stage role.
+  const swatch = (cat, label) => el("span", { class: "pipe-legend-item" }, [
+    el("span", { class: `pipe-swatch cat-${cat}`, "aria-hidden": "true" }),
+    label,
+  ]);
+  root.appendChild(el("div", { class: "pipe-legend" }, [
+    swatch("model", "Model (LLM / on-device AI)"),
+    swatch("browser", "In-browser (deterministic)"),
+    swatch("data", "Data / collaborate"),
+  ]));
+
+  const layout = el("div", { class: "pipe-layout" });
+  const diagram = el("div", { class: "pipe-diagram" });
+  const panel = el("aside", { class: "pipe-panel", id: "pipe-panel", "aria-live": "polite" });
+
+  const boxes = [];            // every .pipe-box button in DOM order (arrow-key nav)
+  const blockOf = new Map();   // button -> its block
+
+  const select = (block, btn) => {
+    boxes.forEach((b) => { b.classList.remove("selected"); b.setAttribute("aria-pressed", "false"); });
+    btn.classList.add("selected");
+    btn.setAttribute("aria-pressed", "true");
+    diagram.classList.add("has-selection");
+    // Fresh content node so the pipeZoom animation replays and aria-live announces the change.
+    const content = renderStageDetail(block);
+    panel.replaceChildren(content);
+    // Shareable URL without a full re-render (replaceState does NOT fire hashchange).
+    try { history.replaceState(null, "", buildHash(["pipeline", block.id])); } catch (_) { /* ignore */ }
+    // On mobile the panel sits below the diagram — bring it into view (no-op while detached on load).
+    if (window.matchMedia && window.matchMedia("(max-width: 800px)").matches) {
+      content.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
+  };
 
   PIPELINE_GROUPS.forEach((g, gi) => {
-    if (gi > 0) flow.appendChild(el("div", { class: "pipe-arrow", "aria-hidden": "true" }, ["↓"]));
-    const groupEl = el("section", { class: "pipe-group" });
-    groupEl.appendChild(el("h2", { class: "pipe-group-title" }, [g.label]));
+    if (gi > 0) diagram.appendChild(el("div", { class: "pipe-arrow", "aria-hidden": "true" }, ["↓"]));
+    const sec = el("section", { class: "pipe-group" });
+    sec.appendChild(el("h2", { class: "pipe-group-title" }, [g.label]));
 
     g.blocks.forEach((b) => {
-      const detail = el("div", { class: "pipe-detail", id: `pipe-d-${b.id}`, hidden: true });
-      b.detail.forEach((p) => detail.appendChild(el("p", {}, [p])));
-      if (b.modules && b.modules.length) {
-        detail.appendChild(el("div", { class: "pipe-modules chips" }, b.modules.map((mn) => chip(mn, { variant: "type" }))));
-      }
-      if (b.link) detail.appendChild(el("p", {}, [el("a", { class: "answer-cta", href: b.link.href }, [`${b.link.label} →`])]));
-
       const btn = el("button", {
-        type: "button", class: "pipe-block",
-        "aria-expanded": "false", "aria-controls": `pipe-d-${b.id}`,
+        type: "button", class: `pipe-box cat-${b.cat || "browser"}`,
+        "aria-pressed": "false", "aria-controls": "pipe-panel",
       }, [
         el("span", { class: "pipe-title" }, [b.title]),
         el("span", { class: "pipe-short" }, [b.short]),
-        el("span", { class: "pipe-caret", "aria-hidden": "true" }, ["▸"]),
       ]);
-      allBlocks.push(btn);
-      btn.addEventListener("click", () => {
-        const willOpen = btn.getAttribute("aria-expanded") !== "true";
-        allBlocks.forEach((x) => { x.setAttribute("aria-expanded", "false"); x.classList.remove("active"); });
-        flow.querySelectorAll(".pipe-detail").forEach((d) => { d.hidden = true; });
-        if (willOpen) { detail.hidden = false; btn.setAttribute("aria-expanded", "true"); btn.classList.add("active"); }
+      btn.addEventListener("click", () => select(b, btn));
+      btn.addEventListener("keydown", (e) => {
+        const i = boxes.indexOf(btn);
+        let j = -1;
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") j = Math.min(boxes.length - 1, i + 1);
+        else if (e.key === "ArrowLeft" || e.key === "ArrowUp") j = Math.max(0, i - 1);
+        if (j >= 0 && j !== i) {
+          e.preventDefault();
+          const target = boxes[j];
+          target.focus();
+          select(blockOf.get(target), target);
+        }
       });
-
-      groupEl.appendChild(el("div", { class: "pipe-item" }, [btn, detail]));
+      boxes.push(btn);
+      blockOf.set(btn, b);
+      sec.appendChild(btn);
     });
-    flow.appendChild(groupEl);
+    diagram.appendChild(sec);
   });
 
-  root.appendChild(flow);
-  root.appendChild(el("p", { class: "muted" }, [
+  layout.append(diagram, panel);
+  root.appendChild(layout);
+
+  // Deep link: preselect #/pipeline/<id> when it names a real block; else show a short overview.
+  const wanted = parseHash().parts[1];
+  const startBtn = wanted ? boxes.find((b) => blockOf.get(b).id === wanted) : null;
+  if (startBtn) {
+    select(blockOf.get(startBtn), startBtn);
+  } else {
+    panel.replaceChildren(el("div", { class: "pipe-panel-content" }, [
+      el("h2", {}, ["Overview"]),
+      el("p", {}, ["Select a stage on the left to see the modules it uses and how it works. Everything here runs in your browser — nothing executes."]),
+    ]));
+  }
+
+  root.appendChild(el("p", { class: "muted pipe-footnote" }, [
     "Everything runs in your browser. The only network calls are to your own AI / Mathpix provider (if you add a key) and to CDNs for libraries.",
   ]));
   return root;
+}
+
+/** Build the side-panel content for one stage (fresh node so the zoom animation replays). */
+function renderStageDetail(b) {
+  const content = el("div", { class: "pipe-panel-content" });
+  content.appendChild(el("h2", {}, [b.title]));
+  b.detail.forEach((p) => content.appendChild(el("p", {}, [p])));
+  if (b.modules && b.modules.length) {
+    content.appendChild(el("div", { class: "pipe-modules chips" }, b.modules.map((mn) => chip(mn, { variant: "type" }))));
+  }
+  if (b.link) content.appendChild(el("p", {}, [el("a", { class: "answer-cta", href: b.link.href }, [`${b.link.label} →`])]));
+  return content;
 }
 
 /* ------------------------------- not found -------------------------------- */

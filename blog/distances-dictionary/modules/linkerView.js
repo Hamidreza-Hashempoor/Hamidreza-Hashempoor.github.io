@@ -13,7 +13,10 @@ import { newCardIssueUrl } from "./config.js";
 import { renderCodePanel } from "./codegen.js";
 import { typeset } from "./mathjax.js";
 
-const call = ({ system, user }) => callJSON({ system, user, maxTokens: 2000, temperature: 0 });
+// 4000 (was 2000) so the detect JSON has room now that every LINKED mention carries a
+// mandatory note; prevents the truncation that showed up as "Model did not return valid
+// JSON". Shared with draftEntry, which only benefits from the extra headroom.
+const call = ({ system, user }) => callJSON({ system, user, maxTokens: 4000, temperature: 0 });
 
 function contextAround(text, m, pad = 320) {
   return text.slice(Math.max(0, m.start - pad), Math.min(text.length, m.end + pad));
@@ -70,6 +73,25 @@ async function normalizeToJpeg(dataUrl, maxDim = 1600) {
 
 const isPdf = (f) => f && (f.type === "application/pdf" || /\.pdf$/i.test(f.name || ""));
 const isImage = (f) => f && (/^image\//.test(f.type || "") || /\.(png|jpe?g|webp|gif|bmp)$/i.test(f.name || ""));
+
+/** Display name for a card id, falling back to a prettified id when the card is missing. */
+function cardLabel(db, id) {
+  const c = db && db.byId && db.byId.get ? db.byId.get(id) : null;
+  return (c && (c.canonical_name || c.name)) || String(id).replace(/_/g, " ");
+}
+
+/**
+ * Synthesize a short, factual note for a LINKED equation when the model didn't return one,
+ * so every boxed equation carries a sticky note. States only the relationship (card name +
+ * relation) — no invented paper-specific detail. Grounded model notes are preferred upstream.
+ */
+function eqFallbackNote(db, m) {
+  const id = m.id || m.related_id;
+  const name = cardLabel(db, id);
+  if (m.id) return `This equation is the ${name}.`;
+  const rel = String(m.relation || "variant").replace(/_/g, " ");
+  return `This equation is a ${rel} of ${name}.`; // e.g. "a special case of Kullback–Leibler divergence"
+}
 
 /** Build the linkified reading-view HTML from full text + sorted mentions. */
 function buildReadingHTML(text, mentions) {
@@ -153,7 +175,9 @@ export function renderLinker(db) {
       if (!span.bbox) continue;
       const hit = res.mentions.find((m) => (m.id || m.related_id) && m.start < span.augEnd && m.end > span.augStart);
       if (!hit) continue; // unlinked equation → not boxed
-      eqBoxes.push({ page: span.page, bbox: span.bbox, id: hit.id || hit.related_id, variant: !hit.id && !!hit.related_id, note: hit.note || null });
+      // Every linked (boxed) equation gets a sticky note: the model's grounded note when
+      // present, else a synthesized fallback — so a highlighted equation is never noteless.
+      eqBoxes.push({ page: span.page, bbox: span.bbox, id: hit.id || hit.related_id, variant: !hit.id && !!hit.related_id, note: hit.note || eqFallbackNote(db, hit) });
     }
 
     output.appendChild(el("p", { class: usedLLM ? "lk-mode ai" : "lk-mode light" }, [
@@ -235,8 +259,17 @@ export function renderLinker(db) {
     // related card, so e.g. the Shannon card shows up from the finite-sample eq.
     const ids = [...new Set(linkedMentions.map((m) => m.id || m.related_id))];
     if (ids.length) {
-      const noteByCard = new Map(); // first grounded note seen for each card
+      const noteByCard = new Map(); // grounded note per card; else a synthesized variant-relation note
       for (const m of linkedMentions) { const cid = m.id || m.related_id; if (m.note && !noteByCard.has(cid)) noteByCard.set(cid, m.note); }
+      // A card that surfaced only via a VARIANT (related_id, no grounded note) still gets an
+      // informative relation note; an exact card with no note stays noteless (its title says it).
+      for (const m of linkedMentions) {
+        const cid = m.id || m.related_id;
+        if (!noteByCard.has(cid) && !m.id && m.related_id) {
+          const rel = String(m.relation || "variant").replace(/_/g, " ");
+          noteByCard.set(cid, `A ${rel} of ${cardLabel(db, cid)} appears in this paper.`);
+        }
+      }
       const sec = el("section", { class: "lk-section" });
       sec.appendChild(el("h2", {}, [`Detected measures (${ids.length})`]));
       ids.forEach((id) => {
@@ -338,7 +371,7 @@ export function renderLinker(db) {
             el("a", { class: "lk-eq-link", href: `#/m/${cardId}` }, [`→ ${rel}${name}`]),
           ]));
           row.appendChild(eqNode(span));
-          const noteText = hit.note || `${rel}${name}`;
+          const noteText = hit.note || eqFallbackNote(db, hit);
           row.appendChild(el("p", { class: "lk-eq-note muted" }, [noteText]));
           sec.appendChild(row);
         });

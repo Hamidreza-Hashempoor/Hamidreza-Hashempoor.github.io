@@ -48,7 +48,9 @@ export const PROVIDERS = {
         body: {
           model, max_tokens: maxTokens, temperature,
           ...(json ? { response_format: { type: "json_object" } } : {}),
-          ...(reasoningOff ? { reasoning: { enabled: false } } : {}),
+          // enabled:false turns reasoning off; exclude:true also strips any reasoning from the
+          // response so it can't leak into and corrupt the JSON body.
+          ...(reasoningOff ? { reasoning: { enabled: false, exclude: true } } : {}),
           messages: [{ role: "system", content: system }, { role: "user", content }],
         },
       };

@@ -36,7 +36,10 @@ export function buildCatalog(db) {
 }
 
 /** Split text into overlapping chunks, tracking each chunk's base offset. */
-export function chunk(text, size = 6000, overlap = 400) {
+// Smaller chunks (4000, was 6000) → fewer mentions+notes per call → shorter, complete
+// JSON (the mandatory per-mention note lengthens output). maxChunks in detectAndLink is
+// raised to 40 so total coverage stays ~constant despite the extra chunks.
+export function chunk(text, size = 4000, overlap = 400) {
   const out = [];
   if (!text) return out;
   let i = 0;
@@ -257,13 +260,14 @@ const DETECT_SYSTEM =
   "mathematical relationship (limit / special case / generalization / bound / regularization), NOT mere " +
   "topical similarity (\"also an entropy\", \"also a distance\"). For a superficial resemblance, leave " +
   "both null. " +
-  "Notes: for every LINKED mention (has an id or related_id), also return \"note\": ONE short sentence " +
-  "(max ~25 words) that (a) says what this equation or term is IN THIS PAPER, grounded in the surrounding " +
-  "text (e.g. \"the paper's proposed per-event entropy\", \"the classic baseline (1)\"), and (b) states " +
-  "its relationship to the linked card with a plain verb (is / generalizes / reduces to / special case of " +
-  "/ bounds / regularizes) plus a brief reason when it fits. Base the note ONLY on the visible text; do " +
-  "not invent facts or numbers. Set \"note\" to null for unlinked mentions. Escape backslashes if the note " +
-  "contains LaTeX.";
+  "Notes: for every LINKED mention (one with an \"id\" or a \"related_id\") you MUST return a non-empty " +
+  "\"note\": ONE short sentence (max ~25 words) that (a) says what this equation or term is IN THIS PAPER, " +
+  "grounded in the surrounding text (e.g. \"the paper's proposed per-event entropy\", \"the classic " +
+  "baseline (1)\"), and (b) states its relationship to the linked card with a plain verb (is / generalizes " +
+  "/ reduces to / special case of / bounds / regularizes) plus a brief reason when it fits. Base the note " +
+  "ONLY on the visible text; do not invent facts or numbers. Never leave \"note\" empty or null when " +
+  "\"id\" or \"related_id\" is set; use null for \"note\" ONLY when the mention is unlinked. Escape " +
+  "backslashes if the note contains LaTeX.";
 
 function detectUser(catalog, chunkText) {
   return `CATALOG (json):\n${JSON.stringify(catalog)}\n\nCHUNK (offsets are 0-based into this exact text):\n${chunkText}`;
@@ -361,7 +365,7 @@ export function mergeMentions(lex, llm) {
  *   call: async ({system,user}) => parsed JSON object, or null/undefined
  * @returns {Promise<{mentions:Array, chunks:number, dropped:number, errors:string[], bySource:object}>}
  */
-export async function detectAndLink({ db, text, call, onProgress = () => {}, maxChunks = 25 }) {
+export async function detectAndLink({ db, text, call, onProgress = () => {}, maxChunks = 40 }) {
   // 1. Deterministic dictionary match (no key needed).
   onProgress({ stage: "lexical" });
   const lex = lexicalPass(db, text);

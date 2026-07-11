@@ -12,6 +12,7 @@ import { annotatePdf, annotateImagesToPdf } from "./annotate.js";
 import { newCardIssueUrl } from "./config.js";
 import { renderCodePanel } from "./codegen.js";
 import { typeset } from "./mathjax.js";
+import { isReady as semanticReady, embed, cardVectors } from "./embeddings.js";
 
 // 4000 (was 2000) so the detect JSON has room now that every LINKED mention carries a
 // mandatory note; prevents the truncation that showed up as "Model did not return valid
@@ -544,6 +545,11 @@ export function renderLinker(db) {
     try {
       const res = await detectAndLink({
         db, text, call: useLLM ? call : null,
+        // Retrieval catalog (Phase 2): only trims per-chunk once the library is large; uses
+        // MiniLM for semantic candidates when "Enable AI search" has loaded it, else lexical.
+        embed: semanticReady() ? embed : null,
+        cardVectors: cardVectors(),
+        domains: null,
         onProgress: (s) => {
           if (s.stage === "lexical") setProgress("Scanning for known measures…");
           else if (s.stage === "detect") setProgress(`Detecting with AI… chunk ${s.index}/${s.total}`);

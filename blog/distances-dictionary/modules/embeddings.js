@@ -75,7 +75,11 @@ export async function enableSemantic(db, onProgress = () => {}) {
     });
 
     onProgress({ status: "Indexing measures…" });
+    // Prefer prebuilt card vectors (data/embeddings.json) so a large library isn't embedded
+    // in the browser; only embed cards that aren't already vectorized.
+    await loadPrebuiltVectors();
     for (const m of db.measures) {
+      if (state.vectors.has(m.id)) continue;
       const out = await state.extractor(embeddingText(db, m), { pooling: "mean", normalize: true });
       state.vectors.set(m.id, toFloat32(out));
     }
@@ -99,6 +103,45 @@ async function embedQuery(text) {
   const v = toFloat32(out);
   state.queryCache.set(key, v);
   return v;
+}
+
+/**
+ * Embed arbitrary text into the shared vector space (for the linker's retrieval).
+ * Returns null when the model isn't loaded, so callers fall back to lexical-only.
+ */
+export async function embed(text) {
+  if (!state.ready || !text) return null;
+  return embedQuery(text);
+}
+
+/** The card-vector map (id -> normalized Float32Array). Populated by enableSemantic
+ *  and/or loadPrebuiltVectors; empty when neither has run. */
+export function cardVectors() {
+  return state.vectors;
+}
+
+/**
+ * Load a prebuilt card-embedding file (data/embeddings.json = { id: number[] }) into the
+ * vector map, so large libraries don't get embedded in the browser. Optional and idempotent:
+ * missing/invalid file is a silent no-op (falls back to in-browser embedding). Vectors already
+ * present are kept (enableSemantic then skips re-embedding them).
+ */
+export async function loadPrebuiltVectors(path = "data/embeddings.json") {
+  try {
+    const res = await fetch(path, { cache: "no-cache" });
+    if (!res.ok) return 0;
+    const obj = await res.json();
+    let n = 0;
+    for (const [id, arr] of Object.entries(obj || {})) {
+      if (Array.isArray(arr) && arr.length && !state.vectors.has(id)) {
+        state.vectors.set(id, Float32Array.from(arr));
+        n++;
+      }
+    }
+    return n;
+  } catch (_) {
+    return 0; // optional file; degrade to in-browser embedding
+  }
 }
 
 /**

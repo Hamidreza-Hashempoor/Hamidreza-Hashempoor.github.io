@@ -12,8 +12,12 @@
 
 import { normalize } from "./util.js";
 
-/** Compact, prompt-sized catalog (the whole dictionary fits in one prompt). */
-export function buildCatalog(db) {
+/**
+ * Compact, prompt-sized catalog. Pass a `cards` subset (from selectCatalog) to build a
+ * per-chunk catalog whose size is independent of library size; defaults to the whole
+ * dictionary (identical to the pre-Phase-2 behavior).
+ */
+export function buildCatalog(db, cards = db.measures) {
   // Fold the external aliases (data/aliases.json, merged into db.aliasIndex) in
   // per measure so the model also sees "KL", "EMD", "JS", etc.
   const extra = new Map();
@@ -25,7 +29,7 @@ export function buildCatalog(db) {
       extra.get(id).add(term);
     }
   }
-  return db.measures.map((m) => ({
+  return cards.map((m) => ({
     id: m.id,
     name: m.canonical_name,
     aliases: [...new Set([...(m.aliases || []), ...(extra.get(m.id) || [])])],
@@ -357,6 +361,75 @@ export function mergeMentions(lex, llm) {
   return kept;
 }
 
+/* ------------------------- retrieval catalog (Phase 2) -------------------- */
+
+// Per-chunk catalog is capped so input-token cost stays ~constant regardless of library
+// size. Retrieval only kicks in for a large library; at/below the threshold the whole
+// catalog is sent exactly as before (full recall, no behavior change).
+const MAX_CATALOG = 36;         // cards sent per chunk (hard cost cap)
+const SEM_TOPK = 24;            // semantic neighbours considered
+const RETRIEVAL_THRESHOLD = 80; // send whole catalog when library <= this
+
+/** Card ids whose name/alias/abbrev appears in the chunk (reuse the deterministic matcher). */
+function lexicalHits(text, db) {
+  return new Set(lexicalPass(db, text).map((m) => m.id));
+}
+
+/** Cosine similarity, norm-safe (vectors are normally already unit-normalized → this = dot). */
+function cosine(a, b) {
+  let dot = 0, na = 0, nb = 0;
+  const n = Math.min(a.length, b.length);
+  for (let i = 0; i < n; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+  return (na && nb) ? dot / Math.sqrt(na * nb) : 0;
+}
+
+/**
+ * Pick only the cards relevant to a chunk: lexical hits (always in, top priority) ∪ one hop
+ * of related/prerequisites ∪ semantic nearest (only when an embedder + card vectors are
+ * available), optionally scoped to `domains`, capped at MAX_CATALOG. Returns card objects.
+ * @param {string} chunkText
+ * @param {object} db
+ * @param {{embed?:(t:string)=>Promise<Float32Array|null>, cardVectors?:Map, domains?:string[]}} opts
+ * @returns {Promise<Array>}
+ */
+export async function selectCatalog(chunkText, db, opts = {}) {
+  const { embed, cardVectors, domains } = opts;
+  const score = new Map();
+
+  // 1) lexical hits — definitely relevant, never dropped by the cap. Guard db.byId.has:
+  // the alias index can carry a stale id (external aliases.json drift) that isn't a card.
+  for (const id of lexicalHits(chunkText, db)) if (db.byId.has(id)) score.set(id, 1000);
+
+  // 2) one hop out: related + prerequisites of the hits (variants / needed context)
+  for (const id of [...score.keys()]) {
+    const c = db.byId.get(id); if (!c) continue;
+    for (const r of [...(c.related || []), ...(c.prerequisites || [])]) {
+      if (db.byId.has(r) && !score.has(r)) score.set(r, 500);
+    }
+  }
+
+  // 3) semantic nearest — concepts named differently (needs the loaded model + vectors)
+  if (embed && cardVectors && cardVectors.size) {
+    const qv = await embed(chunkText.slice(0, 2000));
+    if (qv) {
+      const sims = [];
+      for (const [id, v] of cardVectors) if (db.byId.has(id)) sims.push([id, cosine(qv, v)]);
+      sims.sort((a, b) => b[1] - a[1]);
+      for (const [id, s] of sims.slice(0, SEM_TOPK)) if (!score.has(id)) score.set(id, s); // s in 0..1 < 500
+    }
+  }
+
+  // 4) optional domain scoping
+  let ids = [...score.keys()];
+  if (domains && domains.length) {
+    ids = ids.filter((id) => (db.byId.get(id).domain || []).some((d) => domains.includes(d)));
+  }
+
+  // 5) rank by priority, cap (filter(Boolean): belt-and-suspenders vs any id not in byId)
+  ids.sort((a, b) => score.get(b) - score.get(a));
+  return ids.slice(0, MAX_CATALOG).map((id) => db.byId.get(id)).filter(Boolean);
+}
+
 /**
  * Detect + link measures over the whole document text (hybrid).
  * Always runs the deterministic dictionary pass; runs the LLM pass only when
@@ -366,14 +439,22 @@ export function mergeMentions(lex, llm) {
  *   call: async ({system,user}) => parsed JSON object, or null/undefined
  * @returns {Promise<{mentions:Array, chunks:number, dropped:number, errors:string[], bySource:object}>}
  */
-export async function detectAndLink({ db, text, call, onProgress = () => {}, maxChunks = 40 }) {
+export async function detectAndLink({ db, text, call, onProgress = () => {}, maxChunks = 40, embed = null, cardVectors = null, domains = null }) {
   // 1. Deterministic dictionary match (no key needed).
   onProgress({ stage: "lexical" });
   const lex = lexicalPass(db, text);
 
   // 2. Optional LLM augmentation for unnamed / formula-defined measures.
-  const catalog = buildCatalog(db);
-  const ids = new Set(catalog.map((c) => c.id));
+  // `ids` is the FULL card-id set (validates model-returned ids in normalizeMention), even
+  // when each chunk is sent only a retrieval-selected subset of the catalog.
+  const fullCatalog = buildCatalog(db);
+  const ids = new Set(fullCatalog.map((c) => c.id));
+  // Retrieval only for a large library; small libraries send the whole catalog (full recall).
+  // AND only when a semantic embedder is available: lexical-only trimming would collapse
+  // "relevant" to "lexically named" and silently drop the LLM's unnamed/formula-measure
+  // detection for chunks with no named measure. Without an embedder, fall back to the whole
+  // catalog (recall over cost); enable AI search / ship data/embeddings.json for flat cost.
+  const canRetrieve = db.measures.length > RETRIEVAL_THRESHOLD && !!embed && !!cardVectors && cardVectors.size > 0;
   const chunks = chunk(text);
   const use = chunks.slice(0, maxChunks);
   const dropped = chunks.length - use.length;
@@ -386,9 +467,18 @@ export async function detectAndLink({ db, text, call, onProgress = () => {}, max
     // because mergeMentions sorts. Progress advances by completion count.
     let done = 0;
     const results = await Promise.all(use.map(async ({ text: ctext, base }) => {
+      let cat = fullCatalog;
+      if (canRetrieve) {
+        const selected = await selectCatalog(ctext, db, { embed, cardVectors, domains });
+        // With semantic retrieval active, an empty selection means nothing is relevant here →
+        // skip the LLM call (it would only cost tokens). (Semantic always yields candidates
+        // unless the chunk is truly empty, so this rarely fires.)
+        if (!selected.length) { onProgress({ stage: "detect", index: ++done, total: use.length }); return { mentions: [] }; }
+        cat = buildCatalog(db, selected);
+      }
       let parsed;
       try {
-        parsed = await call({ system: DETECT_SYSTEM, user: detectUser(catalog, ctext) });
+        parsed = await call({ system: DETECT_SYSTEM, user: detectUser(cat, ctext) });
       } catch (e) {
         onProgress({ stage: "detect", index: ++done, total: use.length });
         return { error: String(e && e.message ? e.message : e) };
@@ -412,7 +502,7 @@ export async function detectAndLink({ db, text, call, onProgress = () => {}, max
     chunks: chunks.length,
     dropped,
     errors,
-    bySource: { lexical: lex.length, llm: llm.length, merged: merged.length, usedLLM: typeof call === "function" },
+    bySource: { lexical: lex.length, llm: llm.length, merged: merged.length, usedLLM: typeof call === "function", retrieval: canRetrieve },
   };
 }
 

@@ -23,7 +23,12 @@ function truncate(s, n = 20) {
  * @returns {SVGElement|null}
  */
 export function renderGraph(db, measure) {
-  const related = (measure.related || []).map((id) => db.byId.get(id)).filter(Boolean).slice(0, 7);
+  // Prefer the symmetric graph relations (Phase 3) so the SVG matches the related chips;
+  // fall back to the card's raw one-directional list if the graph isn't built.
+  const relatedIds = db.graph && db.graph.get(measure.id)
+    ? [...db.graph.get(measure.id).related]
+    : (measure.related || []);
+  const related = relatedIds.map((id) => db.byId.get(id)).filter(Boolean).slice(0, 7);
   if (related.length === 0) return null;
 
   const W = 640, H = 320, cx = W / 2, cy = H / 2, R = Math.min(120, 70 + related.length * 6);

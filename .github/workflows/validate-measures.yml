@@ -69,6 +69,18 @@ jobs:
                       if k not in KNOWN_PROPS: errors.append(f"{i}: unknown property '{k}'")
               for r in m.get("related", []):
                   if r not in ids: errors.append(f"{i}: related -> unknown id '{r}'")
+              # Phase 3 relationship consistency: self-links, duplicates, relations[].to
+              for field in ("related", "prerequisites"):
+                  seen_edge = set()
+                  for r in m.get(field, []):
+                      if r == i: errors.append(f"{i}: {field} -> self-link")
+                      if r in seen_edge: errors.append(f"{i}: {field} -> duplicate id '{r}'")
+                      seen_edge.add(r)
+              for e in m.get("relations", []):
+                  to = (e or {}).get("to")
+                  if not to: errors.append(f"{i}: relations entry missing 'to'")
+                  elif to == i: errors.append(f"{i}: relations -> self-link")
+                  elif to not in ids: errors.append(f"{i}: relations -> unknown id '{to}'")
               for t in m.get("code_templates", []):
                   tpl = C.get(i)
                   if not tpl or t not in tpl: errors.append(f"{i}: declared code template '{t}' not found")
@@ -81,6 +93,28 @@ jobs:
               if target not in ids: errors.append(f"alias '{term}' -> unknown id '{target}'")
           for cid in C:
               if cid not in ids: errors.append(f"code_templates has unknown measure id '{cid}'")
+
+          # Phase 3: contradictory typed relations + prerequisite cycles (prereq graph must be a DAG)
+          ANTISYM = {"generalizes", "specializes", "reduces_to"}
+          typed = set()
+          for m in M:
+              for e in m.get("relations", []):
+                  if e and e.get("to") and e.get("type") in ANTISYM:
+                      typed.add((e["type"], m.get("id"), e["to"]))
+          for (t, a, b) in typed:
+              if a < b and (t, b, a) in typed:
+                  errors.append(f"contradictory typed relation: {a} and {b} both '{t}' each other")
+          prereqs = {m.get("id"): [p for p in m.get("prerequisites", []) if p in ids and p != m.get("id")] for m in M}
+          color = {}
+          def visit(x, stack):
+              color[x] = 1
+              for p in prereqs.get(x, []):
+                  c = color.get(p, 0)
+                  if c == 1: errors.append("prerequisite cycle: " + " -> ".join(stack + [x, p]))
+                  elif c != 2: visit(p, stack + [x])
+              color[x] = 2
+          for x in list(prereqs):
+              if color.get(x, 0) == 0: visit(x, [])
 
           print(f"measures={len(M)} families/aliases={len(A)} code-templated={len(C)}")
           if errors:

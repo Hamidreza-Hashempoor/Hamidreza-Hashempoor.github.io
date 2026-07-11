@@ -296,6 +296,12 @@ export function renderHome(db, app) {
 
 /* -------------------------------- detail ---------------------------------- */
 
+// Labels for optional typed relations[] edges (Phase 3), grouped in "Related / See also".
+const RELATION_LABELS = {
+  generalizes: "Generalizes", specializes: "Specializes", reduces_to: "Reduces to",
+  dual_of: "Dual of", equivalent: "Equivalent to", uses: "Uses", see_also: "See also",
+};
+
 function section(title, node) {
   if (!node) return null;
   const s = el("section", { class: "detail-section" });
@@ -444,17 +450,56 @@ export function renderDetail(db, app, measure) {
     root.appendChild(section("Special cases", ul));
   }
 
-  // Related + graph.
-  const related = (measure.related || []).map((id) => db.byId.get(id)).filter(Boolean);
-  if (related.length) {
+  // Relationships (Phase 3): from the graph, so `related` is symmetric and reverse
+  // prerequisite edges ("builds toward") are available. Each section is skipped when empty.
+  const gnode = db.graph && db.graph.get(measure.id);
+  if (gnode) {
+    const chipsFor = (ids) => {
+      const cards = [...ids].map((id) => db.byId.get(id)).filter(Boolean);
+      if (!cards.length) return null;
+      return el("div", { class: "chips" }, cards.map((m) =>
+        chip(m.canonical_name, { variant: "related", href: `#/m/${m.id}` })));
+    };
+
+    const preChips = chipsFor(gnode.prereqs);
+    if (preChips) root.appendChild(section("Prerequisites", preChips));
+
+    const path = db.learningPath(measure.id);
+    if (path.length) {
+      const lp = el("div", { class: "learning-path" });
+      path.forEach((m) => {
+        lp.appendChild(chip(m.canonical_name, { variant: "related", href: `#/m/${m.id}` }));
+        lp.appendChild(el("span", { class: "lp-arrow", "aria-hidden": "true" }, ["→"]));
+      });
+      lp.appendChild(el("span", { class: "lp-current" }, [measure.canonical_name]));
+      root.appendChild(section("Learning path", lp));
+    }
+
+    const depChips = chipsFor(gnode.dependents);
+    if (depChips) root.appendChild(section("Builds toward / Used in", depChips));
+
+    // Related / See also: symmetric `related` + typed `relations` grouped by type + the graph.
     const relWrap = el("div", {});
-    const links = el("div", { class: "chips" }, related.map((m) =>
-      chip(m.canonical_name, { variant: "related", href: `#/measure/${m.id}` })
-    ));
-    relWrap.appendChild(links);
+    const relChips = chipsFor(gnode.related);
+    if (relChips) relWrap.appendChild(relChips);
+    if (gnode.relations.length) {
+      // Use the graph's already-cleaned typed edges (self-links + dangling ids filtered by
+      // buildGraph), so the rendering never diverges from the graph.
+      const byType = new Map();
+      for (const e of gnode.relations) {
+        if (!byType.has(e.type)) byType.set(e.type, []);
+        byType.get(e.type).push(db.byId.get(e.to));
+      }
+      for (const [type, cards] of byType) {
+        relWrap.appendChild(el("div", { class: "rel-typed" }, [
+          el("span", { class: "rel-type-label" }, [(RELATION_LABELS[type] || type) + ": "]),
+          ...cards.map((m) => chip(m.canonical_name, { variant: "related", href: `#/m/${m.id}` })),
+        ]));
+      }
+    }
     const g = renderGraph(db, measure);
     if (g) relWrap.appendChild(el("div", { class: "graph-wrap" }, [g]));
-    root.appendChild(section("Related measures", relWrap));
+    if (relWrap.childNodes.length) root.appendChild(section("Related / See also", relWrap));
   }
 
   // Code.
@@ -729,11 +774,11 @@ const PIPELINE_GROUPS = [
       id: "data",
       cat: "data",
       title: "Dictionary data",
-      short: "Curated cards in JSON, indexed & validated on load",
-      modules: ["data.js", "measures.json", "aliases.json"],
+      short: "Curated JSON cards + taxonomy, indexed, graphed & validated on load",
+      modules: ["data.js", "measures.json", "taxonomy.json", "aliases.json"],
       detail: [
-        "Every measure is one JSON object: name, aliases, symbols, formula, properties, cross-linked identities & inequalities, audited code, and references.",
-        "On load, data.js builds fast lookups (by id, and an alias index mapping every name/alias to a measure) and validates the data. This single source of truth powers search, the assistant, and the PDF linker.",
+        "Every card is one JSON object: a kind and domain(s) from the taxonomy, name, aliases, symbols, formula, properties, cross-linked identities & inequalities, related/prerequisite links, audited code, and references.",
+        "On load, data.js builds fast lookups (by id + an alias index), a taxonomy of kinds/domains, and a relationship graph (symmetric “related” plus prerequisite/dependent edges), then validates ids, taxonomy, and graph consistency (dangling links, prerequisite cycles). Cards load from a multi-file manifest, so new domains drop in as separate files. This single source of truth powers search, the assistant, and the PDF linker.",
       ],
       link: { href: "#/contribute", label: "How to add a card" },
     }],
@@ -797,10 +842,11 @@ const PIPELINE_GROUPS = [
         id: "extract",
         cat: "browser",
         title: "1 · Extract text",
-        short: "pdf.js reads the PDF in your browser",
-        modules: ["pdf.js"],
+        short: "pdf.js reads the PDF; optional vision reader transcribes equations",
+        modules: ["pdf.js", "vision.js"],
         detail: [
-          "pdf.js pulls out the text with per-word geometry and character offsets — no server, no key. (Optional: Mathpix OCR for equation-heavy PDFs, using your own Mathpix key.)",
+          "pdf.js pulls out the text with per-word geometry and character offsets — no server, no key.",
+          "Optionally, a vision-capable model (your own key) transcribes each page’s equations to LaTeX (vision.js), so measures that appear only as formulas — not named in prose — can still be detected and linked.",
         ],
       },
       {
@@ -817,10 +863,11 @@ const PIPELINE_GROUPS = [
         id: "detect",
         cat: "model",
         title: "3 · LLM detect (optional)",
-        short: "Find unnamed / formula-defined measures",
-        modules: ["linker.js", "llm.js"],
+        short: "Find unnamed / formula-defined measures (retrieval-scoped)",
+        modules: ["linker.js", "llm.js", "embeddings.js"],
         detail: [
-          "If a key+model are set, chunks of text plus a compact catalog go to your LLM, which returns measures that appear only as formulas or under names not in our dictionary. Its results are merged with the dictionary matches (the dictionary wins overlaps), and invalid JSON from a weak model is non-fatal.",
+          "If a key+model are set, each text chunk goes to your LLM with a compact catalog, and it returns measures that appear only as formulas or under names not in our dictionary.",
+          "To keep cost flat as the library grows, retrieval sends only the cards relevant to each chunk — lexical hits plus their neighbours and MiniLM embedding nearest-neighbours — instead of the whole catalog. Results merge with the dictionary matches (the dictionary wins overlaps), and invalid JSON from a weak model is non-fatal.",
         ],
       },
       {
@@ -843,10 +890,11 @@ const PIPELINE_GROUPS = [
         id: "render",
         cat: "browser",
         title: "Rendering",
-        short: "Cards, MathJax formulas, audited code, relation graph",
+        short: "Cards, formulas, audited code, relationships & learning paths",
         modules: ["render.js", "mathjax.js", "codegen.js", "graph.js"],
         detail: [
-          "Detail pages render formulas with MathJax, show audited NumPy / PyTorch / JAX (never AI-generated code), cross-linked identities & inequalities, and an SVG graph of related measures.",
+          "Detail pages render formulas with MathJax, show audited NumPy / PyTorch / JAX (never AI-generated code), and cross-linked identities & inequalities.",
+          "From the relationship graph they also surface prerequisites, a learning path (the ordered chain to reach a concept), what a card builds toward, and related / see-also cards — with an SVG neighbourhood graph.",
         ],
       },
       {
@@ -856,7 +904,7 @@ const PIPELINE_GROUPS = [
         short: "Data-driven cards, GitHub PR + CI, stable permalinks",
         modules: ["config.js", "GitHub Actions"],
         detail: [
-          "Because cards are just data, anyone can propose or edit one on GitHub. CI validates every change; once merged, GitHub Pages rebuilds and the card updates everywhere — including inside already-annotated PDFs, whose links point to the stable #/m/:id permalink.",
+          "Because cards are just data, anyone can propose or edit one on GitHub. CI validates every change — schema, taxonomy (kinds/domains), and relationship consistency (dangling links, prerequisite cycles); once merged, GitHub Pages rebuilds and the card updates everywhere — including inside already-annotated PDFs, whose links point to the stable #/m/:id permalink.",
         ],
         link: { href: "#/contribute", label: "Contribute" },
       },

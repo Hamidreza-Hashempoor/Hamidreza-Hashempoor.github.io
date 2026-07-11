@@ -336,6 +336,13 @@ a.chip:hover { text-decoration: none; border-color: var(--accent); color: var(--
 .graph-wrap { margin-top: 12px; }
 .source-note { margin-top: 20px; font-family: var(--sans); font-size: 0.85rem; color: var(--muted); }
 
+/* relationships (Phase 3): learning path + typed relations */
+.learning-path { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-family: var(--sans); }
+.learning-path .lp-arrow { color: var(--muted); }
+.learning-path .lp-current { font-weight: 700; color: var(--accent); }
+.rel-typed { margin-top: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.rel-typed .rel-type-label { font-family: var(--sans); font-size: 0.85rem; color: var(--muted); }
+
 /* related graph */
 .rel-graph { width: 100%; height: auto; }
 .rel-edge { stroke: #d8d3c9; stroke-width: 1.4; }

@@ -167,6 +167,26 @@ export async function loadData() {
     warnings: [],
   };
 
+  // Relationship graph (reverse edges + symmetric `related`) + navigation helpers.
+  db.graph = buildGraph(measures, byId);
+  db.neighbors = (id) => {
+    const n = db.graph.get(id);
+    return n ? new Set([...n.related, ...n.prereqs, ...n.dependents]) : new Set();
+  };
+  // Transitive prerequisites, topologically ordered (prereqs first), self dropped.
+  db.learningPath = (id) => {
+    const seen = new Set(), order = [];
+    const visit = (x) => {
+      if (seen.has(x)) return;
+      seen.add(x);
+      for (const p of (db.graph.get(x)?.prereqs || [])) visit(p);
+      order.push(x);
+    };
+    visit(id);
+    order.pop(); // drop the card itself (visited last)
+    return order.map((i) => byId.get(i)).filter(Boolean);
+  };
+
   db.warnings = validate(db);
   if (db.warnings.length) {
     console.warn(`[distances-dictionary] ${db.warnings.length} data warning(s):`);
@@ -178,6 +198,55 @@ export async function loadData() {
 /** Resolve a family/object-type slug to a human label. */
 export function familyLabel(db, key) {
   return (db.families[key] && db.families[key].label) || key;
+}
+
+/* ----------------------------- relationship graph ------------------------ */
+
+// Antisymmetric typed-relation kinds: A->type->B and B->type->A is contradictory.
+const ANTISYMMETRIC_RELATIONS = new Set(["generalizes", "specializes", "reduces_to"]);
+
+/**
+ * Adjacency map with reverse edges. `related` is mirrored (symmetric); `prerequisites`
+ * become forward `prereqs` + reverse `dependents`; optional typed `relations[]` are kept
+ * as authored. Self-edges and edges to unknown ids are skipped (validate() warns on them).
+ * @returns {Map<string, {related:Set<string>, prereqs:Set<string>, dependents:Set<string>, relations:Array<{to:string,type:string}>}>}
+ */
+function buildGraph(cards, byId) {
+  const graph = new Map();
+  const node = (id) => {
+    if (!graph.has(id)) graph.set(id, { related: new Set(), prereqs: new Set(), dependents: new Set(), relations: [] });
+    return graph.get(id);
+  };
+  for (const c of cards) node(c.id);
+  for (const c of cards) {
+    const n = node(c.id);
+    for (const r of c.related || []) {
+      if (byId.has(r) && r !== c.id) { n.related.add(r); node(r).related.add(c.id); } // symmetric
+    }
+    for (const p of c.prerequisites || []) {
+      if (byId.has(p) && p !== c.id) { n.prereqs.add(p); node(p).dependents.add(c.id); } // reverse
+    }
+    for (const e of c.relations || []) {
+      if (e && byId.has(e.to) && e.to !== c.id) n.relations.push({ to: e.to, type: e.type });
+    }
+  }
+  return graph;
+}
+
+/** Prerequisite cycles (the prereq subgraph must be a DAG). Returns each cycle path. */
+function prereqCycles(graph) {
+  const color = new Map(), cycles = []; // 0 white, 1 gray, 2 black
+  const dfs = (id, stack) => {
+    color.set(id, 1);
+    for (const p of graph.get(id).prereqs) {
+      const c = color.get(p) || 0;
+      if (c === 1) cycles.push([...stack, id, p]);
+      else if (c !== 2) dfs(p, [...stack, id]);
+    }
+    color.set(id, 2);
+  };
+  for (const id of graph.keys()) if ((color.get(id) || 0) === 0) dfs(id, []);
+  return cycles;
 }
 
 /** Non-fatal data integrity checks (logged, never thrown). */
@@ -217,6 +286,20 @@ function validate(db) {
     for (const rel of m.related || []) {
       if (!db.byId.has(rel)) warnings.push(`${m.id}: related -> unknown id "${rel}"`);
     }
+    // Relationship edges: self-links and duplicates within related/prerequisites.
+    for (const field of ["related", "prerequisites"]) {
+      const seenEdge = new Set();
+      for (const r of m[field] || []) {
+        if (r === m.id) warnings.push(`${m.id}: ${field} -> self-link`);
+        if (seenEdge.has(r)) warnings.push(`${m.id}: ${field} -> duplicate id "${r}"`);
+        seenEdge.add(r);
+      }
+    }
+    for (const e of m.relations || []) {
+      if (!e || !e.to) { warnings.push(`${m.id}: relations entry missing "to"`); continue; }
+      if (e.to === m.id) warnings.push(`${m.id}: relations -> self-link`);
+      else if (!db.byId.has(e.to)) warnings.push(`${m.id}: relations -> unknown id "${e.to}"`);
+    }
     for (const t of m.code_templates || []) {
       const tpl = db.codeTemplates[m.id];
       if (!tpl || !tpl[t]) warnings.push(`${m.id}: declared code template "${t}" not found`);
@@ -232,6 +315,23 @@ function validate(db) {
   }
   for (const [term, id] of db.aliasIndex) {
     if (!db.byId.has(id)) warnings.push(`alias "${term}" -> unknown id "${id}"`);
+  }
+  // Typed asymmetry: A ->(antisymmetric type)-> B and B ->(same type)-> A is contradictory.
+  const typed = new Set();
+  for (const m of db.measures) {
+    for (const e of m.relations || []) {
+      if (e && e.to && ANTISYMMETRIC_RELATIONS.has(e.type)) typed.add(`${e.type} ${m.id} ${e.to}`);
+    }
+  }
+  for (const key of typed) {
+    const [type, a, b] = key.split(" ");
+    if (a < b && typed.has(`${type} ${b} ${a}`)) {
+      warnings.push(`contradictory typed relation: ${a} and ${b} both "${type}" each other`);
+    }
+  }
+  // Prerequisite cycles: the prereq subgraph must be a DAG.
+  if (db.graph) {
+    for (const cyc of prereqCycles(db.graph)) warnings.push(`prerequisite cycle: ${cyc.join(" -> ")}`);
   }
   return warnings;
 }

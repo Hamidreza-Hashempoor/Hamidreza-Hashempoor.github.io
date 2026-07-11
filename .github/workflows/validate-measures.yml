@@ -26,6 +26,9 @@ jobs:
           M = json.load(open(f"{base}/measures.json"))
           A = json.load(open(f"{base}/aliases.json"))
           C = json.load(open(f"{base}/code_templates.json"))
+          T = json.load(open(f"{base}/taxonomy.json"))
+          KNOWN_KINDS = {k["id"] for k in T["kinds"]}
+          KNOWN_DOMAINS = {d["id"] for d in T["domains"]}
 
           KNOWN_TYPES = {"scalar","vector","matrix","spd_matrix","probability_vector",
             "probability_density","probability_distribution","empirical_samples","function",
@@ -45,14 +48,27 @@ jobs:
               nk = (m.get("canonical_name") or "").lower()
               if nk in names: errors.append(f"duplicate canonical name: {m.get('canonical_name')}")
               names.add(nk)
-              if not m.get("formula_latex") and not m.get("code_templates"):
-                  errors.append(f"{i}: empty formula and no code templates")
+              # taxonomy: every card needs a known kind and >=1 known domain
+              kind_id = m.get("kind")
+              if not kind_id: errors.append(f"{i}: missing kind")
+              elif kind_id not in KNOWN_KINDS: errors.append(f"{i}: unknown kind '{kind_id}'")
+              dom = m.get("domain")
+              if not isinstance(dom, list) or not dom: errors.append(f"{i}: missing domain")
+              else:
+                  for d in dom:
+                      if d not in KNOWN_DOMAINS: errors.append(f"{i}: unknown domain '{d}'")
+              for p in m.get("prerequisites", []):
+                  if p not in ids: errors.append(f"{i}: prerequisites -> unknown id '{p}'")
+              # measure-specific rules (future non-measure kinds aren't judged by them)
+              if kind_id == "measure":
+                  if not m.get("formula_latex") and not m.get("code_templates"):
+                      errors.append(f"{i}: empty formula and no code templates")
+                  for t in m.get("input_types", []):
+                      if t not in KNOWN_TYPES: errors.append(f"{i}: unknown input type '{t}'")
+                  for k in (m.get("properties") or {}):
+                      if k not in KNOWN_PROPS: errors.append(f"{i}: unknown property '{k}'")
               for r in m.get("related", []):
                   if r not in ids: errors.append(f"{i}: related -> unknown id '{r}'")
-              for t in m.get("input_types", []):
-                  if t not in KNOWN_TYPES: errors.append(f"{i}: unknown input type '{t}'")
-              for k in (m.get("properties") or {}):
-                  if k not in KNOWN_PROPS: errors.append(f"{i}: unknown property '{k}'")
               for t in m.get("code_templates", []):
                   tpl = C.get(i)
                   if not tpl or t not in tpl: errors.append(f"{i}: declared code template '{t}' not found")

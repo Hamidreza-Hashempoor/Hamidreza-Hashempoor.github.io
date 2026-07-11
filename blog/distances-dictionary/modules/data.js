@@ -10,6 +10,8 @@ const DATA_FILES = {
   aliases: "data/aliases.json",
   families: "data/families.json",
   codeTemplates: "data/code_templates.json",
+  taxonomy: "data/taxonomy.json",
+  manifest: "data/cards/manifest.json",
 };
 
 export const KNOWN_OBJECT_TYPES = new Set([
@@ -86,12 +88,28 @@ async function fetchJSON(path) {
  * Throws if the core measures file cannot be fetched (e.g. file://).
  */
 export async function loadData() {
-  const [measures, extraAliases, families, codeTemplates] = await Promise.all([
-    fetchJSON(DATA_FILES.measures),
+  const [manifest, taxonomy, extraAliases, families, codeTemplates] = await Promise.all([
+    fetchJSON(DATA_FILES.manifest).catch(() => null), // optional; falls back to measures.json
+    fetchJSON(DATA_FILES.taxonomy),                   // required: defines allowed kinds/domains
     fetchJSON(DATA_FILES.aliases).catch(() => ({})),
     fetchJSON(DATA_FILES.families).catch(() => ({})),
     fetchJSON(DATA_FILES.codeTemplates).catch(() => ({})),
   ]);
+
+  // Cards come from the manifest's file list (paths relative to data/) so future
+  // domains can drop in as separate files; without a manifest, load the single
+  // measures file exactly as before.
+  const useManifest = manifest && Array.isArray(manifest.files) && manifest.files.length;
+  if (manifest && !useManifest) {
+    console.warn("[distances-dictionary] data/cards/manifest.json has no usable \"files\" array — falling back to measures.json");
+  }
+  const cardFiles = useManifest ? manifest.files.map((f) => "data/" + f) : [DATA_FILES.measures];
+  // One broken/missing card file must not take down the rest — skip it with a
+  // console warning. Only an empty result (nothing loaded at all) stays fatal.
+  const measures = (await Promise.all(cardFiles.map((f) =>
+    fetchJSON(f).catch((e) => { console.warn(`[distances-dictionary] skipping card file ${f}: ${e.message}`); return []; })
+  ))).flat();
+  if (!measures.length) throw new Error("No dictionary cards could be loaded.");
 
   const byId = new Map();
   for (const m of measures) byId.set(m.id, m);
@@ -116,6 +134,8 @@ export async function loadData() {
   const allInputTypes = new Set();
   const allProperties = new Set();
   const allApplications = new Set();
+  const allKinds = new Set();
+  const allDomains = new Set();
   for (const m of measures) {
     (m.family || []).forEach((f) => allFamilies.add(f));
     (m.input_types || []).forEach((t) => allInputTypes.add(t));
@@ -123,6 +143,8 @@ export async function loadData() {
     for (const [k, v] of Object.entries(m.properties || {})) {
       if (v === true) allProperties.add(k);
     }
+    if (m.kind) allKinds.add(m.kind);
+    (m.domain || []).forEach((d) => allDomains.add(d));
   }
 
   const db = {
@@ -131,10 +153,17 @@ export async function loadData() {
     aliasIndex,
     families,
     codeTemplates,
+    taxonomy,
+    // Array.isArray guards: a malformed taxonomy must surface as validate() warnings
+    // ("unknown kind/domain"), not crash loadData before validation can run.
+    knownKinds: new Set((Array.isArray(taxonomy.kinds) ? taxonomy.kinds : []).map((k) => k.id)),
+    knownDomains: new Set((Array.isArray(taxonomy.domains) ? taxonomy.domains : []).map((d) => d.id)),
     allFamilies: [...allFamilies].sort(),
     allInputTypes: [...allInputTypes].sort(),
     allProperties: [...allProperties].sort(),
     allApplications: [...allApplications].sort(),
+    allKinds: [...allKinds].sort(),
+    allDomains: [...allDomains].sort(),
     warnings: [],
   };
 
@@ -163,17 +192,30 @@ function validate(db) {
     const nk = normalize(m.canonical_name);
     if (names.has(nk)) warnings.push(`duplicate canonical name: ${m.canonical_name}`);
     names.add(nk);
-    if (!m.formula_latex && (m.code_templates || []).length === 0) {
-      warnings.push(`${m.id}: empty formula and no code templates`);
+    // Taxonomy checks: every card needs a known kind and >=1 known domain.
+    if (!m.kind) warnings.push(`${m.id}: missing kind`);
+    else if (!db.knownKinds.has(m.kind)) warnings.push(`${m.id}: unknown kind "${m.kind}"`);
+    if (!Array.isArray(m.domain) || m.domain.length === 0) warnings.push(`${m.id}: missing domain`);
+    else for (const d of m.domain) {
+      if (!db.knownDomains.has(d)) warnings.push(`${m.id}: unknown domain "${d}"`);
+    }
+    for (const p of m.prerequisites || []) {
+      if (!db.byId.has(p)) warnings.push(`${m.id}: prerequisites -> unknown id "${p}"`);
+    }
+    // Measure-specific rules: don't judge future non-measure kinds by them.
+    if (m.kind === "measure") {
+      if (!m.formula_latex && (m.code_templates || []).length === 0) {
+        warnings.push(`${m.id}: empty formula and no code templates`);
+      }
+      for (const t of m.input_types || []) {
+        if (!KNOWN_OBJECT_TYPES.has(t)) warnings.push(`${m.id}: unknown input type "${t}"`);
+      }
+      for (const k of Object.keys(m.properties || {})) {
+        if (!KNOWN_PROPERTY_KEYS.has(k)) warnings.push(`${m.id}: unknown property "${k}"`);
+      }
     }
     for (const rel of m.related || []) {
       if (!db.byId.has(rel)) warnings.push(`${m.id}: related -> unknown id "${rel}"`);
-    }
-    for (const t of m.input_types || []) {
-      if (!KNOWN_OBJECT_TYPES.has(t)) warnings.push(`${m.id}: unknown input type "${t}"`);
-    }
-    for (const k of Object.keys(m.properties || {})) {
-      if (!KNOWN_PROPERTY_KEYS.has(k)) warnings.push(`${m.id}: unknown property "${k}"`);
     }
     for (const t of m.code_templates || []) {
       const tpl = db.codeTemplates[m.id];

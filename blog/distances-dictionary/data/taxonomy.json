@@ -1,0 +1,34 @@
+{
+  "kinds": [
+    { "id": "measure",      "label": "Measure / metric",     "description": "A distance, divergence, similarity, or entropy between objects." },
+    { "id": "concept",      "label": "Concept / definition" },
+    { "id": "object",       "label": "Object" },
+    { "id": "theorem",      "label": "Theorem / result" },
+    { "id": "formula",      "label": "Formula / identity" },
+    { "id": "inequality",   "label": "Inequality" },
+    { "id": "transform",    "label": "Transform / operator" },
+    { "id": "method",       "label": "Method / algorithm" },
+    { "id": "function",     "label": "Function" },
+    { "id": "distribution", "label": "Distribution" }
+  ],
+  "domains": [
+    { "id": "information-theory",      "label": "Information theory",
+      "subtopics": ["entropy", "divergence", "mutual-information", "coding"] },
+    { "id": "metric-geometry",         "label": "Metric geometry & distances",
+      "subtopics": ["vector-metric", "set-distance", "string-distance", "matrix-distance", "point-distance"] },
+    { "id": "linear-algebra",          "label": "Linear algebra" },
+    { "id": "probability",             "label": "Probability" },
+    { "id": "statistics",              "label": "Statistics & inference" },
+    { "id": "analysis",                "label": "Analysis & calculus" },
+    { "id": "optimization",            "label": "Optimization" },
+    { "id": "topology-geometry",       "label": "Topology & geometry" },
+    { "id": "discrete-combinatorics",  "label": "Discrete math & combinatorics" },
+    { "id": "number-theory",           "label": "Number theory" },
+    { "id": "differential-equations",  "label": "Differential equations" },
+    { "id": "algebra",                 "label": "Abstract algebra" },
+    { "id": "numerical-methods",       "label": "Numerical methods" },
+    { "id": "signal-processing",       "label": "Signal processing & transforms" },
+    { "id": "foundations-logic",       "label": "Foundations & logic" },
+    { "id": "ml-math",                 "label": "Mathematics for ML & data science" }
+  ]
+}

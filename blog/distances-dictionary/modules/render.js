@@ -130,6 +130,8 @@ function renderFilterRail(db, app) {
     rail.appendChild(box);
   };
 
+  group("Domain", "domains", db.allDomains, (v) => (db.domainLabels && db.domainLabels.get(v)) || v);
+  group("Kind", "kinds", db.allKinds, (v) => (db.kindLabels && db.kindLabels.get(v)) || v);
   group("Object type", "inputTypes", db.allInputTypes, (v) => OBJECT_TYPE_LABELS[v] || v);
   group("Property", "properties", db.allProperties, (v) => PROPERTY_LABELS[v] || v);
   group("Family", "families", db.allFamilies, (v) => familyLabel(db, v));
@@ -727,6 +729,87 @@ export function renderTypesView(db, app) {
       .sort((a, b) => a.canonical_name.localeCompare(b.canonical_name))
       .forEach((m) => grid.appendChild(renderResultCard(db, app, m)));
     sec.appendChild(grid);
+    root.appendChild(sec);
+  }
+  return root;
+}
+
+/* ------------------------------- topics ---------------------------------- */
+
+// Browse the whole library by mathematical area (domain), then by subtopic. Parallels
+// renderTypesView but over ALL cards grouped by `domain` (which every card has), not just
+// measures grouped by object type.
+export function renderTopicsView(db, app) {
+  const root = el("div", { class: "types-view topics-view" });
+  root.appendChild(el("a", { class: "back-link", href: "#/" }, ["← Back to search"]));
+  root.appendChild(el("h1", { tabindex: "-1", id: "route-heading" }, ["Browse by topic"]));
+  root.appendChild(el("p", { class: "detail-lead" }, [
+    "Every concept, grouped by mathematical area. A card can appear under more than one area.",
+  ]));
+  root.appendChild(el("p", { class: "hero-contribute" }, [
+    "Missing a topic or a concept? ",
+    el("a", { href: "#/contribute" }, ["Contribute →"]),
+  ]));
+
+  const groups = new Map();
+  for (const m of db.measures) {
+    if (!(m.domain && m.domain.length)) continue;
+    for (const d of m.domain) {
+      if (!groups.has(d)) groups.set(d, []);
+      groups.get(d).push(m);
+    }
+  }
+  const domainLabel = (d) => (db.domainLabels && db.domainLabels.get(d)) || d;
+  const domains = [...groups.keys()].sort((a, b) =>
+    groups.get(b).length - groups.get(a).length || domainLabel(a).localeCompare(domainLabel(b))
+  );
+
+  const nav = el("div", { class: "types-nav" }, domains.map((d) => {
+    const b = el("button", { type: "button", class: "chip" }, [`${domainLabel(d)} (${groups.get(d).length})`]);
+    b.addEventListener("click", () => {
+      const s = document.getElementById(`topic-${d}`);
+      if (s) s.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return b;
+  }));
+  root.appendChild(nav);
+
+  const prettySub = (s) => s.replace(/[-_]/g, " ").replace(/^./, (c) => c.toUpperCase());
+  const byName = (a, b) => a.canonical_name.localeCompare(b.canonical_name);
+  const cardGrid = (cards) => {
+    const grid = el("div", { class: "card-grid" });
+    cards.slice().sort(byName).forEach((m) => grid.appendChild(renderResultCard(db, app, m)));
+    return grid;
+  };
+
+  for (const d of domains) {
+    const cards = groups.get(d);
+    const sec = el("section", { class: "lk-section" });
+    sec.appendChild(el("h2", { id: `topic-${d}` }, [`${domainLabel(d)} (${cards.length})`]));
+
+    // Subtopic order: taxonomy order first, then any extras found on cards; "Other" catches the rest.
+    const taxDom = (db.taxonomy && Array.isArray(db.taxonomy.domains))
+      ? db.taxonomy.domains.find((x) => x.id === d) : null;
+    const order = (taxDom && Array.isArray(taxDom.subtopics)) ? [...taxDom.subtopics] : [];
+    const present = new Set();
+    cards.forEach((m) => (m.subtopics || []).forEach((s) => present.add(s)));
+    present.forEach((s) => { if (!order.includes(s)) order.push(s); });
+
+    const used = new Set();
+    let subShown = 0;
+    for (const s of order) {
+      const inSub = cards.filter((m) => (m.subtopics || []).includes(s));
+      if (!inSub.length) continue;
+      inSub.forEach((m) => used.add(m));
+      sec.appendChild(el("h3", { class: "topic-subhead" }, [prettySub(s)]));
+      sec.appendChild(cardGrid(inSub));
+      subShown++;
+    }
+    const rest = cards.filter((m) => !used.has(m));
+    if (rest.length) {
+      if (subShown) sec.appendChild(el("h3", { class: "topic-subhead" }, ["Other"]));
+      sec.appendChild(cardGrid(rest));
+    }
     root.appendChild(sec);
   }
   return root;

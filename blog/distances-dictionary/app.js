@@ -3,7 +3,7 @@
 
 import { loadData } from "./modules/data.js";
 import { parseHash, onRoute } from "./modules/router.js";
-import { renderHome, renderDetail, renderCompare, renderNotFound, renderTypesView, renderContribute, renderPipeline } from "./modules/render.js";
+import { renderHome, renderDetail, renderCompare, renderNotFound, renderTypesView, renderTopicsView, renderContribute, renderPipeline } from "./modules/render.js";
 import {
   filterFromParams, filterToParams, emptyFilterState,
 } from "./modules/filters.js";
@@ -245,6 +245,9 @@ function route() {
   } else if (parts[0] === "types") {
     view = renderTypesView(app.db, app);
     active = "types";
+  } else if (parts[0] === "topics") {
+    view = renderTopicsView(app.db, app);
+    active = "topics";
   } else if (parts[0] === "ask") {
     view = renderAsk();
     active = "ask";

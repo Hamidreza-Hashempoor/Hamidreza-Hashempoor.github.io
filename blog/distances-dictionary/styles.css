@@ -560,6 +560,7 @@ a.chip:hover { text-decoration: none; border-color: var(--accent); color: var(--
 .types-nav .chip { cursor: pointer; font-family: var(--sans); border-color: #d6c6b7; }
 .types-nav .chip:hover { background: var(--accent-soft); color: var(--accent); }
 .types-view .lk-section h2 { scroll-margin-top: 80px; }
+.topic-subhead { font-size: 0.95rem; font-weight: 700; color: var(--muted); margin: 14px 0 6px; text-transform: none; }
 
 /* -------------------------------- contribute ------------------------------ */
 

@@ -158,6 +158,9 @@ export async function loadData() {
     // ("unknown kind/domain"), not crash loadData before validation can run.
     knownKinds: new Set((Array.isArray(taxonomy.kinds) ? taxonomy.kinds : []).map((k) => k.id)),
     knownDomains: new Set((Array.isArray(taxonomy.domains) ? taxonomy.domains : []).map((d) => d.id)),
+    // Human labels for the taxonomy facets (Domain/Kind) — labels live only in taxonomy.json.
+    domainLabels: new Map((Array.isArray(taxonomy.domains) ? taxonomy.domains : []).map((d) => [d.id, d.label])),
+    kindLabels: new Map((Array.isArray(taxonomy.kinds) ? taxonomy.kinds : []).map((k) => [k.id, k.label])),
     allFamilies: [...allFamilies].sort(),
     allInputTypes: [...allInputTypes].sort(),
     allProperties: [...allProperties].sort(),

@@ -4,6 +4,8 @@
 /** Empty filter state. */
 export function emptyFilterState() {
   return {
+    domains: new Set(),
+    kinds: new Set(),
     inputTypes: new Set(),
     families: new Set(),
     applications: new Set(),
@@ -13,6 +15,8 @@ export function emptyFilterState() {
 
 export function isFilterActive(state) {
   return (
+    state.domains.size +
+    state.kinds.size +
     state.inputTypes.size +
     state.families.size +
     state.applications.size +
@@ -21,7 +25,7 @@ export function isFilterActive(state) {
 }
 
 export function filterCount(state) {
-  return state.inputTypes.size + state.families.size + state.applications.size + state.properties.size;
+  return state.domains.size + state.kinds.size + state.inputTypes.size + state.families.size + state.applications.size + state.properties.size;
 }
 
 function anyOf(values, selected) {
@@ -33,6 +37,9 @@ function anyOf(values, selected) {
 /** Apply the filter state to a list of measures. */
 export function applyFilters(measures, state) {
   return measures.filter((m) => {
+    // domain: OR-within (a card may sit in several domains); kind: scalar match.
+    if (!anyOf(m.domain, state.domains)) return false;
+    if (state.kinds.size && !state.kinds.has(m.kind)) return false;
     if (!anyOf(m.input_types, state.inputTypes)) return false;
     if (!anyOf(m.family, state.families)) return false;
     if (!anyOf(m.applications, state.applications)) return false;
@@ -47,6 +54,8 @@ export function applyFilters(measures, state) {
 /** Serialize filter state to URL query params. */
 export function filterToParams(state) {
   const p = new URLSearchParams();
+  if (state.domains.size) p.set("domains", [...state.domains].join(","));
+  if (state.kinds.size) p.set("kinds", [...state.kinds].join(","));
   if (state.inputTypes.size) p.set("types", [...state.inputTypes].join(","));
   if (state.families.size) p.set("families", [...state.families].join(","));
   if (state.applications.size) p.set("apps", [...state.applications].join(","));
@@ -61,6 +70,8 @@ export function filterFromParams(params) {
     const raw = params.get(key);
     if (raw) raw.split(",").filter(Boolean).forEach((v) => set.add(v));
   };
+  load("domains", state.domains);
+  load("kinds", state.kinds);
   load("types", state.inputTypes);
   load("families", state.families);
   load("apps", state.applications);

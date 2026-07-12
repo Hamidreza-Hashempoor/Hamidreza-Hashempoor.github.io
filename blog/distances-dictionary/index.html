@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Distances &amp; Divergences Dictionary</title>
-  <meta name="description" content="An interactive, searchable dictionary of distances, divergences and probability metrics: search by name, alias, property or use case; compare measures; generate safe NumPy/PyTorch/JAX code; and ask questions with in-browser or bring-your-own-token AI." />
+  <title>Mathematics Dictionary — distances, linear algebra &amp; more</title>
+  <meta name="description" content="An interactive, searchable dictionary of mathematical concepts — distances &amp; divergences, linear algebra, and more — with faceted browse by domain and kind, definitions and formulas, safe NumPy/PyTorch/JAX code, and a PDF concept linker; ask questions with in-browser or bring-your-own-key AI." />
   <link rel="stylesheet" href="styles.css" />
   <script>
     window.MathJax = {
@@ -18,18 +18,20 @@
   <div class="page">
     <!-- Themed post intro (matches the rest of the blog) -->
     <header class="intro">
-      <div class="meta">Interactive Tool • Distances &amp; Divergences</div>
-      <h1 class="intro-title">Distances &amp; Divergences Dictionary</h1>
+      <div class="meta">Interactive Tool • Mathematics</div>
+      <h1 class="intro-title">Mathematics Dictionary</h1>
       <p class="authors">Hamidreza Hashempoor • Institute for AI, University of Stuttgart</p>
       <p class="intro-lead">
-        An interactive companion to the
+        An interactive, searchable dictionary of mathematical concepts — distances &amp; divergences,
+        linear algebra, and more. It began as the interactive companion to the
         <a href="../distances/distances.html">Taxonomy of Principal Distances &amp; Divergences</a>
-        (original idea suggested by <a href="https://franknielsen.github.io/Divergence/index.html" target="_blank" rel="noopener">Frank Nielsen</a>):
-        the same curated measures, now searchable and linkable. Look up a measure by name, alias,
-        property, object type, or application; read its formula, properties, and worked example;
-        compare measures side by side; generate audited NumPy / PyTorch / JAX code; and — optionally —
-        ask questions using a free in-browser model or your own HuggingFace token.
+        (original idea suggested by <a href="https://franknielsen.github.io/Divergence/index.html" target="_blank" rel="noopener">Frank Nielsen</a>),
+        and distances remain a first-class area. Look up a concept by name, alias, or property; browse by
+        domain, kind, or object type; read its definition or formula, properties, and worked example;
+        compare measures side by side; generate audited NumPy / PyTorch / JAX code; link the concepts in a
+        PDF; and — optionally — ask questions using a free in-browser model or your own AI key.
       </p>
+      <p class="muted">Now covering: distances &amp; divergences, linear algebra — more domains coming.</p>
       <div class="intro-tools">
         <a href="../distances/distances.html">Read the taxonomy post</a>
         <a href="#/ask">Ask the dictionary</a>
@@ -45,11 +47,12 @@
         class="search-input"
         placeholder="Search by name, alias, formula idea, object type, property, or use case…"
         autocomplete="off"
-        aria-label="Search distances and divergences"
+        aria-label="Search the mathematics dictionary"
       />
       <nav class="toolbar-nav" aria-label="Sections">
         <a href="#/" data-route="home">Search</a>
         <a href="#/types" data-route="types">By type</a>
+        <a href="#/topics" data-route="topics">Browse</a>
         <a href="#/ask" data-route="ask">Ask AI</a>
         <a href="#/linker" data-route="linker">PDF Linker</a>
         <a href="#/pipeline" data-route="pipeline">Pipeline</a>

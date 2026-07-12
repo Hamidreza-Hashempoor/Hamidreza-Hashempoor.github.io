@@ -126,6 +126,34 @@ Not part of the deployed site. To bootstrap entries from a PDF table offline:
 Math extracted from PDFs is noisy — never trust extracted formulas without
 review.
 
+## Authoring workflow (content waves)
+
+Phases 5+ add cards in **waves** (one domain at a time) so correctness scales with the corpus.
+Each wave is a mechanical, quality-checked loop. The authoring kit lives in `data/templates/`,
+`prompts/`, and `scripts/` — all authoring-time (Node/offline); the deployed site never runs them.
+
+1. **Pick the concept list** for the domain (the Phase-5+ specs provide these).
+2. **Generate** each card with `prompts/generate-card.md` (paste the matching
+   `data/templates/{kind}.json`) into the right `data/cards/{domain}.json`. The prompt enforces
+   the correctness bar: references required, no fabrication, omit-if-unsure.
+3. **Review — mandatory human step.** Verify every formula and reference by hand; fix anything
+   the model omitted or guessed. The model drafts; a human is the source of truth.
+4. **Cross-link.** Run `node scripts/suggest-relations.mjs` (after embeddings exist) and confirm
+   `related` / `prerequisites`, resolving names to ids. `node scripts/relations-report.mjs`
+   flags orphans, contradictory typed relations, and prerequisite cycles.
+5. **Validate.** Run `node scripts/validate-cards.mjs` and fix until it passes. It mirrors the
+   in-browser `validate()` and the CI checks and adds Phase-4 gates (kind-specific required
+   fields, ≥1 titled reference, well-formed URLs, LaTeX sanity, alias collisions). `npm i katex`
+   enables a stricter LaTeX parse; otherwise a structural brace/`$` check runs (same as CI).
+6. **Re-embed.** Run `node scripts/build-embeddings.mjs` so semantic search and the retrieval
+   linker see the new cards; commit the regenerated `data/embeddings.json`.
+7. **Register & commit.** Add any new file to `data/cards/manifest.json`, then open a PR — CI
+   (`validate-measures.yml`) re-checks the data before merge.
+
+New card kinds beyond `measure` (concept, object, theorem, formula, inequality, transform,
+method, function, distribution) share the core schema plus kind-specific fields; the shape for
+each is `data/templates/{kind}.json`.
+
 ## File map
 
 ```
@@ -157,6 +185,15 @@ modules/
   mathpix.js            optional BYO equation OCR (experimental, lazy)
   annotate.js           optional annotated-PDF export via pdf-lib (experimental, lazy)
 data/                   measures.json, aliases.json, families.json, code_templates.json
+  taxonomy.json         card classification: kinds + domains (Phase 1)
+  cards/manifest.json   list of card files the app loads (multi-file support)
+  templates/            one JSON field template per kind (authoring, Phase 4)
+prompts/                generate-card.md — the card-generation prompt (Phase 4)
+scripts/                Node authoring tools (offline; NOT part of the deployed site)
+  validate-cards.mjs    schema + taxonomy + graph + Phase-4 quality gate
+  suggest-relations.mjs candidate related-link suggester (uses embeddings)
+  relations-report.mjs  orphan / prerequisite-cycle / contradiction report
+  build-embeddings.mjs  precompute data/embeddings.json for semantic search
 ```
 
 Permalinks: every measure is reachable at `#/m/:id` (used by the linker);

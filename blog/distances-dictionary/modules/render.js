@@ -2,9 +2,10 @@
 // detail, comparison table, and the result card / filter rail components.
 // Render functions receive the `app` controller (app.js) for callbacks.
 
-import { el, chip, escapeHTML } from "./util.js";
+import { el, chip, escapeHTML, debounce, latexBalanced } from "./util.js";
 import {
   PROPERTY_LABELS, OBJECT_TYPE_LABELS, APPLICATION_LABELS, familyLabel,
+  KNOWN_OBJECT_TYPES, KNOWN_PROPERTY_KEYS,
 } from "./data.js";
 import { search } from "./search.js";
 import { converse, renderAnswer } from "./assistant.js";
@@ -14,6 +15,7 @@ import { renderCodePanel } from "./codegen.js";
 import { renderGraph, svg } from "./graph.js";
 import { editUrl, editCardIssueUrl, newCardIssueUrl, blobUrl } from "./config.js";
 import { parseHash, buildHash } from "./router.js";
+import { typeset } from "./mathjax.js";
 
 const KEY_PROPERTIES = ["symmetric", "bounded", "metric", "nonnegative"];
 
@@ -677,31 +679,93 @@ export function renderTypesView(db, app) {
 
 /* ------------------------------- contribute ------------------------------- */
 
-const NEW_MEASURE_SKELETON = {
-  id: "my_measure",
-  canonical_name: "My Measure",
-  aliases: [],
-  short_description: "One-sentence description of what it measures.",
-  kind: "measure",
-  domain: ["metric-geometry"],
-  subtopics: [],
-  prerequisites: [],
-  tags: [],
-  family: [],
-  input_types: ["vector"],
-  symbols: [],
-  formula_latex: "",
-  formula_plaintext: "",
-  properties: { nonnegative: true, symmetric: true, bounded: false, metric: false },
-  identities: [],
-  inequalities: [],
-  range: "",
-  parameters: [],
-  practical_use_cases: [],
-  when_to_use: "",
-  when_not_to_use: "",
-  related: [],
-  references: [{ title: "", url: "" }],
+// Field model for the contribute form. Keys match data/templates/*.json; the required rules
+// mirror REQUIRED_BY_KIND in scripts/validate-cards.mjs so client + offline gates agree.
+const CONTRIB_SLUG_RE = /^[a-z0-9]+([-_][a-z0-9]+)*$/;
+const CONTRIB_LATEX_REQUIRED = new Set(["measure", "formula", "function", "distribution", "transform", "inequality"]);
+
+const CONTRIB_CORE_FIELDS = [
+  { key: "id", label: "id (slug)", type: "text", required: true, hint: "lowercase, - or _ ; becomes #/m/:id" },
+  { key: "canonical_name", label: "Canonical name", type: "text", required: true },
+  { key: "aliases", label: "Aliases", type: "csv", hint: "comma-separated" },
+  { key: "short_description", label: "Short description", type: "textarea", required: true, hint: "one precise sentence" },
+  { key: "formula_latex", label: "Formula (LaTeX)", type: "latex", hint: "raw LaTeX, no surrounding $$" },
+  { key: "formula_plaintext", label: "Formula (plain text)", type: "text" },
+  { key: "subtopics", label: "Subtopics", type: "csv", hint: "comma-separated" },
+  { key: "tags", label: "Tags", type: "csv", hint: "comma-separated" },
+  { key: "prerequisites", label: "Prerequisites (card ids)", type: "csv", hint: "comma-separated ids" },
+  { key: "related", label: "Related (card ids)", type: "csv", hint: "comma-separated ids" },
+];
+
+// Kind-specific fields (shown when that kind is selected). Keys match data/templates/*.json.
+const CONTRIB_FIELDS_BY_KIND = {
+  measure: [
+    { key: "input_types", label: "Input types", type: "checkgroup", options: () => [...KNOWN_OBJECT_TYPES], labelFn: (v) => OBJECT_TYPE_LABELS[v] || v },
+    { key: "properties", label: "Properties (check the ones that provably hold)", type: "boolgroup", options: () => [...KNOWN_PROPERTY_KEYS], labelFn: (v) => PROPERTY_LABELS[v] || v },
+    { key: "family", label: "Family", type: "csv" },
+    { key: "range", label: "Range", type: "text" },
+    { key: "when_to_use", label: "When to use", type: "textarea" },
+    { key: "when_not_to_use", label: "When NOT to use", type: "textarea" },
+    { key: "practical_use_cases", label: "Practical use cases", type: "csv" },
+  ],
+  concept: [
+    { key: "definition", label: "Definition", type: "textarea" },
+    { key: "examples", label: "Examples", type: "csv" },
+  ],
+  object: [
+    { key: "definition", label: "Definition", type: "textarea" },
+    { key: "examples", label: "Examples", type: "csv" },
+    { key: "notation", label: "Notation", type: "text" },
+  ],
+  theorem: [
+    { key: "statement", label: "Statement", type: "textarea" },
+    { key: "proof_sketch", label: "Proof sketch", type: "textarea" },
+    { key: "consequences", label: "Consequences", type: "csv" },
+  ],
+  formula: [
+    { key: "statement", label: "Statement", type: "textarea" },
+    { key: "derivation", label: "Derivation", type: "textarea" },
+    { key: "conditions", label: "Conditions", type: "csv" },
+  ],
+  inequality: [
+    { key: "statement", label: "Statement", type: "textarea" },
+    { key: "conditions", label: "Conditions", type: "csv" },
+    { key: "equality_conditions", label: "Equality conditions", type: "text" },
+    { key: "consequences", label: "Consequences", type: "csv" },
+  ],
+  transform: [
+    { key: "definition", label: "Definition", type: "textarea" },
+    { key: "inverse_latex", label: "Inverse (LaTeX)", type: "text" },
+    { key: "domain_of_definition", label: "Domain of definition", type: "text" },
+  ],
+  method: [
+    { key: "summary", label: "Summary", type: "textarea" },
+    { key: "steps", label: "Steps (one per line)", type: "lines" },
+    { key: "complexity", label: "Complexity", type: "text" },
+    { key: "assumptions", label: "Assumptions", type: "csv" },
+  ],
+  function: [
+    { key: "definition", label: "Definition", type: "textarea" },
+    { key: "domain_of_definition", label: "Domain", type: "text" },
+    { key: "range", label: "Range", type: "text" },
+    { key: "special_values", label: "Special values", type: "csv" },
+  ],
+  distribution: [
+    { key: "support", label: "Support", type: "text" },
+    { key: "pdf_pmf", label: "PDF / PMF (LaTeX)", type: "text" },
+    { key: "parameters", label: "Parameters (name: description, one per line)", type: "kvlines" },
+    { key: "mean", label: "Mean", type: "text" },
+    { key: "variance", label: "Variance", type: "text" },
+  ],
+};
+
+const contribEmpty = (v) => v == null || v === "" ||
+  (Array.isArray(v) && v.length === 0) ||
+  (typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0);
+const contribCsv = (s) => {
+  const out = [], seen = new Set();
+  for (const t of String(s).split(",").map((x) => x.trim()).filter(Boolean)) if (!seen.has(t)) { seen.add(t); out.push(t); }
+  return out;
 };
 
 export function renderContribute(db) {
@@ -709,58 +773,253 @@ export function renderContribute(db) {
   root.appendChild(el("a", { class: "back-link", href: "#/" }, ["← Back to search"]));
   root.appendChild(el("h1", { tabindex: "-1", id: "route-heading" }, ["Contribute to the dictionary"]));
   root.appendChild(el("p", { class: "detail-lead" }, [
-    "The flash cards are data-driven — they live in one JSON file, so anyone can propose a new measure or an ",
-    "edit with no local setup. Because links use the stable #/m/:id permalink, a merged change updates the card ",
-    "everywhere automatically, including inside already-annotated PDFs.",
+    "Draft a new card below — the fields adapt to the kind you pick, and the form validates before ",
+    "it produces a submission. Nothing is committed until a human reviews it: the form opens a prefilled ",
+    "GitHub issue (or copies the JSON), and CI validates every merge. Links use the stable #/m/:id permalink.",
+  ]));
+  root.appendChild(section("Draft a new card", buildContribForm(db)));
+  root.appendChild(buildContribInfo(db));
+  root.appendChild(el("p", { class: "muted" }, [
+    `The dictionary currently has ${db.measures.length} cards. No unreviewed math reaches the site — human review and CI gate every contribution.`,
+  ]));
+  return root;
+}
+
+function buildContribForm(db) {
+  const form = el("div", { class: "contrib-form" });
+  const inputs = new Map(); // namespaced key -> getter()
+
+  // Shared live MathJax preview for the formula_latex field.
+  const previewNode = el("div", { class: "eq contrib-preview" });
+  const runPreview = debounce((latex) => {
+    previewNode.textContent = latex ? `$$${latex}$$` : "";
+    typeset(previewNode); // async, never rejects; safe if MathJax is absent
+  }, 220);
+
+  function buildField(def, ns) {
+    const key = ns + def.key;
+    const wrap = el("div", { class: "contrib-field" });
+    const labelText = def.label + (def.required ? " *" : "");
+    if (def.type === "checkgroup" || def.type === "boolgroup") {
+      const box = el("details", { class: "filter-group contrib-checks" });
+      box.appendChild(el("summary", {}, [labelText]));
+      const list = el("div", { class: "filter-options" });
+      const boxes = [];
+      (def.options ? def.options() : []).forEach((v) => {
+        const cb = el("input", { type: "checkbox" });
+        boxes.push([v, cb]);
+        list.appendChild(el("label", { class: "filter-opt" }, [cb, el("span", {}, [def.labelFn ? def.labelFn(v) : v])]));
+      });
+      box.appendChild(list);
+      wrap.appendChild(box);
+      inputs.set(key, () => {
+        const checked = boxes.filter(([, cb]) => cb.checked).map(([v]) => v);
+        if (def.type === "boolgroup") { const o = {}; checked.forEach((v) => (o[v] = true)); return o; }
+        return checked;
+      });
+      return wrap;
+    }
+    wrap.appendChild(el("label", { class: "field-label" }, [labelText]));
+    if (def.hint) wrap.appendChild(el("span", { class: "contrib-hint" }, [def.hint]));
+    const multiline = def.type === "textarea" || def.type === "lines" || def.type === "kvlines";
+    const control = multiline
+      ? el("textarea", { class: "llm-field contrib-input", rows: def.type === "textarea" ? "2" : "3" })
+      : el("input", { type: "text", class: "llm-field contrib-input" });
+    if (def.type === "latex") control.addEventListener("input", () => runPreview(control.value.trim()));
+    wrap.appendChild(control);
+    if (def.type === "latex") wrap.appendChild(previewNode);
+    inputs.set(key, () => {
+      const raw = control.value.trim();
+      if (def.type === "csv") return contribCsv(raw);
+      if (def.type === "lines") return raw ? raw.split("\n").map((x) => x.trim()).filter(Boolean) : [];
+      if (def.type === "kvlines") return raw
+        ? raw.split("\n").map((x) => x.trim()).filter(Boolean).map((line) => {
+            const i = line.indexOf(":");
+            return i === -1 ? { name: line } : { name: line.slice(0, i).trim(), description: line.slice(i + 1).trim() };
+          })
+        : [];
+      return raw;
+    });
+    return wrap;
+  }
+
+  // Kind select.
+  const kindSel = el("select", { class: "llm-field contrib-input" });
+  ((db.taxonomy && db.taxonomy.kinds) || []).forEach((k) => kindSel.appendChild(el("option", { value: k.id }, [k.label || k.id])));
+  kindSel.value = "measure";
+  form.appendChild(el("div", { class: "contrib-field" }, [el("label", { class: "field-label" }, ["Kind *"]), kindSel]));
+
+  // Domain multi-select.
+  const domBoxes = [];
+  const domList = el("div", { class: "filter-options" });
+  ((db.taxonomy && db.taxonomy.domains) || []).forEach((d) => {
+    const cb = el("input", { type: "checkbox" });
+    domBoxes.push([d.id, cb]);
+    domList.appendChild(el("label", { class: "filter-opt" }, [cb, el("span", {}, [d.label || d.id])]));
+  });
+  const getDomains = () => domBoxes.filter(([, cb]) => cb.checked).map(([id]) => id);
+  form.appendChild(el("div", { class: "contrib-field" }, [
+    el("details", { class: "filter-group contrib-checks", open: "" }, [el("summary", {}, ["Domain(s) *"]), domList]),
   ]));
 
-  // Primary actions.
-  const actions = el("div", { class: "chips contribute-actions" }, [
-    el("a", { class: "answer-cta", href: newCardIssueUrl(NEW_MEASURE_SKELETON), target: "_blank", rel: "noopener" }, ["➕ Propose a new measure"]),
+  // Core fields.
+  CONTRIB_CORE_FIELDS.forEach((def) => form.appendChild(buildField(def, "")));
+
+  // Kind-specific groups: build all once, toggle visibility (no re-render).
+  const kindGroups = [];
+  Object.entries(CONTRIB_FIELDS_BY_KIND).forEach(([kind, defs]) => {
+    const g = el("div", { class: "contrib-kind-group", dataset: { kind } });
+    defs.forEach((def) => g.appendChild(buildField(def, kind + "::")));
+    kindGroups.push(g);
+    form.appendChild(g);
+  });
+  const applyKind = (kind) => kindGroups.forEach((g) => { g.hidden = g.dataset.kind !== kind; });
+  kindSel.addEventListener("change", () => applyKind(kindSel.value));
+  applyKind(kindSel.value);
+
+  // References repeater (≥ 1 row; a row needs a title).
+  const refList = el("div", { class: "contrib-refs" });
+  const addRefRow = (title = "", url = "") => {
+    const t = el("input", { type: "text", class: "llm-field contrib-input", placeholder: "Reference title" });
+    const u = el("input", { type: "text", class: "llm-field contrib-input", placeholder: "URL (optional)" });
+    t.value = title; u.value = url;
+    const rm = el("button", { type: "button", class: "contrib-ref-rm", title: "Remove" }, ["×"]);
+    const row = el("div", { class: "ref-row" }, [t, u, rm]);
+    row._get = () => ({ title: t.value.trim(), url: u.value.trim() });
+    rm.addEventListener("click", () => { row.remove(); if (!refList.children.length) addRefRow(); });
+    refList.appendChild(row);
+  };
+  addRefRow();
+  const getRefs = () => Array.from(refList.children).map((r) => r._get())
+    .filter((r) => r.title || r.url)
+    .map((r) => (r.url ? { title: r.title, url: r.url } : { title: r.title }));
+  const addRefBtn = el("button", { type: "button", class: "answer-cta" }, ["+ Add reference"]);
+  addRefBtn.addEventListener("click", () => addRefRow());
+  form.appendChild(el("div", { class: "contrib-field" }, [
+    el("label", { class: "field-label" }, ["References * (at least one with a title)"]),
+    refList, addRefBtn,
+  ]));
+
+  // Build the entry object (template field order; empty optional core fields dropped).
+  const collectEntry = () => {
+    const kind = kindSel.value;
+    const e = {
+      id: inputs.get("id")(),
+      canonical_name: inputs.get("canonical_name")(),
+      aliases: inputs.get("aliases")(),
+      kind,
+      domain: getDomains(),
+      subtopics: inputs.get("subtopics")(),
+      tags: inputs.get("tags")(),
+      short_description: inputs.get("short_description")(),
+      formula_latex: inputs.get("formula_latex")(),
+      formula_plaintext: inputs.get("formula_plaintext")(),
+      prerequisites: inputs.get("prerequisites")(),
+      related: inputs.get("related")(),
+      references: getRefs(),
+    };
+    (CONTRIB_FIELDS_BY_KIND[kind] || []).forEach((def) => {
+      const v = inputs.get(kind + "::" + def.key)();
+      if (!contribEmpty(v)) e[def.key] = v;
+    });
+    for (const k of ["aliases", "formula_latex", "formula_plaintext", "subtopics", "tags", "prerequisites", "related"]) {
+      if (contribEmpty(e[k])) delete e[k];
+    }
+    return e;
+  };
+
+  // Client validation mirroring the offline validator's core checks.
+  const validateEntry = (e) => {
+    const errs = [];
+    if (!e.id) errs.push("id is required");
+    else if (!CONTRIB_SLUG_RE.test(e.id)) errs.push("id must be a slug (lowercase letters, digits, - or _)");
+    if (!e.canonical_name) errs.push("Canonical name is required");
+    if (!e.short_description) errs.push("Short description is required");
+    if (!e.domain.length) errs.push("Select at least one domain");
+    if (!e.references.some((r) => r.title)) errs.push("Add at least one reference with a title");
+    e.references.forEach((r) => {
+      if (!r.url) return;
+      let bad = /\s/.test(r.url);
+      if (!bad) { try { new URL(r.url, "https://card.invalid/"); } catch { bad = true; } }
+      if (bad) errs.push(`Reference URL is malformed: ${r.url}`);
+    });
+    if (CONTRIB_LATEX_REQUIRED.has(e.kind) && !e.formula_latex) errs.push(`A ${e.kind} needs a formula (LaTeX)`);
+    if (e.kind === "measure" && !(e.input_types && e.input_types.length)) errs.push("A measure needs at least one input type");
+    if (e.formula_latex && !latexBalanced(e.formula_latex)) errs.push("Formula LaTeX has unbalanced braces or $");
+    return errs;
+  };
+
+  // Actions.
+  const errorBox = el("div", { class: "contrib-errors", role: "alert", tabindex: "-1" });
+  const status = el("span", { class: "chat-status contrib-status" });
+  const showErrors = (errs) => {
+    errorBox.textContent = "";
+    if (!errs.length) return;
+    errorBox.appendChild(el("p", {}, ["Please fix before submitting:"]));
+    errorBox.appendChild(el("ul", {}, errs.map((x) => el("li", {}, [x]))));
+    errorBox.scrollIntoView({ block: "nearest" });
+    errorBox.focus();
+  };
+  const issueBtn = el("button", { type: "button", class: "answer-cta primary" }, ["Open GitHub issue"]);
+  issueBtn.addEventListener("click", () => {
+    const e = collectEntry(), errs = validateEntry(e);
+    if (errs.length) return showErrors(errs);
+    showErrors([]);
+    window.open(newCardIssueUrl(e), "_blank", "noopener");
+    status.textContent = "Opened a prefilled GitHub issue for review.";
+  });
+  const copyBtn = el("button", { type: "button", class: "answer-cta" }, ["Copy card JSON"]);
+  copyBtn.addEventListener("click", async () => {
+    const e = collectEntry(), errs = validateEntry(e);
+    if (errs.length) return showErrors(errs);
+    showErrors([]);
+    try { await navigator.clipboard.writeText(JSON.stringify(e, null, 2)); copyBtn.textContent = "Copied!"; }
+    catch (_) { copyBtn.textContent = "Copy failed"; }
+    setTimeout(() => (copyBtn.textContent = "Copy card JSON"), 1400);
+  });
+  form.appendChild(errorBox);
+  form.appendChild(el("div", { class: "chips contribute-actions" }, [issueBtn, copyBtn, status]));
+  return form;
+}
+
+function buildContribInfo(db) {
+  const wrap = el("details", { class: "contrib-info" });
+  wrap.appendChild(el("summary", {}, ["Other ways to contribute & the entry schema"]));
+  wrap.appendChild(el("div", { class: "chips contribute-actions" }, [
     el("a", { class: "answer-cta", href: editUrl(), target: "_blank", rel: "noopener" }, ["✎ Edit measures.json on GitHub"]),
     el("a", { class: "answer-cta", href: "#/" }, ["🔎 Browse & edit an existing card"]),
-  ]);
-  root.appendChild(section("Ways to contribute", actions));
-
-  // How it works.
+  ]));
   const how = el("ol", { class: "contribute-steps" }, [
-    el("li", {}, ["Open any measure and use its ", el("strong", {}, ["Contribute"]), " box to edit it, or start from the buttons above."]),
-    el("li", {}, ["The ", el("a", { href: "#/linker" }, ["PDF Linker"]), " can draft a new entry for you: it flags a measure that isn't in the dictionary and the AI drafts a schema-valid card to download or propose."]),
-    el("li", {}, ["Open a pull request (or a prefilled issue). Continuous integration validates the data automatically — ids, types, and every cross-reference."]),
+    el("li", {}, ["Fill the form above; the ", el("a", { href: "#/linker" }, ["PDF Linker"]), " can also draft a card from a paper for you to review."]),
+    el("li", {}, ["Open the prefilled issue (or a pull request). CI validates the data automatically — schema, taxonomy, references, and every cross-reference."]),
     el("li", {}, ["A maintainer reviews and merges. GitHub Pages rebuilds and the card is live; existing annotated PDFs keep working because their links point to the permalink."]),
   ]);
-  root.appendChild(section("How it works", how));
+  wrap.appendChild(section("How it works", how));
 
-  // Schema summary.
   const schema = el("div", {});
-  schema.appendChild(el("p", { class: "muted" }, ["Each entry is one JSON object. The core fields:"]));
+  schema.appendChild(el("p", { class: "muted" }, ["Each entry is one JSON object. Core fields (every kind):"]));
   const dl = el("dl", { class: "schema-list" });
   [
-    ["id", "unique kebab-case slug (becomes the #/m/:id permalink)"],
+    ["id", "unique slug (becomes the #/m/:id permalink)"],
     ["canonical_name", "the primary display name"],
+    ["kind / domain", "taxonomy classification (see data/taxonomy.json)"],
     ["aliases", "other names it goes by — used by search and the PDF linker"],
-    ["input_types", "objects compared: vector, matrix, spd_matrix, probability_vector, …"],
-    ["symbols", "LaTeX symbol forms, e.g. D_{KL}(p\\|q)"],
+    ["short_description", "one precise sentence"],
     ["formula_latex / formula_plaintext", "the definition"],
-    ["properties", "{ nonnegative, symmetric, bounded, metric }"],
-    ["identities / inequalities", "cross-linked relations: { latex, refs, note }"],
-    ["related / references", "other measure ids and citations"],
+    ["prerequisites / related", "other card ids (relationship graph)"],
+    ["references", "1–3 real, authoritative sources { title, url }"],
   ].forEach(([k, v]) => {
     dl.appendChild(el("dt", {}, [k]));
     dl.appendChild(el("dd", {}, [v]));
   });
   schema.appendChild(dl);
   schema.appendChild(el("p", { class: "muted" }, [
-    "Full schema and validation rules live with the data: ",
-    el("a", { href: blobUrl(), target: "_blank", rel: "noopener" }, ["measures.json"]),
-    ". Set metric / symmetric / bounded / SPD flags from known mathematics, not guesses.",
+    "Kind-specific fields (measures add input_types, properties, …; theorems add a statement; etc.) live in ",
+    el("a", { href: blobUrl(), target: "_blank", rel: "noopener" }, ["the data"]),
+    " under data/templates/. Set metric / symmetric / bounded / SPD flags from known mathematics, not guesses.",
   ]));
-  root.appendChild(section("Entry schema", schema));
-
-  root.appendChild(el("p", { class: "muted" }, [
-    `The dictionary currently has ${db.measures.length} measures. No unreviewed math reaches the site — human review and CI gate every contribution.`,
-  ]));
-  return root;
+  wrap.appendChild(section("Entry schema", schema));
+  return wrap;
 }
 
 /* ------------------------------- pipeline --------------------------------- */

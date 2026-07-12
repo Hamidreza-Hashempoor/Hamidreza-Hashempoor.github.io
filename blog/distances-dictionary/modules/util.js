@@ -91,3 +91,25 @@ export function tokens(text) {
 export function clamp(x, lo, hi) {
   return Math.max(lo, Math.min(hi, x));
 }
+
+/**
+ * Structural LaTeX sanity check — shared by the offline validator
+ * (scripts/validate-cards.mjs) and the contribute form so both gates agree.
+ * Passes when the string is non-empty, has balanced { } (escaped \{ \} ignored),
+ * and an even number of unescaped $. This is a fast gate that catches truncation
+ * and brace typos, NOT a full TeX parse. The site renders with MathJax; katex, when
+ * installed, is only an optional stricter authoring lint layered on top of this.
+ */
+export function latexBalanced(s) {
+  if (typeof s !== "string" || !s.trim()) return false;
+  let depth = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c === "\\") { i++; continue; } // skip the escaped char (\{ \} \$ …)
+    if (c === "{") depth++;
+    else if (c === "}") { if (--depth < 0) return false; }
+  }
+  if (depth !== 0) return false;
+  const dollars = (s.replace(/\\\$/g, "").match(/\$/g) || []).length;
+  return dollars % 2 === 0;
+}

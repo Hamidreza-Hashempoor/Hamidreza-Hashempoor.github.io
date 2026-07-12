@@ -1,0 +1,2690 @@
+[
+  {
+    "id": "vector",
+    "canonical_name": "Vector",
+    "kind": "object",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "vectors-spaces"
+    ],
+    "short_description": "An element of a vector space, which can be added to other vectors and scaled by scalars; in R^n it is an ordered tuple of components.",
+    "definition": "A vector is an element of a vector space V over a field F. Concretely, a vector in F^n is an ordered n-tuple v = (v_1, ..., v_n) of scalars called its components (or coordinates). Vectors support two operations: addition of two vectors, done componentwise in F^n, and multiplication by a scalar, also done componentwise. More abstractly, a vector need not be a tuple: elements of function spaces, polynomial spaces, and matrix spaces are all vectors.",
+    "notation": "v, \\mathbf{v}, or \\vec{v}; components v_i; the zero vector 0.",
+    "formula_latex": "v = (v_1, v_2, \\ldots, v_n) \\in \\mathbb{F}^n, \\qquad (u+v)_i = u_i + v_i, \\quad (cv)_i = c\\,v_i",
+    "formula_plaintext": "v = (v_1, v_2, ..., v_n) in F^n; (u+v)_i = u_i + v_i; (c v)_i = c v_i",
+    "examples": [
+      "The pair (3, -1) in R^2.",
+      "The polynomial 1 + 2x - x^2 as a vector in the space of polynomials of degree <= 2.",
+      "The zero vector 0 = (0, ..., 0) in R^n."
+    ],
+    "worked_example": "In $\\mathbb{R}^3$, with $u=(1,0,2)$ and $v=(3,-1,1)$: $u+v=(4,-1,3)$ and $2u=(2,0,4)$.",
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right"
+      }
+    ]
+  },
+  {
+    "id": "vector-space",
+    "canonical_name": "Vector space",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "vectors-spaces"
+    ],
+    "short_description": "A set equipped with vector addition and scalar multiplication satisfying eight axioms, providing the abstract setting for all of linear algebra.",
+    "definition": "A vector space over a field F is a set V together with an addition V x V -> V and a scalar multiplication F x V -> V satisfying, for all u, v, w in V and a, b in F: (1) associativity of addition, (2) commutativity of addition, (3) existence of an additive identity 0, (4) existence of additive inverses -v, (5) 1v = v, (6) a(bv) = (ab)v, (7) a(u+v) = au + av, and (8) (a+b)v = av + bv. Elements of V are called vectors and elements of F scalars.",
+    "formula_latex": "a(u+v)=au+av,\\quad (a+b)v=av+bv,\\quad a(bv)=(ab)v,\\quad 1\\,v=v",
+    "formula_plaintext": "a(u+v)=au+av; (a+b)v=av+bv; a(bv)=(ab)v; 1v=v",
+    "examples": [
+      "R^n and C^n with componentwise operations.",
+      "The space of all real-valued functions on a set, with pointwise addition and scaling.",
+      "The space P_n of polynomials of degree at most n.",
+      "The space of m x n matrices over R."
+    ],
+    "references": [
+      {
+        "title": "Axler, Linear Algebra Done Right"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      }
+    ]
+  },
+  {
+    "id": "subspace",
+    "canonical_name": "Subspace",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "vectors-spaces"
+    ],
+    "short_description": "A subset of a vector space that is itself a vector space under the inherited operations, characterized by closure under addition and scalar multiplication.",
+    "definition": "A subset W of a vector space V over F is a subspace if it is nonempty and closed under the vector space operations. Equivalently, W is a subspace iff: (1) 0 in W, (2) u + v in W whenever u, v in W, and (3) cv in W whenever c in F and v in W. A subspace is automatically a vector space with the operations inherited from V.",
+    "formula_latex": "0 \\in W,\\quad u,v \\in W \\Rightarrow u+v \\in W,\\quad c \\in \\mathbb{F},\\, v \\in W \\Rightarrow cv \\in W",
+    "formula_plaintext": "0 in W; u,v in W => u+v in W; c in F, v in W => cv in W",
+    "examples": [
+      "Any line or plane through the origin in R^3.",
+      "The set {0} (the trivial subspace) and V itself.",
+      "The null space and column space of a matrix.",
+      "Polynomials of degree <= 2 inside the space of all polynomials."
+    ],
+    "worked_example": "In $\\mathbb{R}^2$, the line $\\{(t, 2t): t \\in \\mathbb{R}\\}$ is a subspace, but the line $\\{(t, 2t+1)\\}$ is not, since it does not contain $0$.",
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right"
+      }
+    ],
+    "prerequisites": [
+      "vector-space"
+    ]
+  },
+  {
+    "id": "linear-combination",
+    "canonical_name": "Linear combination",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "vectors-spaces"
+    ],
+    "short_description": "A sum of scalar multiples of given vectors; the basic construction from which spans, bases, and linear maps are built.",
+    "definition": "Given vectors v_1, ..., v_k in a vector space V over F and scalars c_1, ..., c_k in F, the vector c_1 v_1 + ... + c_k v_k is called a linear combination of v_1, ..., v_k. The scalars c_i are the coefficients of the combination. The combination is trivial if all coefficients are zero.",
+    "formula_latex": "\\sum_{i=1}^{k} c_i v_i = c_1 v_1 + c_2 v_2 + \\cdots + c_k v_k, \\qquad c_i \\in \\mathbb{F}",
+    "formula_plaintext": "sum_{i=1}^k c_i v_i = c_1 v_1 + ... + c_k v_k, c_i in F",
+    "examples": [
+      "3(1,0) + 2(0,1) = (3,2) in R^2.",
+      "Any vector in R^n as a linear combination of the standard basis vectors e_1, ..., e_n.",
+      "A weighted average is a linear combination with nonnegative coefficients summing to 1."
+    ],
+    "worked_example": "With $v_1=(1,1)$ and $v_2=(1,-1)$, the linear combination $2v_1 + 3v_2 = (5,-1)$.",
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right"
+      }
+    ],
+    "prerequisites": [
+      "vector"
+    ]
+  },
+  {
+    "id": "span",
+    "canonical_name": "Span",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "vectors-spaces"
+    ],
+    "short_description": "The set of all linear combinations of a given set of vectors, forming the smallest subspace containing them.",
+    "definition": "The span of a set of vectors S = {v_1, ..., v_k} in a vector space V, written span(S), is the set of all linear combinations of the vectors in S. It is a subspace of V, and it is the smallest subspace of V containing S. If span(S) = V, then S is said to span (or generate) V. By convention, the span of the empty set is {0}.",
+    "formula_latex": "\\operatorname{span}\\{v_1,\\ldots,v_k\\} = \\left\\{ \\sum_{i=1}^{k} c_i v_i : c_1,\\ldots,c_k \\in \\mathbb{F} \\right\\}",
+    "formula_plaintext": "span{v_1,...,v_k} = { sum_i c_i v_i : c_i in F }",
+    "examples": [
+      "The span of (1,0,0) and (0,1,0) is the xy-plane in R^3.",
+      "The span of a single nonzero vector is the line through the origin along it.",
+      "The standard basis vectors span R^n."
+    ],
+    "worked_example": "In $\\mathbb{R}^3$, $\\operatorname{span}\\{(1,0,0),(0,1,0)\\} = \\{(a,b,0): a,b \\in \\mathbb{R}\\}$, the $xy$-plane.",
+    "references": [
+      {
+        "title": "Axler, Linear Algebra Done Right"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      }
+    ],
+    "prerequisites": [
+      "linear-combination"
+    ]
+  },
+  {
+    "id": "linear-independence",
+    "canonical_name": "Linear independence",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "vectors-spaces"
+    ],
+    "short_description": "A property of a set of vectors in which no nontrivial linear combination equals the zero vector, ensuring no vector is redundant.",
+    "definition": "Vectors v_1, ..., v_k in a vector space V are linearly independent if the only solution to c_1 v_1 + ... + c_k v_k = 0 is c_1 = ... = c_k = 0. If some nontrivial choice of coefficients (not all zero) yields the zero vector, the vectors are linearly dependent. Equivalently, the vectors are dependent iff at least one of them is a linear combination of the others.",
+    "formula_latex": "\\sum_{i=1}^{k} c_i v_i = 0 \\;\\Longrightarrow\\; c_1 = c_2 = \\cdots = c_k = 0",
+    "formula_plaintext": "sum_i c_i v_i = 0  =>  c_1 = ... = c_k = 0",
+    "examples": [
+      "The standard basis vectors e_1, ..., e_n in R^n are linearly independent.",
+      "(1,2) and (2,4) are linearly dependent since (2,4) = 2(1,2).",
+      "Any set containing the zero vector is linearly dependent."
+    ],
+    "worked_example": "For $(1,0)$ and $(1,1)$ in $\\mathbb{R}^2$: $c_1(1,0)+c_2(1,1)=(c_1+c_2, c_2)=(0,0)$ forces $c_2=0$ then $c_1=0$, so they are independent.",
+    "references": [
+      {
+        "title": "Axler, Linear Algebra Done Right"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      }
+    ],
+    "prerequisites": [
+      "linear-combination"
+    ]
+  },
+  {
+    "id": "basis",
+    "canonical_name": "Basis",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "vectors-spaces"
+    ],
+    "short_description": "A linearly independent set of vectors that spans a vector space, giving every vector a unique representation as a linear combination.",
+    "definition": "A basis of a vector space V is a set of vectors that is both linearly independent and spans V. Equivalently, a basis is a set B such that every vector in V can be written uniquely as a linear combination of the vectors in B. Every vector space has a basis, and any two bases of the same space have the same number of elements.",
+    "formula_latex": "v = \\sum_{i=1}^{n} c_i b_i \\text{ uniquely for each } v \\in V, \\quad \\{b_1,\\ldots,b_n\\} \\text{ a basis}",
+    "formula_plaintext": "v = sum_i c_i b_i uniquely for each v in V, where {b_1,...,b_n} is a basis",
+    "examples": [
+      "The standard basis {e_1, ..., e_n} of R^n.",
+      "{1, x, x^2} is a basis of the polynomials of degree <= 2.",
+      "{(1,1),(1,-1)} is a basis of R^2."
+    ],
+    "worked_example": "In $\\mathbb{R}^2$, $\\{(1,0),(0,1)\\}$ is a basis: it is independent and spans, and $(a,b)=a(1,0)+b(0,1)$ uniquely.",
+    "references": [
+      {
+        "title": "Axler, Linear Algebra Done Right"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      }
+    ],
+    "prerequisites": [
+      "span",
+      "linear-independence"
+    ]
+  },
+  {
+    "id": "dimension",
+    "canonical_name": "Dimension",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "vectors-spaces"
+    ],
+    "short_description": "The number of vectors in any basis of a vector space, a well-defined invariant measuring its size.",
+    "definition": "The dimension of a vector space V, written dim V, is the number of vectors in a basis of V. This number is well-defined because all bases of a given vector space have the same cardinality. A space is finite-dimensional if it has a finite basis; otherwise it is infinite-dimensional. By convention dim{0} = 0.",
+    "formula_latex": "\\dim V = |B| \\text{ for any basis } B \\text{ of } V, \\qquad \\dim \\mathbb{F}^n = n",
+    "formula_plaintext": "dim V = |B| for any basis B of V; dim F^n = n",
+    "examples": [
+      "dim R^n = n.",
+      "The polynomials of degree <= n form a space of dimension n+1.",
+      "The space of m x n matrices has dimension mn.",
+      "dim{0} = 0."
+    ],
+    "references": [
+      {
+        "title": "Axler, Linear Algebra Done Right"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      }
+    ],
+    "prerequisites": [
+      "basis"
+    ]
+  },
+  {
+    "id": "coordinate-vector",
+    "canonical_name": "Coordinate vector",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "vectors-spaces"
+    ],
+    "short_description": "The tuple of coefficients expressing a vector relative to an ordered basis, encoding the vector as a column in F^n.",
+    "definition": "Let B = (b_1, ..., b_n) be an ordered basis of an n-dimensional vector space V over F. Every v in V has a unique expression v = c_1 b_1 + ... + c_n b_n. The coordinate vector of v relative to B is [v]_B = (c_1, ..., c_n)^T in F^n. The map v -> [v]_B is an isomorphism from V onto F^n, depending on the choice and ordering of the basis.",
+    "formula_latex": "v = \\sum_{i=1}^{n} c_i b_i \\;\\Longleftrightarrow\\; [v]_B = \\begin{pmatrix} c_1 \\\\ \\vdots \\\\ c_n \\end{pmatrix}",
+    "formula_plaintext": "v = sum_i c_i b_i  <=>  [v]_B = (c_1, ..., c_n)^T",
+    "examples": [
+      "Relative to the standard basis of R^n, [v]_B = v itself.",
+      "For the polynomial 3 + 2x^2 in P_2 with basis (1, x, x^2), the coordinate vector is (3, 0, 2)^T."
+    ],
+    "worked_example": "In $\\mathbb{R}^2$ with basis $B=((1,1),(1,-1))$, the vector $(3,1)$ satisfies $(3,1)=2(1,1)+1(1,-1)$, so $[v]_B=(2,1)^T$.",
+    "references": [
+      {
+        "title": "Axler, Linear Algebra Done Right"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      }
+    ],
+    "prerequisites": [
+      "basis"
+    ]
+  },
+  {
+    "id": "matrix",
+    "canonical_name": "Matrix",
+    "kind": "object",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "matrices"
+    ],
+    "short_description": "A rectangular array of numbers arranged in rows and columns that represents a linear map between finite-dimensional vector spaces.",
+    "definition": "An m-by-n matrix A over a field F is a rectangular array of scalars A_{ij} in F, with i indexing the m rows and j indexing the n columns. Relative to chosen bases, an m-by-n matrix represents a linear map from F^n to F^m via x -> Ax, and matrices of the same size form a vector space under entrywise addition and scalar multiplication.",
+    "notation": "A = (a_{ij}) \\in F^{m \\times n}; entry a_{ij} in row i, column j; A_{i,:} row, A_{:,j} column.",
+    "formula_latex": "A = \\begin{pmatrix} a_{11} & a_{12} & \\cdots & a_{1n} \\\\ a_{21} & a_{22} & \\cdots & a_{2n} \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ a_{m1} & a_{m2} & \\cdots & a_{mn} \\end{pmatrix} \\in F^{m \\times n}",
+    "formula_plaintext": "A = [a_{ij}], i=1..m, j=1..n, an m-by-n array over the field F.",
+    "examples": [
+      "A 2x3 real matrix [[1,0,2],[3,-1,4]] represents a linear map from R^3 to R^2.",
+      "A column vector in R^n is an n-by-1 matrix."
+    ],
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right"
+      }
+    ]
+  },
+  {
+    "id": "matrix-multiplication",
+    "canonical_name": "Matrix multiplication",
+    "kind": "transform",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "matrices"
+    ],
+    "short_description": "The row-by-column product of two compatible matrices, corresponding to composition of the linear maps they represent.",
+    "definition": "For A in F^{m x n} and B in F^{n x p}, the product C = AB in F^{m x p} has entries C_{ij} = sum_{k=1}^n A_{ik} B_{kj}. The number of columns of A must equal the number of rows of B. Matrix multiplication is associative and distributive over addition but not commutative in general; it represents composition of linear maps.",
+    "domain_of_definition": "Pairs (A, B) with A of size m x n and B of size n x p over a common field.",
+    "formula_latex": "(AB)_{ij} = \\sum_{k=1}^{n} A_{ik} B_{kj}, \\qquad A \\in F^{m\\times n},\\ B \\in F^{n\\times p}",
+    "formula_plaintext": "(AB)_{ij} = sum_{k=1}^n A_{ik} B_{kj}, for A in F^{m x n}, B in F^{n x p}.",
+    "worked_example": "For $A=\\begin{pmatrix}1&2\\\\0&1\\end{pmatrix}$, $B=\\begin{pmatrix}3&0\\\\1&4\\end{pmatrix}$, $AB=\\begin{pmatrix}5&8\\\\1&4\\end{pmatrix}$.",
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Horn & Johnson, Matrix Analysis"
+      }
+    ],
+    "prerequisites": [
+      "matrix"
+    ]
+  },
+  {
+    "id": "transpose",
+    "canonical_name": "Transpose",
+    "kind": "transform",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "matrices"
+    ],
+    "short_description": "The operation that swaps the rows and columns of a matrix, sending an m-by-n matrix to its n-by-m mirror across the main diagonal.",
+    "definition": "The transpose of A in F^{m x n} is the matrix A^T in F^{n x m} with (A^T)_{ij} = A_{ji}. Transposition is linear, is its own inverse, and reverses products: (AB)^T = B^T A^T. It represents the dual (adjoint) map with respect to standard bilinear pairings.",
+    "inverse_latex": "(A^{T})^{T} = A",
+    "domain_of_definition": "All matrices A in F^{m x n}.",
+    "formula_latex": "(A^{T})_{ij} = A_{ji}, \\qquad (AB)^{T} = B^{T}A^{T}",
+    "formula_plaintext": "(A^T)_{ij} = A_{ji}; (AB)^T = B^T A^T.",
+    "worked_example": "If $A=\\begin{pmatrix}1&2&3\\\\4&5&6\\end{pmatrix}$ then $A^{T}=\\begin{pmatrix}1&4\\\\2&5\\\\3&6\\end{pmatrix}$.",
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right"
+      }
+    ],
+    "prerequisites": [
+      "matrix"
+    ]
+  },
+  {
+    "id": "identity-matrix",
+    "canonical_name": "Identity matrix",
+    "kind": "object",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "matrices"
+    ],
+    "short_description": "The square matrix with ones on the main diagonal and zeros elsewhere, acting as the multiplicative identity for matrices.",
+    "definition": "The n-by-n identity matrix I_n has entries (I_n)_{ij} = delta_{ij} (the Kronecker delta), i.e. ones on the main diagonal and zeros elsewhere. It satisfies A I = A and I A = A whenever the products are defined, and represents the identity linear map on F^n.",
+    "notation": "I_n or I; entries (I_n)_{ij} = \\delta_{ij}.",
+    "formula_latex": "(I_n)_{ij} = \\delta_{ij}, \\qquad AI = IA = A",
+    "formula_plaintext": "(I_n)_{ij} = delta_{ij}; AI = IA = A.",
+    "examples": [
+      "I_2 = [[1,0],[0,1]].",
+      "I_3 = [[1,0,0],[0,1,0],[0,0,1]]."
+    ],
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Horn & Johnson, Matrix Analysis"
+      }
+    ],
+    "prerequisites": [
+      "matrix"
+    ]
+  },
+  {
+    "id": "matrix-inverse",
+    "canonical_name": "Matrix inverse",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "matrices"
+    ],
+    "short_description": "The unique matrix A^{-1} undoing a square matrix A, satisfying A A^{-1} = A^{-1} A = I, which exists exactly when det(A) is nonzero.",
+    "definition": "A square matrix A in F^{n x n} is invertible (nonsingular) if there exists A^{-1} in F^{n x n} with A A^{-1} = A^{-1} A = I_n; when it exists this inverse is unique. Over a field, A is invertible iff det(A) != 0, equivalently iff A has full rank n, equivalently iff its columns are linearly independent. For products, (AB)^{-1} = B^{-1} A^{-1}.",
+    "formula_latex": "A A^{-1} = A^{-1} A = I_n; \\qquad A^{-1} = \\frac{1}{\\det A}\\,\\operatorname{adj}(A)\\ \\ (\\det A \\neq 0)",
+    "formula_plaintext": "A A^{-1} = A^{-1} A = I_n; A^{-1} = adj(A)/det(A) when det(A) != 0.",
+    "examples": [
+      "For A=[[a,b],[c,d]] with ad-bc != 0, A^{-1} = (1/(ad-bc)) [[d,-b],[-c,a]].",
+      "The identity is its own inverse: I^{-1} = I."
+    ],
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right"
+      }
+    ],
+    "prerequisites": [
+      "matrix-multiplication",
+      "identity-matrix",
+      "determinant"
+    ]
+  },
+  {
+    "id": "diagonal-matrix",
+    "canonical_name": "Diagonal matrix",
+    "kind": "object",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "matrices"
+    ],
+    "short_description": "A square matrix whose only possibly nonzero entries lie on the main diagonal, so it scales each coordinate axis independently.",
+    "definition": "A square matrix D in F^{n x n} is diagonal if D_{ij} = 0 for all i != j; it is written D = diag(d_1, ..., d_n) with the d_i on the diagonal. Diagonal matrices are closed under sums and products, multiply entrywise on the diagonal, and D is invertible iff every d_i != 0, with D^{-1} = diag(1/d_1, ..., 1/d_n).",
+    "notation": "D = \\operatorname{diag}(d_1, \\dots, d_n); D_{ij} = d_i \\delta_{ij}.",
+    "formula_latex": "D = \\operatorname{diag}(d_1,\\dots,d_n), \\qquad D_{ij} = d_i\\,\\delta_{ij}",
+    "formula_plaintext": "D = diag(d_1,...,d_n); D_{ij} = d_i * delta_{ij}.",
+    "examples": [
+      "diag(2,5) = [[2,0],[0,5]].",
+      "The identity matrix is the diagonal matrix diag(1,...,1)."
+    ],
+    "references": [
+      {
+        "title": "Horn & Johnson, Matrix Analysis"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      }
+    ],
+    "prerequisites": [
+      "matrix"
+    ]
+  },
+  {
+    "id": "triangular-matrix",
+    "canonical_name": "Triangular matrix",
+    "kind": "object",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "matrices"
+    ],
+    "short_description": "A square matrix with all zeros below (upper) or above (lower) the main diagonal, central to LU factorization and back substitution.",
+    "definition": "A square matrix U is upper triangular if U_{ij} = 0 whenever i > j, and L is lower triangular if L_{ij} = 0 whenever i < j. Triangular matrices are closed under multiplication, and the determinant equals the product of the diagonal entries; such a matrix is invertible iff all its diagonal entries are nonzero.",
+    "notation": "Upper: U_{ij}=0 for i>j. Lower: L_{ij}=0 for i<j.",
+    "formula_latex": "U_{ij} = 0\\ (i > j), \\qquad \\det U = \\prod_{i=1}^{n} U_{ii}",
+    "formula_plaintext": "Upper triangular: U_{ij}=0 for i>j; det U = product of diagonal entries U_{ii}.",
+    "examples": [
+      "[[1,2,3],[0,4,5],[0,0,6]] is upper triangular with determinant 24.",
+      "[[1,0],[7,2]] is lower triangular."
+    ],
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Golub & Van Loan, Matrix Computations"
+      }
+    ],
+    "prerequisites": [
+      "matrix"
+    ]
+  },
+  {
+    "id": "symmetric-matrix",
+    "canonical_name": "Symmetric matrix",
+    "kind": "object",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "matrices"
+    ],
+    "short_description": "A square real matrix equal to its own transpose, whose eigenvalues are real and which is orthogonally diagonalizable by the spectral theorem.",
+    "definition": "A real square matrix A in R^{n x n} is symmetric if A = A^T, i.e. A_{ij} = A_{ji} for all i, j. By the spectral theorem every real symmetric matrix has real eigenvalues and an orthonormal basis of eigenvectors, so A = Q Lambda Q^T for an orthogonal Q and diagonal Lambda. Symmetric matrices correspond to symmetric bilinear forms.",
+    "notation": "A = A^{T}, i.e. A_{ij} = A_{ji}.",
+    "formula_latex": "A = A^{T} \\iff A_{ij} = A_{ji} \\ \\forall i,j",
+    "formula_plaintext": "A = A^T, equivalently A_{ij} = A_{ji} for all i, j.",
+    "examples": [
+      "[[2,1],[1,3]] is symmetric.",
+      "Any Gram matrix B^T B is symmetric."
+    ],
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Horn & Johnson, Matrix Analysis"
+      }
+    ],
+    "prerequisites": [
+      "transpose"
+    ],
+    "related": [
+      "hermitian-matrix"
+    ]
+  },
+  {
+    "id": "orthogonal-matrix",
+    "canonical_name": "Orthogonal matrix",
+    "kind": "object",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "matrices"
+    ],
+    "short_description": "A real square matrix whose columns form an orthonormal basis, so Q^T Q = I and Q preserves lengths and inner products.",
+    "definition": "A real square matrix Q in R^{n x n} is orthogonal if Q^T Q = Q Q^T = I, equivalently its columns (and rows) form an orthonormal set. Then Q^{-1} = Q^T, Q preserves the Euclidean inner product and norm (||Qx|| = ||x||), and det(Q) = +-1. Orthogonal matrices form the group O(n).",
+    "notation": "Q^{T}Q = I, Q^{-1} = Q^{T}.",
+    "formula_latex": "Q^{T}Q = QQ^{T} = I \\implies Q^{-1} = Q^{T},\\ \\det Q = \\pm 1",
+    "formula_plaintext": "Q^T Q = Q Q^T = I, so Q^{-1} = Q^T and det(Q) = +-1.",
+    "examples": [
+      "A 2D rotation [[cos t, -sin t],[sin t, cos t]] is orthogonal.",
+      "Any permutation matrix is orthogonal."
+    ],
+    "references": [
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      }
+    ],
+    "prerequisites": [
+      "orthonormal-basis"
+    ],
+    "related": [
+      "unitary-matrix"
+    ]
+  },
+  {
+    "id": "permutation-matrix",
+    "canonical_name": "Permutation matrix",
+    "kind": "object",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "matrices"
+    ],
+    "short_description": "A square 0-1 matrix obtained by permuting the rows of the identity, whose action reorders the entries of a vector.",
+    "definition": "A permutation matrix P is a square matrix obtained by permuting the rows (or columns) of the identity, so it has exactly one 1 in each row and each column and zeros elsewhere. For a permutation sigma, (P_sigma)_{ij} = 1 iff i = sigma(j). Permutation matrices are orthogonal (P^{-1} = P^T), have determinant equal to the sign of the permutation, and multiplying by P reorders coordinates.",
+    "notation": "P_\\sigma with (P_\\sigma)_{ij} = \\delta_{i,\\sigma(j)}; P^{-1} = P^{T}.",
+    "formula_latex": "(P_\\sigma)_{ij} = \\delta_{i,\\sigma(j)}, \\qquad P^{-1} = P^{T},\\ \\det P = \\operatorname{sgn}(\\sigma)",
+    "formula_plaintext": "(P_sigma)_{ij} = delta_{i, sigma(j)}; P^{-1} = P^T; det P = sgn(sigma).",
+    "examples": [
+      "[[0,1],[1,0]] swaps the two coordinates of a vector.",
+      "The identity is the permutation matrix of the identity permutation."
+    ],
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Golub & Van Loan, Matrix Computations"
+      }
+    ],
+    "prerequisites": [
+      "matrix"
+    ]
+  },
+  {
+    "id": "block-matrix",
+    "canonical_name": "Block matrix",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "matrices"
+    ],
+    "short_description": "A matrix partitioned into rectangular submatrix blocks, allowing arithmetic to be carried out blockwise when the partitions are conformable.",
+    "definition": "A block (partitioned) matrix is a matrix whose entries are grouped into rectangular submatrices (blocks) by partitioning its rows and columns. With conformable partitions, addition and multiplication can be performed blockwise using the same formulas as for scalar entries, e.g. treating blocks A_{IK} and B_{KJ} as elements. Block-diagonal and block-triangular structures simplify determinants and inverses.",
+    "formula_latex": "M = \\begin{pmatrix} A & B \\\\ C & D \\end{pmatrix}, \\qquad (MN)_{IJ} = \\sum_{K} M_{IK} N_{KJ}",
+    "formula_plaintext": "M = [[A,B],[C,D]]; block product (MN)_{IJ} = sum_K M_{IK} N_{KJ} for conformable partitions.",
+    "examples": [
+      "For a block-diagonal M = diag(A, D), det(M) = det(A) det(D).",
+      "For block-upper-triangular [[A,B],[0,D]], det = det(A) det(D)."
+    ],
+    "references": [
+      {
+        "title": "Horn & Johnson, Matrix Analysis"
+      },
+      {
+        "title": "Golub & Van Loan, Matrix Computations"
+      }
+    ]
+  },
+  {
+    "id": "trace",
+    "canonical_name": "Trace",
+    "kind": "function",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "matrices"
+    ],
+    "short_description": "The sum of the diagonal entries of a square matrix; it is linear, cyclic, basis-invariant, and equals the sum of the eigenvalues.",
+    "definition": "The trace of a square matrix A in F^{n x n} is tr(A) = sum_{i=1}^n A_{ii}, the sum of its diagonal entries. It is linear, satisfies the cyclic property tr(AB) = tr(BA), and is invariant under similarity (tr(P^{-1} A P) = tr(A)); consequently it equals the sum of the eigenvalues counted with multiplicity (over an algebraically closed field, or counting complex eigenvalues).",
+    "domain_of_definition": "All square matrices A in F^{n x n}.",
+    "range": "The underlying field F (all of R for real matrices).",
+    "formula_latex": "\\operatorname{tr}(A) = \\sum_{i=1}^{n} A_{ii} = \\sum_{i=1}^{n} \\lambda_i",
+    "formula_plaintext": "tr(A) = sum_{i=1}^n A_{ii} = sum of eigenvalues lambda_i.",
+    "worked_example": "For $A=\\begin{pmatrix}2&7\\\\1&5\\end{pmatrix}$, $\\operatorname{tr}(A)=2+5=7$.",
+    "references": [
+      {
+        "title": "Horn & Johnson, Matrix Analysis"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right"
+      }
+    ]
+  },
+  {
+    "id": "linear-transformation",
+    "canonical_name": "Linear transformation",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "linear-maps"
+    ],
+    "short_description": "A map between vector spaces that preserves vector addition and scalar multiplication, so it is completely determined by its action on a basis.",
+    "definition": "Let V and W be vector spaces over the same field F. A function T: V -> W is a linear transformation (linear map) if for all u, v in V and all scalars c in F it satisfies additivity T(u+v) = T(u) + T(v) and homogeneity T(cv) = cT(v). Equivalently, T(cu + dv) = cT(u) + dT(v) for all scalars c, d. Every linear map satisfies T(0) = 0. When V is finite-dimensional, T is fully determined by the images of the basis vectors, and choosing bases for V and W represents T by a matrix acting on coordinate vectors.",
+    "formula_latex": "T(c\\mathbf{u} + d\\mathbf{v}) = c\\,T(\\mathbf{u}) + d\\,T(\\mathbf{v})",
+    "formula_plaintext": "T(c*u + d*v) = c*T(u) + d*T(v) for all vectors u, v and scalars c, d",
+    "examples": [
+      "Multiplication by a fixed m x n matrix A: T(x) = Ax defines a linear map from F^n to F^m.",
+      "Differentiation D(f) = f' on the space of polynomials is linear.",
+      "Rotation of the plane about the origin by a fixed angle is a linear transformation of R^2."
+    ],
+    "references": [
+      {
+        "title": "Axler, Linear Algebra Done Right, Chapter 3 (Linear Maps)"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      }
+    ],
+    "prerequisites": [
+      "vector-space",
+      "linear-combination"
+    ]
+  },
+  {
+    "id": "kernel",
+    "canonical_name": "Kernel (null space)",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "linear-maps"
+    ],
+    "short_description": "The set of all vectors a linear map sends to zero; it is a subspace and measures the map's failure to be injective.",
+    "definition": "For a linear map T: V -> W, the kernel (or null space) is ker(T) = { v in V : T(v) = 0 }. It is a subspace of the domain V. For a matrix A, the null space is N(A) = { x : Ax = 0 }. The kernel is trivial (equal to {0}) if and only if T is injective. Its dimension is the nullity, and it consists exactly of the solutions of the homogeneous system Ax = 0.",
+    "formula_latex": "\\ker(T) = \\{\\, \\mathbf{v} \\in V : T(\\mathbf{v}) = \\mathbf{0} \\,\\}",
+    "formula_plaintext": "ker(T) = { v in V : T(v) = 0 }",
+    "examples": [
+      "For A = [[1,2],[2,4]], the null space is spanned by (2,-1), since Ax = 0 gives x1 = -2 x2.",
+      "The kernel of differentiation on polynomials is the set of constant functions."
+    ],
+    "references": [
+      {
+        "title": "Axler, Linear Algebra Done Right, Chapter 3 (Null Spaces)"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      }
+    ],
+    "prerequisites": [
+      "linear-transformation"
+    ],
+    "related": [
+      "image-range"
+    ]
+  },
+  {
+    "id": "image-range",
+    "canonical_name": "Image (column space)",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "linear-maps"
+    ],
+    "short_description": "The set of all outputs of a linear map; for a matrix it is the span of its columns, and it measures surjectivity.",
+    "definition": "For a linear map T: V -> W, the image (or range) is im(T) = { T(v) : v in V }, a subspace of the codomain W. For a matrix A with columns a_1, ..., a_n, the image equals the column space C(A) = span{a_1, ..., a_n} = { Ax : x in F^n }. The map T is surjective if and only if im(T) = W. The dimension of the image is the rank of T.",
+    "formula_latex": "\\operatorname{im}(T) = \\{\\, T(\\mathbf{v}) : \\mathbf{v} \\in V \\,\\} = \\operatorname{span}\\{\\mathbf{a}_1, \\dots, \\mathbf{a}_n\\}",
+    "formula_plaintext": "im(T) = { T(v) : v in V } = span{a_1, ..., a_n} (columns of A)",
+    "examples": [
+      "For A = [[1,2],[2,4]], the column space is the line spanned by (1,2), since both columns are multiples of it.",
+      "The image of a rotation of R^2 is all of R^2 (it is surjective)."
+    ],
+    "references": [
+      {
+        "title": "Axler, Linear Algebra Done Right, Chapter 3 (Range)"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra (Column Space)"
+      }
+    ],
+    "prerequisites": [
+      "linear-transformation"
+    ]
+  },
+  {
+    "id": "rank",
+    "canonical_name": "Rank",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "linear-maps"
+    ],
+    "short_description": "The dimension of the image (column space) of a linear map or matrix, counting the number of linearly independent columns.",
+    "definition": "The rank of a linear map T: V -> W is rank(T) = dim(im(T)). For a matrix A, rank(A) = dim C(A), the number of linearly independent columns, which equals the number of linearly independent rows (row rank equals column rank) and the number of nonzero pivots in row echelon form. An m x n matrix has rank at most min(m, n); it has full rank when equality holds.",
+    "formula_latex": "\\operatorname{rank}(T) = \\dim\\bigl(\\operatorname{im}(T)\\bigr)",
+    "formula_plaintext": "rank(T) = dim(im(T)) = dim of column space of A",
+    "examples": [
+      "A = [[1,2],[2,4]] has rank 1, since its two columns are linearly dependent.",
+      "The 3 x 3 identity matrix has rank 3 (full rank)."
+    ],
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra (Rank)"
+      },
+      {
+        "title": "Horn & Johnson, Matrix Analysis"
+      }
+    ],
+    "prerequisites": [
+      "image-range"
+    ],
+    "related": [
+      "nullity"
+    ]
+  },
+  {
+    "id": "nullity",
+    "canonical_name": "Nullity",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "linear-maps"
+    ],
+    "short_description": "The dimension of the kernel (null space) of a linear map or matrix; the number of free variables in the homogeneous system Ax = 0.",
+    "definition": "The nullity of a linear map T: V -> W is nullity(T) = dim(ker(T)). For a matrix A, it is dim N(A), the dimension of the solution space of Ax = 0, equal to the number of free (non-pivot) columns in row echelon form, i.e. n - rank(A) for an m x n matrix. The nullity is zero exactly when the map is injective.",
+    "formula_latex": "\\operatorname{nullity}(T) = \\dim\\bigl(\\ker(T)\\bigr)",
+    "formula_plaintext": "nullity(T) = dim(ker(T)) = dim of null space of A",
+    "examples": [
+      "A = [[1,2],[2,4]] (2 columns, rank 1) has nullity 1.",
+      "An invertible n x n matrix has nullity 0."
+    ],
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right"
+      }
+    ],
+    "prerequisites": [
+      "kernel"
+    ]
+  },
+  {
+    "id": "rank-nullity-theorem",
+    "canonical_name": "Rank-nullity theorem",
+    "kind": "theorem",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "linear-maps"
+    ],
+    "short_description": "For a linear map on a finite-dimensional domain, the rank plus the nullity equals the dimension of the domain.",
+    "statement": "Let V be a finite-dimensional vector space and T: V -> W a linear map. Then dim(ker(T)) + dim(im(T)) = dim(V); equivalently rank(T) + nullity(T) = dim(V). For an m x n matrix A this reads rank(A) + nullity(A) = n, the number of columns.",
+    "formula_latex": "\\operatorname{rank}(T) + \\operatorname{nullity}(T) = \\dim(V)",
+    "formula_plaintext": "rank(T) + nullity(T) = dim(V); for an m x n matrix, rank(A) + nullity(A) = n",
+    "proof_sketch": "Choose a basis v_1, ..., v_k of ker(T), where k = nullity(T). Extend it to a basis v_1, ..., v_k, u_1, ..., u_r of V, so dim(V) = k + r. One shows T(u_1), ..., T(u_r) form a basis of im(T): they span the image because the T(v_i) vanish, and they are linearly independent because any dependence pulls back to a vector in the kernel expressible in the v_i, forcing all coefficients to be zero. Hence rank(T) = r and rank + nullity = r + k = dim(V).",
+    "consequences": [
+      "For a square matrix (V and W of equal finite dimension), injectivity is equivalent to surjectivity, hence to invertibility.",
+      "A linear map from a higher-dimensional space to a lower-dimensional one must have nonzero nullity, so it cannot be injective."
+    ],
+    "worked_example": "For $A = \\begin{bmatrix}1&2\\\\2&4\\end{bmatrix}$ we have $n = 2$, $\\operatorname{rank}(A) = 1$, so nullity $= 2 - 1 = 1$, matching the one-dimensional null space spanned by $(2,-1)$.",
+    "references": [
+      {
+        "title": "Axler, Linear Algebra Done Right, Fundamental Theorem of Linear Maps"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      }
+    ],
+    "prerequisites": [
+      "rank",
+      "nullity",
+      "kernel",
+      "image-range"
+    ]
+  },
+  {
+    "id": "change-of-basis",
+    "canonical_name": "Change of basis",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "linear-maps"
+    ],
+    "short_description": "The coordinate transformation relating the representations of a vector in two different bases, effected by an invertible change-of-basis matrix.",
+    "definition": "Given two bases B and C of a finite-dimensional vector space V, every vector has coordinate vectors [v]_B and [v]_C. The change-of-basis matrix P (from B to C) has as its columns the C-coordinates of the B-basis vectors, and it converts coordinates by [v]_C = P [v]_B. P is invertible, with P^{-1} converting from C to B. For a linear operator T represented by matrix A in basis B and A' in basis C, the representations are related by A' = P A P^{-1}, i.e. similar matrices represent the same operator in different bases.",
+    "formula_latex": "[\\mathbf{v}]_C = P\\,[\\mathbf{v}]_B, \\qquad A' = P\\,A\\,P^{-1}",
+    "formula_plaintext": "[v]_C = P [v]_B, and A' = P A P^{-1} for the operator's matrix in the new basis",
+    "examples": [
+      "In R^2, changing from the standard basis to the basis {(1,1),(1,-1)} is done by a 2x2 change-of-basis matrix whose columns express the new basis vectors.",
+      "Diagonalizing A = P D P^{-1} expresses the operator in a basis of eigenvectors, where its matrix is diagonal."
+    ],
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra (Change of Basis)"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right"
+      }
+    ],
+    "prerequisites": [
+      "basis",
+      "coordinate-vector"
+    ]
+  },
+  {
+    "id": "similar-matrices",
+    "canonical_name": "Similar matrices",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "linear-maps"
+    ],
+    "short_description": "Two square matrices are similar when related by B = P^{-1}AP for an invertible P, meaning they represent the same linear operator in different bases.",
+    "definition": "Square matrices A and B of the same size are similar if there exists an invertible matrix P such that B = P^{-1} A P. Similarity is an equivalence relation. Similar matrices represent the same linear operator with respect to different bases, and they share many invariants: the same characteristic polynomial, eigenvalues (with multiplicities), determinant, trace, and rank. A matrix is diagonalizable exactly when it is similar to a diagonal matrix.",
+    "formula_latex": "B = P^{-1} A P, \\quad P \\text{ invertible}",
+    "formula_plaintext": "B = P^{-1} A P for some invertible matrix P",
+    "examples": [
+      "A diagonalizable matrix A is similar to the diagonal matrix D of its eigenvalues via A = P D P^{-1}, where P holds the eigenvectors.",
+      "The matrices [[2,1],[0,2]] and [[2,0],[1,2]] are similar (a matrix is always similar to its transpose over a field)."
+    ],
+    "references": [
+      {
+        "title": "Horn & Johnson, Matrix Analysis (Similarity)"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right"
+      }
+    ],
+    "prerequisites": [
+      "change-of-basis"
+    ]
+  },
+  {
+    "id": "determinant",
+    "canonical_name": "Determinant",
+    "kind": "function",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "determinants"
+    ],
+    "short_description": "A scalar function of a square matrix giving the signed volume-scaling factor of its linear map; it is nonzero exactly when the matrix is invertible.",
+    "definition": "The determinant assigns to each n-by-n matrix A over a field a scalar det(A). It is the unique function that is multilinear and alternating in the columns (or rows) of A and satisfies det(I)=1. Equivalently, it equals the signed n-dimensional volume of the parallelepiped spanned by the columns of A, and det(A) is the product of the eigenvalues of A counted with multiplicity.",
+    "formula_latex": "\\det(A) = \\sum_{\\sigma \\in S_n} \\operatorname{sgn}(\\sigma) \\prod_{i=1}^{n} a_{i,\\sigma(i)}",
+    "formula_plaintext": "det(A) = sum over permutations sigma in S_n of sgn(sigma) * product_{i=1}^n a_{i,sigma(i)}",
+    "domain_of_definition": "Square matrices A in F^{n x n} over a field F (commonly R or C).",
+    "range": "A scalar in the field F; det(A) = 0 iff A is singular (non-invertible).",
+    "notation": "det(A) or |A|",
+    "worked_example": "For $A=\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}$, $\\det(A)=ad-bc$. E.g. $\\begin{pmatrix} 2 & 1 \\\\ 1 & 3 \\end{pmatrix}$ has determinant $2\\cdot 3 - 1\\cdot 1 = 5 \\neq 0$, so the matrix is invertible.",
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra, Chapter 5 (Determinants)"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right, Chapter on Determinants"
+      },
+      {
+        "title": "Determinant — Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Determinant"
+      }
+    ]
+  },
+  {
+    "id": "cofactor-expansion",
+    "canonical_name": "Cofactor (Laplace) expansion",
+    "kind": "method",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "determinants"
+    ],
+    "short_description": "A recursive method to compute a determinant by expanding along a chosen row or column as a signed sum of entries times minors.",
+    "summary": "The determinant of an n-by-n matrix is expressed as a sum along any fixed row i (or column j) of each entry times its cofactor, where the cofactor is a signed (n-1)-by-(n-1) minor. Applying this recursively reduces the computation to smaller determinants until reaching the 1-by-1 base case.",
+    "formula_latex": "\\det(A) = \\sum_{j=1}^{n} a_{ij} C_{ij}, \\qquad C_{ij} = (-1)^{i+j} M_{ij}",
+    "formula_plaintext": "det(A) = sum_{j=1}^n a_{ij} * C_{ij}, where C_{ij} = (-1)^(i+j) * M_{ij}",
+    "inputs": [
+      "An n-by-n matrix A",
+      "A chosen row index i (or column index j) for expansion"
+    ],
+    "outputs": [
+      "The scalar det(A)"
+    ],
+    "steps": [
+      "Choose a row i (or column j), preferably one with many zeros to reduce work.",
+      "For each entry a_{ij} in that row, form the minor M_{ij}: the determinant of the (n-1)-by-(n-1) submatrix obtained by deleting row i and column j.",
+      "Compute the cofactor C_{ij} = (-1)^{i+j} M_{ij}.",
+      "Sum a_{ij} * C_{ij} over the entries of the chosen row (or column).",
+      "Recurse on each minor until reaching 1-by-1 matrices, whose determinant is the single entry."
+    ],
+    "complexity": "O(n!) operations if applied naively without reusing subcomputations; feasible only for small n.",
+    "worked_example": "Expanding $\\begin{pmatrix} 1 & 2 & 3 \\\\ 0 & 4 & 5 \\\\ 1 & 0 & 6 \\end{pmatrix}$ along the first row: $1\\cdot(4\\cdot 6-5\\cdot 0) - 2\\cdot(0\\cdot 6-5\\cdot 1) + 3\\cdot(0\\cdot 0-4\\cdot 1) = 24 +10 -12 = 22.$",
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra, Chapter 5 (Determinants)"
+      },
+      {
+        "title": "Horn & Johnson, Matrix Analysis, Section 0.3"
+      },
+      {
+        "title": "Laplace expansion — Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Laplace_expansion"
+      }
+    ],
+    "prerequisites": [
+      "determinant"
+    ]
+  },
+  {
+    "id": "cramers-rule",
+    "canonical_name": "Cramer's rule",
+    "kind": "theorem",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "determinants"
+    ],
+    "short_description": "For a square system Ax=b with det(A) nonzero, each unknown equals a ratio of determinants, giving a closed-form solution.",
+    "statement": "Let A be an n-by-n matrix with det(A) != 0, and let Ax = b. Then the unique solution has components x_i = det(A_i) / det(A), where A_i is the matrix formed by replacing the i-th column of A with the vector b.",
+    "formula_latex": "x_i = \\frac{\\det(A_i)}{\\det(A)}, \\qquad i = 1, \\dots, n",
+    "formula_plaintext": "x_i = det(A_i) / det(A), for i = 1, ..., n, where A_i is A with its i-th column replaced by b",
+    "conditions": [
+      "A is square (n-by-n)",
+      "det(A) != 0 (A is invertible)"
+    ],
+    "proof_sketch": "Since det(A) != 0, A is invertible and the solution is unique. Consider the matrix X_i obtained from the identity by replacing its i-th column with x. Then A X_i = A_i (the columns of A X_i are the columns of A except the i-th, which is Ax = b). Taking determinants and using multiplicativity, det(A) det(X_i) = det(A_i). Because X_i is the identity with one column replaced by x, det(X_i) = x_i (by cofactor expansion). Hence x_i = det(A_i)/det(A).",
+    "consequences": [
+      "Provides an explicit formula for the inverse via cofactors: A^{-1} = adj(A)/det(A).",
+      "Confirms the solution depends continuously (rationally) on the entries of A and b when det(A) != 0.",
+      "Mainly of theoretical value; it is computationally inefficient compared to Gaussian elimination."
+    ],
+    "worked_example": "For $\\begin{pmatrix} 2 & 1 \\\\ 1 & 3 \\end{pmatrix}\\mathbf{x} = \\begin{pmatrix} 3 \\\\ 5 \\end{pmatrix}$, $\\det(A)=5$. Then $x_1 = \\det\\begin{pmatrix} 3 & 1 \\\\ 5 & 3 \\end{pmatrix}/5 = 4/5$ and $x_2 = \\det\\begin{pmatrix} 2 & 3 \\\\ 1 & 5 \\end{pmatrix}/5 = 7/5.$",
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra, Chapter 5 (Determinants)"
+      },
+      {
+        "title": "Horn & Johnson, Matrix Analysis, Section 0.8"
+      },
+      {
+        "title": "Cramer's rule — Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Cramer%27s_rule"
+      }
+    ],
+    "prerequisites": [
+      "determinant"
+    ]
+  },
+  {
+    "id": "eigenvalue-eigenvector",
+    "canonical_name": "Eigenvalue and eigenvector",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "eigen"
+    ],
+    "short_description": "A nonzero vector whose direction is preserved by a linear map, scaled by a scalar eigenvalue, capturing the map's invariant axes.",
+    "definition": "For a square matrix A over a field, a scalar lambda is an eigenvalue and a nonzero vector v is a corresponding eigenvector if A v = lambda v. Equivalently, v lies in the null space of A - lambda I, and lambda is a root of det(A - lambda I) = 0. Eigenvectors sharing an eigenvalue together with the zero vector form the eigenspace, a subspace whose dimension is the geometric multiplicity of lambda.",
+    "notation": "A v = \\lambda v,\\ v \\neq 0",
+    "formula_latex": "A v = \\lambda v, \\qquad v \\neq 0",
+    "formula_plaintext": "A v = lambda v, with v nonzero",
+    "examples": [
+      "For A = [[2,0],[0,3]], the standard basis vectors e1, e2 are eigenvectors with eigenvalues 2 and 3.",
+      "A rotation by 90 degrees in the real plane has no real eigenvectors, but eigenvalues i and -i over the complex numbers."
+    ],
+    "worked_example": "For $A = \\begin{pmatrix} 2 & 1 \\\\ 0 & 3 \\end{pmatrix}$, solving $\\det(A - \\lambda I) = (2-\\lambda)(3-\\lambda) = 0$ gives $\\lambda = 2, 3$. For $\\lambda = 2$, $(A - 2I)v = 0$ yields $v = (1,0)^T$; for $\\lambda = 3$, $v = (1,1)^T$.",
+    "tags": [
+      "eigenvalue",
+      "eigenvector",
+      "eigenspace",
+      "invariant"
+    ],
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra, Chapter 6"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right, Chapter 5"
+      }
+    ],
+    "related": [
+      "characteristic-polynomial"
+    ]
+  },
+  {
+    "id": "characteristic-polynomial",
+    "canonical_name": "Characteristic polynomial",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "eigen"
+    ],
+    "short_description": "The degree-n polynomial det(A - lambda I) whose roots are exactly the eigenvalues of an n-by-n matrix A.",
+    "definition": "The characteristic polynomial of an n-by-n matrix A is p(lambda) = det(A - lambda I), a polynomial of degree n in lambda (with leading coefficient (-1)^n; it is made monic by using det(lambda I - A) instead). Its roots, counted with multiplicity, are the eigenvalues of A; the multiplicity of a root is the algebraic multiplicity of that eigenvalue. Its coefficients are basis-independent invariants: the sum of the roots equals the trace of A and the product of the roots equals det(A).",
+    "notation": "p_A(\\lambda) = \\det(A - \\lambda I)",
+    "formula_latex": "p_A(\\lambda) = \\det(A - \\lambda I)",
+    "formula_plaintext": "p_A(lambda) = det(A - lambda I)",
+    "examples": [
+      "For A = [[2,1],[0,3]], p(lambda) = (2 - lambda)(3 - lambda) = lambda^2 - 5 lambda + 6.",
+      "The trace 5 equals the sum of eigenvalues 2 + 3, and det = 6 equals their product."
+    ],
+    "worked_example": "For $A = \\begin{pmatrix} 0 & -1 \\\\ 1 & 0 \\end{pmatrix}$, $p(\\lambda) = \\lambda^2 + 1$, with complex roots $\\pm i$.",
+    "tags": [
+      "characteristic-polynomial",
+      "determinant",
+      "eigenvalue",
+      "trace"
+    ],
+    "references": [
+      {
+        "title": "Horn & Johnson, Matrix Analysis, Chapter 1"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right, Chapter 5"
+      }
+    ],
+    "prerequisites": [
+      "determinant"
+    ]
+  },
+  {
+    "id": "diagonalization",
+    "canonical_name": "Diagonalization",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "eigen"
+    ],
+    "short_description": "Writing a matrix as A = P D P^{-1} with D diagonal, possible exactly when A has a full basis of eigenvectors.",
+    "definition": "A square matrix A is diagonalizable if there exists an invertible matrix P and a diagonal matrix D such that A = P D P^{-1}. The columns of P are eigenvectors of A and the diagonal entries of D are the corresponding eigenvalues. An n-by-n matrix is diagonalizable over a field if and only if it has n linearly independent eigenvectors, equivalently the sum of the dimensions of its eigenspaces is n, equivalently every eigenvalue has geometric multiplicity equal to its algebraic multiplicity.",
+    "notation": "A = P D P^{-1}",
+    "formula_latex": "A = P D P^{-1}, \\qquad D = \\operatorname{diag}(\\lambda_1, \\dots, \\lambda_n)",
+    "formula_plaintext": "A = P D P^{-1}, D = diag(lambda_1, ..., lambda_n)",
+    "examples": [
+      "A matrix with n distinct eigenvalues is always diagonalizable.",
+      "The matrix [[1,1],[0,1]] is not diagonalizable: eigenvalue 1 has algebraic multiplicity 2 but only a one-dimensional eigenspace."
+    ],
+    "worked_example": "For $A = \\begin{pmatrix} 2 & 1 \\\\ 0 & 3 \\end{pmatrix}$, take $P = \\begin{pmatrix} 1 & 1 \\\\ 0 & 1 \\end{pmatrix}$ and $D = \\begin{pmatrix} 2 & 0 \\\\ 0 & 3 \\end{pmatrix}$; then $A = P D P^{-1}$. Powers become easy: $A^k = P D^k P^{-1}$.",
+    "tags": [
+      "diagonalization",
+      "eigenvector",
+      "similarity",
+      "basis"
+    ],
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra, Chapter 6"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right, Chapter 5"
+      }
+    ],
+    "prerequisites": [
+      "eigenvalue-eigenvector",
+      "basis"
+    ]
+  },
+  {
+    "id": "eigendecomposition",
+    "canonical_name": "Eigendecomposition",
+    "kind": "method",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "eigen"
+    ],
+    "short_description": "A procedure that factors a diagonalizable matrix as A = P D P^{-1} by assembling its eigenvalues and eigenvectors.",
+    "summary": "Eigendecomposition factors a diagonalizable square matrix A into A = P D P^{-1}, where D is diagonal with the eigenvalues and the columns of P are corresponding eigenvectors. It is the workhorse for computing matrix powers, matrix functions, and solving linear recurrences and differential equations, since A^k = P D^k P^{-1} and f(A) = P f(D) P^{-1}.",
+    "steps": [
+      "Form the characteristic polynomial p(lambda) = det(A - lambda I) and find its roots, the eigenvalues lambda_1, ..., lambda_n.",
+      "For each eigenvalue lambda_i, solve (A - lambda_i I) v = 0 for a basis of the eigenspace.",
+      "Check that the collected eigenvectors are n linearly independent; if so, place them as columns of P and the eigenvalues on the diagonal of D in matching order.",
+      "Assemble A = P D P^{-1}; verify by confirming A P = P D."
+    ],
+    "inputs": [
+      "A diagonalizable square matrix A of size n-by-n"
+    ],
+    "outputs": [
+      "Invertible matrix P of eigenvectors and diagonal matrix D of eigenvalues with A = P D P^{-1}"
+    ],
+    "complexity": "O(n^3) for dense matrices using standard iterative eigenvalue algorithms such as the QR algorithm.",
+    "formula_latex": "A = P D P^{-1}, \\qquad A^k = P D^k P^{-1}",
+    "formula_plaintext": "A = P D P^{-1}, A^k = P D^k P^{-1}",
+    "worked_example": "For $A = \\begin{pmatrix} 2 & 0 \\\\ 1 & 3 \\end{pmatrix}$, eigenvalues are $2, 3$ with eigenvectors $(1,-1)^T$ and $(0,1)^T$. Then $P = \\begin{pmatrix} 1 & 0 \\\\ -1 & 1 \\end{pmatrix}$, $D = \\begin{pmatrix} 2 & 0 \\\\ 0 & 3 \\end{pmatrix}$, and $A^k = P D^k P^{-1}$.",
+    "tags": [
+      "eigendecomposition",
+      "diagonalization",
+      "matrix-power",
+      "QR-algorithm"
+    ],
+    "references": [
+      {
+        "title": "Golub & Van Loan, Matrix Computations, Chapter 7"
+      },
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra, Lecture 24"
+      }
+    ],
+    "prerequisites": [
+      "diagonalization"
+    ]
+  },
+  {
+    "id": "spectral-theorem",
+    "canonical_name": "Spectral theorem",
+    "kind": "theorem",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "eigen"
+    ],
+    "short_description": "Every real symmetric matrix is orthogonally diagonalizable with real eigenvalues, guaranteeing an orthonormal eigenbasis.",
+    "statement": "If A is a real symmetric n-by-n matrix (A = A^T), then all eigenvalues of A are real and there exists an orthogonal matrix Q (Q^T Q = I) and a real diagonal matrix D such that A = Q D Q^T. Equivalently, R^n admits an orthonormal basis consisting of eigenvectors of A. More generally, a complex matrix is unitarily diagonalizable if and only if it is normal, and Hermitian matrices have real eigenvalues.",
+    "formula_latex": "A = Q D Q^{T}, \\qquad Q^{T} Q = I, \\quad A = A^{T}",
+    "formula_plaintext": "A = Q D Q^T, with Q^T Q = I and A = A^T",
+    "proof_sketch": "Symmetry gives real eigenvalues: if A v = lambda v with v a nonzero complex vector, then lambda (v* v) = v* A v = (A v)* v = conj(lambda)(v* v), forcing lambda real. Eigenvectors for distinct eigenvalues are orthogonal since lambda_i (v_i . v_j) = (A v_i) . v_j = v_i . (A v_j) = lambda_j (v_i . v_j). One then proceeds by induction: pick a unit eigenvector, restrict A to its orthogonal complement (which is invariant by symmetry), and diagonalize there, assembling an orthonormal eigenbasis.",
+    "consequences": [
+      "Real symmetric matrices are always diagonalizable, with no defective eigenvalues.",
+      "Quadratic forms x^T A x can be diagonalized by an orthogonal change of variables (principal axes theorem).",
+      "A is positive definite iff all its eigenvalues are positive; the decomposition underlies PCA and the SVD of symmetric matrices."
+    ],
+    "worked_example": "For $A = \\begin{pmatrix} 2 & 1 \\\\ 1 & 2 \\end{pmatrix}$, eigenvalues are $3$ and $1$ with orthonormal eigenvectors $\\tfrac{1}{\\sqrt 2}(1,1)^T$ and $\\tfrac{1}{\\sqrt 2}(1,-1)^T$, giving $A = Q\\,\\mathrm{diag}(3,1)\\,Q^T$.",
+    "tags": [
+      "spectral-theorem",
+      "symmetric-matrix",
+      "orthogonal-diagonalization",
+      "normal-matrix"
+    ],
+    "references": [
+      {
+        "title": "Axler, Linear Algebra Done Right, Chapter 7"
+      },
+      {
+        "title": "Horn & Johnson, Matrix Analysis, Chapter 2"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra, Chapter 6"
+      }
+    ],
+    "prerequisites": [
+      "eigendecomposition",
+      "symmetric-matrix"
+    ]
+  },
+  {
+    "id": "cayley-hamilton",
+    "canonical_name": "Cayley-Hamilton theorem",
+    "kind": "theorem",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "eigen"
+    ],
+    "short_description": "Every square matrix satisfies its own characteristic polynomial, so p(A) equals the zero matrix.",
+    "statement": "Let A be an n-by-n matrix over a commutative ring (in particular any field) with characteristic polynomial p(lambda) = det(lambda I - A). Then substituting A for lambda yields the zero matrix: p(A) = 0. Consequently A^n can be expressed as a linear combination of I, A, ..., A^{n-1}, and (when A is invertible) A^{-1} can be written as a polynomial in A.",
+    "formula_latex": "p_A(A) = 0, \\qquad p_A(\\lambda) = \\det(\\lambda I - A)",
+    "formula_plaintext": "p_A(A) = 0, where p_A(lambda) = det(lambda I - A)",
+    "proof_sketch": "Use the adjugate identity (lambda I - A) adj(lambda I - A) = det(lambda I - A) I = p(lambda) I. The adjugate is a matrix polynomial in lambda with matrix coefficients B_k, so equating coefficients of powers of lambda on both sides and forming the telescoping sum after multiplying by successive powers of A yields p(A) = 0. (The naive 'plug A into det(A - A I)' is not a valid proof.)",
+    "consequences": [
+      "The minimal polynomial of A divides the characteristic polynomial.",
+      "High powers and the inverse of A can be reduced to polynomials of degree less than n.",
+      "Provides a route to computing matrix exponentials and functions of A via a reduced polynomial basis."
+    ],
+    "worked_example": "For $A = \\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix}$, $p(\\lambda) = \\lambda^2 - 5\\lambda - 2$. Then $A^2 - 5A - 2I = 0$, so $A^2 = 5A + 2I$ and $A^{-1} = \\tfrac{1}{2}(A - 5I)$.",
+    "tags": [
+      "cayley-hamilton",
+      "characteristic-polynomial",
+      "minimal-polynomial",
+      "matrix-inverse"
+    ],
+    "references": [
+      {
+        "title": "Horn & Johnson, Matrix Analysis, Chapter 2"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right, Chapter 8"
+      }
+    ],
+    "prerequisites": [
+      "characteristic-polynomial"
+    ]
+  },
+  {
+    "id": "jordan-normal-form",
+    "canonical_name": "Jordan normal form",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "eigen"
+    ],
+    "short_description": "A canonical block-diagonal form of Jordan blocks representing any complex matrix up to similarity, generalizing diagonalization to defective matrices.",
+    "definition": "Over an algebraically closed field (e.g. the complex numbers), every square matrix A is similar to a block-diagonal Jordan matrix J = P^{-1} A P, unique up to the ordering of blocks. Each Jordan block J_k(lambda) is a k-by-k matrix with eigenvalue lambda on the diagonal and 1's on the superdiagonal. The number and sizes of blocks for a given eigenvalue are determined by the ranks of powers (A - lambda I)^j; A is diagonalizable exactly when every Jordan block has size 1.",
+    "notation": "J = P^{-1} A P, \\quad J_k(\\lambda)",
+    "formula_latex": "J_k(\\lambda) = \\begin{pmatrix} \\lambda & 1 & & \\\\ & \\lambda & \\ddots & \\\\ & & \\ddots & 1 \\\\ & & & \\lambda \\end{pmatrix} \\in \\mathbb{C}^{k \\times k}",
+    "formula_plaintext": "J_k(lambda) is k-by-k with lambda on the diagonal and 1's on the superdiagonal",
+    "examples": [
+      "The 2-by-2 matrix [[lambda,1],[0,lambda]] is a single Jordan block J_2(lambda); it is not diagonalizable.",
+      "A diagonalizable matrix has Jordan form equal to a diagonal matrix (all blocks of size 1)."
+    ],
+    "worked_example": "For $A = \\begin{pmatrix} 5 & 1 \\\\ 0 & 5 \\end{pmatrix}$, the eigenvalue $5$ has algebraic multiplicity $2$ but geometric multiplicity $1$, so the Jordan form is the single block $J_2(5) = \\begin{pmatrix} 5 & 1 \\\\ 0 & 5 \\end{pmatrix}$ itself.",
+    "tags": [
+      "jordan-normal-form",
+      "jordan-block",
+      "generalized-eigenvector",
+      "similarity"
+    ],
+    "references": [
+      {
+        "title": "Horn & Johnson, Matrix Analysis, Chapter 3"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right, Chapter 8"
+      }
+    ],
+    "prerequisites": [
+      "eigenvalue-eigenvector"
+    ]
+  },
+  {
+    "id": "spectral-radius",
+    "canonical_name": "Spectral radius",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "eigen"
+    ],
+    "short_description": "The maximum absolute value of a matrix's eigenvalues, governing asymptotic growth of powers and convergence of iterations.",
+    "definition": "The spectral radius of a square matrix A is rho(A) = max { |lambda| : lambda is an eigenvalue of A }, the largest modulus among the (possibly complex) eigenvalues. It is a lower bound for every induced matrix norm, rho(A) <= ||A||, and Gelfand's formula gives rho(A) = lim_{k->infinity} ||A^k||^{1/k}. The powers A^k tend to zero if and only if rho(A) < 1.",
+    "notation": "\\rho(A)",
+    "formula_latex": "\\rho(A) = \\max_{i} |\\lambda_i| = \\lim_{k \\to \\infty} \\lVert A^k \\rVert^{1/k}",
+    "formula_plaintext": "rho(A) = max_i |lambda_i| = lim_{k->inf} ||A^k||^{1/k}",
+    "examples": [
+      "For a symmetric real matrix, the spectral radius equals the spectral (operator 2-) norm.",
+      "An iterative method x_{k+1} = M x_k + c converges for every starting point iff rho(M) < 1."
+    ],
+    "worked_example": "For $A = \\begin{pmatrix} 0 & 2 \\\\ -2 & 0 \\end{pmatrix}$, eigenvalues are $\\pm 2i$, so $\\rho(A) = 2$; since $\\rho(A) > 1$, the powers $A^k$ do not converge to zero.",
+    "tags": [
+      "spectral-radius",
+      "eigenvalue",
+      "gelfand-formula",
+      "convergence"
+    ],
+    "references": [
+      {
+        "title": "Horn & Johnson, Matrix Analysis, Chapter 5"
+      },
+      {
+        "title": "Golub & Van Loan, Matrix Computations, Chapter 2"
+      }
+    ],
+    "prerequisites": [
+      "eigenvalue-eigenvector"
+    ]
+  },
+  {
+    "id": "inner-product",
+    "canonical_name": "Inner product",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "inner-product-spaces"
+    ],
+    "short_description": "A positive-definite Hermitian (or symmetric bilinear) form assigning a scalar to each pair of vectors, generalizing the dot product and inducing length and angle.",
+    "definition": "An inner product on a vector space V over a field F (real or complex) is a map \\langle \\cdot, \\cdot \\rangle : V \\times V \\to F satisfying: (i) conjugate symmetry \\langle x, y \\rangle = \\overline{\\langle y, x \\rangle} (symmetry in the real case); (ii) linearity in the first argument \\langle \\alpha x + \\beta z, y \\rangle = \\alpha\\langle x, y \\rangle + \\beta\\langle z, y \\rangle; and (iii) positive-definiteness \\langle x, x \\rangle \\ge 0 with equality iff x = 0. A vector space equipped with an inner product is an inner product space.",
+    "formula_latex": "\\langle x, y \\rangle = \\sum_{i=1}^{n} x_i \\overline{y_i}",
+    "formula_plaintext": "<x,y> = sum_i x_i conj(y_i)",
+    "examples": [
+      "The standard dot product on \\mathbb{R}^n: \\langle x, y \\rangle = \\sum_i x_i y_i.",
+      "The standard Hermitian inner product on \\mathbb{C}^n: \\langle x, y \\rangle = \\sum_i x_i \\overline{y_i}.",
+      "On C[a,b], \\langle f, g \\rangle = \\int_a^b f(t)\\overline{g(t)}\\,dt."
+    ],
+    "worked_example": "For $x=(1,2)$, $y=(3,-1)$ in $\\mathbb{R}^2$, $\\langle x,y\\rangle = 1\\cdot 3 + 2\\cdot(-1) = 1$.",
+    "references": [
+      {
+        "title": "Axler, Linear Algebra Done Right, Chapter 6"
+      },
+      {
+        "title": "Horn & Johnson, Matrix Analysis"
+      },
+      {
+        "title": "Inner product space - Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Inner_product_space"
+      }
+    ]
+  },
+  {
+    "id": "vector-norm",
+    "canonical_name": "Vector norm",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "inner-product-spaces"
+    ],
+    "short_description": "A nonnegative length function on a vector space satisfying homogeneity and the triangle inequality; it induces a metric and quantifies vector magnitude.",
+    "definition": "A norm on a vector space V over \\mathbb{R} or \\mathbb{C} is a function \\|\\cdot\\| : V \\to [0,\\infty) satisfying: (i) \\|x\\| = 0 iff x = 0 (positive definiteness); (ii) \\|\\alpha x\\| = |\\alpha|\\,\\|x\\| (absolute homogeneity); and (iii) \\|x + y\\| \\le \\|x\\| + \\|y\\| (triangle inequality). An inner product induces the norm \\|x\\| = \\sqrt{\\langle x, x \\rangle}. The p-norms are \\|x\\|_p = (\\sum_i |x_i|^p)^{1/p} for 1 \\le p < \\infty, with \\|x\\|_\\infty = \\max_i |x_i|. Every norm induces the metric d(x,y) = \\|x - y\\|.",
+    "formula_latex": "\\|x\\|_p = \\left(\\sum_{i=1}^{n} |x_i|^p\\right)^{1/p}, \\qquad 1 \\le p < \\infty",
+    "formula_plaintext": "||x||_p = (sum_i |x_i|^p)^(1/p), for 1 <= p < infinity",
+    "examples": [
+      "Euclidean norm: \\|x\\|_2 = \\sqrt{\\sum_i x_i^2}.",
+      "Manhattan norm: \\|x\\|_1 = \\sum_i |x_i|.",
+      "Maximum norm: \\|x\\|_\\infty = \\max_i |x_i|."
+    ],
+    "worked_example": "For $x=(3,-4)$: $\\|x\\|_1 = 7$, $\\|x\\|_2 = 5$, $\\|x\\|_\\infty = 4$.",
+    "references": [
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra, Lecture 3"
+      },
+      {
+        "title": "Horn & Johnson, Matrix Analysis, Chapter 5"
+      },
+      {
+        "title": "Norm (mathematics) - Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Norm_(mathematics)"
+      }
+    ],
+    "related": [
+      "euclidean",
+      "manhattan",
+      "minkowski",
+      "chebyshev",
+      "matrix-norm"
+    ]
+  },
+  {
+    "id": "orthogonality",
+    "canonical_name": "Orthogonality",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "inner-product-spaces"
+    ],
+    "short_description": "Two vectors are orthogonal when their inner product is zero, generalizing perpendicularity and underlying projections, Pythagorean relations, and decompositions.",
+    "definition": "In an inner product space, two vectors x and y are orthogonal, written x \\perp y, if \\langle x, y \\rangle = 0. The zero vector is orthogonal to every vector. A set of vectors is orthogonal if its elements are pairwise orthogonal, and orthonormal if in addition each has unit norm. Orthogonality yields the Pythagorean theorem \\|x + y\\|^2 = \\|x\\|^2 + \\|y\\|^2 when x \\perp y (real case), and any set of nonzero pairwise-orthogonal vectors is linearly independent.",
+    "formula_latex": "x \\perp y \\iff \\langle x, y \\rangle = 0",
+    "formula_plaintext": "x _|_ y  iff  <x,y> = 0",
+    "examples": [
+      "In \\mathbb{R}^3, (1,0,0) and (0,1,0) are orthogonal.",
+      "The functions \\sin t and \\cos t are orthogonal on [0, 2\\pi] under the L^2 inner product.",
+      "Any nonzero pairwise-orthogonal set is linearly independent."
+    ],
+    "worked_example": "$(1,2,2)$ and $(2,-2,1)$ satisfy $1\\cdot2 + 2\\cdot(-2) + 2\\cdot1 = 0$, so they are orthogonal.",
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra, Chapter 4"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right, Chapter 6"
+      }
+    ],
+    "prerequisites": [
+      "inner-product"
+    ]
+  },
+  {
+    "id": "orthonormal-basis",
+    "canonical_name": "Orthonormal basis",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "inner-product-spaces"
+    ],
+    "short_description": "A basis of mutually orthogonal unit vectors, enabling coordinates via inner products and making the Gram matrix the identity.",
+    "definition": "An orthonormal basis of a finite-dimensional inner product space V is a basis \\{e_1, \\dots, e_n\\} whose elements are pairwise orthogonal and of unit norm, i.e. \\langle e_i, e_j \\rangle = \\delta_{ij} (the Kronecker delta). Relative to such a basis every vector expands as x = \\sum_i \\langle x, e_i \\rangle e_i, and Parseval's identity \\|x\\|^2 = \\sum_i |\\langle x, e_i \\rangle|^2 holds. Every finite-dimensional inner product space has an orthonormal basis, obtainable via the Gram-Schmidt process. The change-of-basis matrix between orthonormal bases is orthogonal (unitary in the complex case).",
+    "formula_latex": "\\langle e_i, e_j \\rangle = \\delta_{ij}, \\qquad x = \\sum_{i=1}^{n} \\langle x, e_i \\rangle\\, e_i",
+    "formula_plaintext": "<e_i, e_j> = delta_ij ;  x = sum_i <x, e_i> e_i",
+    "examples": [
+      "The standard basis \\{e_1, \\dots, e_n\\} of \\mathbb{R}^n.",
+      "Columns of any orthogonal (or unitary) matrix.",
+      "\\{(1,1)/\\sqrt{2}, (1,-1)/\\sqrt{2}\\} in \\mathbb{R}^2."
+    ],
+    "worked_example": "With $e_1=(1,1)/\\sqrt2$, $e_2=(1,-1)/\\sqrt2$ and $x=(3,1)$: $\\langle x,e_1\\rangle = 4/\\sqrt2$, $\\langle x,e_2\\rangle = 2/\\sqrt2$, and $x = \\tfrac{4}{\\sqrt2}e_1 + \\tfrac{2}{\\sqrt2}e_2$.",
+    "references": [
+      {
+        "title": "Axler, Linear Algebra Done Right, Chapter 6"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra, Chapter 4"
+      }
+    ],
+    "prerequisites": [
+      "orthogonality",
+      "basis"
+    ]
+  },
+  {
+    "id": "gram-schmidt",
+    "canonical_name": "Gram-Schmidt process",
+    "kind": "method",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "inner-product-spaces"
+    ],
+    "short_description": "An algorithm that converts a linearly independent set into an orthonormal set spanning the same subspaces, yielding the QR factorization.",
+    "summary": "The Gram-Schmidt process orthogonalizes a linearly independent list v_1, \\dots, v_k by successively subtracting from each vector its orthogonal projection onto the span of the previously produced vectors, then normalizing. The resulting orthonormal set q_1, \\dots, q_k satisfies \\operatorname{span}(q_1,\\dots,q_j) = \\operatorname{span}(v_1,\\dots,v_j) for every j. Applied to the columns of a full-column-rank matrix A it produces the (reduced) QR factorization A = QR with Q having orthonormal columns and R upper triangular.",
+    "formula_latex": "u_j = v_j - \\sum_{i=1}^{j-1} \\frac{\\langle v_j, u_i \\rangle}{\\langle u_i, u_i \\rangle}\\, u_i, \\qquad q_j = \\frac{u_j}{\\|u_j\\|}",
+    "formula_plaintext": "u_j = v_j - sum_{i<j} (<v_j,u_i>/<u_i,u_i>) u_i ;  q_j = u_j / ||u_j||",
+    "steps": [
+      "Set u_1 = v_1 and q_1 = u_1 / \\|u_1\\|.",
+      "For j = 2, \\dots, k, subtract the projections onto the earlier u_i: u_j = v_j - \\sum_{i<j} \\frac{\\langle v_j, u_i \\rangle}{\\langle u_i, u_i \\rangle} u_i.",
+      "Normalize: q_j = u_j / \\|u_j\\|.",
+      "Return the orthonormal set \\{q_1, \\dots, q_k\\}."
+    ],
+    "inputs": [
+      "A linearly independent list of vectors v_1, \\dots, v_k in an inner product space"
+    ],
+    "outputs": [
+      "An orthonormal list q_1, \\dots, q_k with the same successive spans"
+    ],
+    "complexity": "O(k^2 n) arithmetic operations for k vectors in \\mathbb{R}^n; the modified Gram-Schmidt variant is numerically more stable.",
+    "worked_example": "For $v_1=(1,1,0)$, $v_2=(1,0,1)$: $q_1=(1,1,0)/\\sqrt2$; $u_2 = v_2 - \\tfrac{1}{2}(1,1,0) = (\\tfrac12,-\\tfrac12,1)$, and $q_2 = (\\tfrac12,-\\tfrac12,1)/\\sqrt{3/2}$.",
+    "references": [
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra, Lecture 7-8"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra, Chapter 4"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right, Chapter 6"
+      }
+    ],
+    "prerequisites": [
+      "inner-product",
+      "orthonormal-basis"
+    ],
+    "related": [
+      "qr-decomposition"
+    ]
+  },
+  {
+    "id": "orthogonal-projection",
+    "canonical_name": "Orthogonal projection",
+    "kind": "transform",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "inner-product-spaces"
+    ],
+    "short_description": "The linear map sending each vector to its nearest point in a subspace; it is idempotent and self-adjoint, with residual orthogonal to the subspace.",
+    "definition": "Given a subspace U of an inner product space V, the orthogonal projection onto U is the linear operator P_U that maps each x \\in V to the unique u \\in U minimizing \\|x - u\\|, equivalently the u with x - u \\perp U. It satisfies P^2 = P (idempotent) and P^* = P (self-adjoint; P^T = P in the real case), and I - P is the projection onto U^\\perp. If the columns of A form a basis of U, then P = A(A^T A)^{-1} A^T; if they are orthonormal (Q), then P = QQ^T.",
+    "formula_latex": "P = A(A^{T}A)^{-1}A^{T}, \\qquad P^2 = P, \\quad P^{T} = P",
+    "formula_plaintext": "P = A (A^T A)^{-1} A^T ;  P^2 = P ,  P^T = P",
+    "domain_of_definition": "All of V; P is defined on the whole inner product space and maps onto the subspace U (its range), with kernel U^\\perp.",
+    "worked_example": "Projecting $b=(1,1,0)$ onto the line spanned by $a=(1,0,0)$: $P = aa^T/\\!(a^Ta)$, so $Pb = a\\,\\tfrac{a^Tb}{a^Ta} = (1,0,0)$ and residual $b-Pb=(0,1,0)\\perp a$.",
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra, Chapter 4"
+      },
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra, Lecture 6"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right, Chapter 6"
+      }
+    ],
+    "prerequisites": [
+      "inner-product"
+    ]
+  },
+  {
+    "id": "orthogonal-complement",
+    "canonical_name": "Orthogonal complement",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "inner-product-spaces"
+    ],
+    "short_description": "The subspace of all vectors orthogonal to every vector in a given set; it splits the space into a direct sum with that set's span.",
+    "definition": "For a subset (or subspace) U of an inner product space V, the orthogonal complement is U^\\perp = \\{ v \\in V : \\langle v, u \\rangle = 0 \\text{ for all } u \\in U \\}. It is always a subspace of V. In finite dimensions V = U \\oplus U^\\perp, so \\dim U + \\dim U^\\perp = \\dim V, and (U^\\perp)^\\perp = U. For a matrix A the four fundamental subspaces pair up as orthogonal complements: (\\operatorname{col} A)^\\perp = \\operatorname{null}(A^T) and (\\operatorname{row} A)^\\perp = \\operatorname{null}(A).",
+    "formula_latex": "U^{\\perp} = \\{\\, v \\in V : \\langle v, u \\rangle = 0 \\ \\forall\\, u \\in U \\,\\}, \\qquad V = U \\oplus U^{\\perp}",
+    "formula_plaintext": "U^perp = { v in V : <v,u> = 0 for all u in U } ;  V = U (+) U^perp",
+    "examples": [
+      "In \\mathbb{R}^3, the orthogonal complement of a plane through the origin is the normal line.",
+      "The orthogonal complement of the column space of A is the left null space \\operatorname{null}(A^T).",
+      "\\{0\\}^\\perp = V and V^\\perp = \\{0\\}."
+    ],
+    "worked_example": "In $\\mathbb{R}^3$, for $U = \\operatorname{span}\\{(1,0,0),(0,1,0)\\}$, $U^\\perp = \\operatorname{span}\\{(0,0,1)\\}$, and $\\dim U + \\dim U^\\perp = 2+1 = 3$.",
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra, Chapter 4"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right, Chapter 6"
+      }
+    ],
+    "prerequisites": [
+      "orthogonality"
+    ]
+  },
+  {
+    "id": "adjoint",
+    "canonical_name": "Adjoint (conjugate transpose)",
+    "kind": "transform",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "inner-product-spaces"
+    ],
+    "short_description": "The unique operator A^* satisfying <Ax,y>=<x,A*y>; for matrices it is the conjugate transpose, reducing to the transpose in the real case.",
+    "definition": "For a linear map A between inner product spaces, the adjoint A^* is the unique linear map satisfying \\langle Ax, y \\rangle = \\langle x, A^* y \\rangle for all x, y. In coordinates with respect to orthonormal bases, A^* is the conjugate transpose: (A^*)_{ij} = \\overline{A_{ji}}, i.e. A^* = \\overline{A}^{T} = A^H; over the reals this is simply the transpose A^T. Key properties: (A^*)^* = A, (AB)^* = B^* A^*, and (A + B)^* = A^* + B^*. An operator is self-adjoint (Hermitian) if A^* = A and unitary if A^* A = I.",
+    "formula_latex": "\\langle Ax, y \\rangle = \\langle x, A^{*} y \\rangle, \\qquad (A^{*})_{ij} = \\overline{A_{ji}}",
+    "formula_plaintext": "<Ax, y> = <x, A* y> ;  (A*)_{ij} = conj(A_{ji})",
+    "inverse_latex": "(A^{*})^{*} = A",
+    "domain_of_definition": "Defined for any linear map A: V \\to W between finite-dimensional inner product spaces; A^*: W \\to V.",
+    "worked_example": "For $A = \\begin{pmatrix} 1 & i \\\\ 0 & 2 \\end{pmatrix}$, the adjoint is $A^* = \\begin{pmatrix} 1 & 0 \\\\ -i & 2 \\end{pmatrix}$.",
+    "references": [
+      {
+        "title": "Axler, Linear Algebra Done Right, Chapter 7"
+      },
+      {
+        "title": "Horn & Johnson, Matrix Analysis"
+      },
+      {
+        "title": "Conjugate transpose - Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Conjugate_transpose"
+      }
+    ],
+    "prerequisites": [
+      "transpose",
+      "inner-product"
+    ]
+  },
+  {
+    "id": "gram-matrix",
+    "canonical_name": "Gram matrix",
+    "kind": "object",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "inner-product-spaces"
+    ],
+    "short_description": "The matrix of all pairwise inner products of a set of vectors; it is Hermitian positive semidefinite and detects linear independence.",
+    "definition": "The Gram matrix of vectors v_1, \\dots, v_k in an inner product space is the k \\times k matrix G with entries G_{ij} = \\langle v_i, v_j \\rangle. It is Hermitian (symmetric in the real case) and positive semidefinite, and is positive definite exactly when the v_i are linearly independent. Its rank equals the dimension of \\operatorname{span}(v_1, \\dots, v_k). If A is the matrix whose columns are the v_i, then in the real case G = A^{T}A, and \\det G (the Gram determinant) equals the squared volume of the parallelepiped spanned by the vectors.",
+    "notation": "G = (\\langle v_i, v_j \\rangle)_{i,j=1}^{k}",
+    "formula_latex": "G_{ij} = \\langle v_i, v_j \\rangle, \\qquad G = A^{T}A \\ \\text{(real case)}",
+    "formula_plaintext": "G_{ij} = <v_i, v_j> ;  G = A^T A  (real case)",
+    "worked_example": "For $v_1=(1,0)$, $v_2=(1,1)$ in $\\mathbb{R}^2$, $G = \\begin{pmatrix} 1 & 1 \\\\ 1 & 2 \\end{pmatrix}$, with $\\det G = 1 > 0$, confirming linear independence.",
+    "references": [
+      {
+        "title": "Horn & Johnson, Matrix Analysis"
+      },
+      {
+        "title": "Gram matrix - Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Gram_matrix"
+      }
+    ],
+    "prerequisites": [
+      "inner-product"
+    ]
+  },
+  {
+    "id": "svd",
+    "canonical_name": "Singular value decomposition",
+    "kind": "method",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "decompositions"
+    ],
+    "short_description": "A factorization of any m-by-n matrix into orthogonal/unitary factors and a diagonal matrix of nonnegative singular values, central to rank, norms, and least squares.",
+    "summary": "The SVD writes any real (or complex) matrix A as A = U Sigma V^T (A = U Sigma V^* in the complex case), where U (m-by-m) and V (n-by-n) are orthogonal/unitary and Sigma is m-by-n diagonal with nonnegative entries sigma_1 >= sigma_2 >= ... >= 0, the singular values. The columns of U and V are the left and right singular vectors. It reveals rank, range, null space, the 2-norm, and the best low-rank approximations.",
+    "formula_latex": "A = U \\Sigma V^{\\top}, \\quad U^{\\top}U = I_m,\\; V^{\\top}V = I_n,\\; \\Sigma = \\operatorname{diag}(\\sigma_1,\\dots,\\sigma_p),\\; \\sigma_1 \\ge \\cdots \\ge \\sigma_p \\ge 0",
+    "formula_plaintext": "A = U Sigma V^T, with U^T U = I_m, V^T V = I_n, Sigma = diag(sigma_1,...,sigma_p), sigma_1 >= ... >= sigma_p >= 0",
+    "steps": [
+      "Form A^T A (n-by-n, symmetric positive semidefinite); its eigenvalues are the squares of the singular values.",
+      "Compute eigenpairs of A^T A; the eigenvectors form the columns of V and the eigenvalues give sigma_i = sqrt(lambda_i).",
+      "For each sigma_i > 0, set the left singular vector u_i = A v_i / sigma_i; extend to an orthonormal basis to complete U.",
+      "Assemble A = U Sigma V^T. In practice numerically stable algorithms (Golub-Kahan bidiagonalization then implicit QR) are used instead of forming A^T A."
+    ],
+    "inputs": [
+      "An m-by-n real or complex matrix A"
+    ],
+    "outputs": [
+      "Orthogonal/unitary U (m-by-m)",
+      "Diagonal Sigma (m-by-n) of singular values",
+      "Orthogonal/unitary V (n-by-n)"
+    ],
+    "complexity": "O(m n^2) for m >= n (dense algorithms such as Golub-Reinsch)",
+    "worked_example": "For $A=\\begin{pmatrix}1&0\\\\0&0\\\\0&2\\end{pmatrix}$ the singular values are $2$ and $1$, since $A^{\\top}A=\\operatorname{diag}(1,4)$.",
+    "references": [
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra, Lectures 4-5"
+      },
+      {
+        "title": "Golub & Van Loan, Matrix Computations, Section 2.4"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra, Chapter 7"
+      }
+    ],
+    "prerequisites": [
+      "eigendecomposition",
+      "orthogonal-matrix",
+      "singular-value"
+    ],
+    "related": [
+      "eigendecomposition"
+    ]
+  },
+  {
+    "id": "singular-value",
+    "canonical_name": "Singular value",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "decompositions"
+    ],
+    "short_description": "The nonnegative square roots of the eigenvalues of A^T A, measuring how much a matrix stretches vectors along its principal axes.",
+    "definition": "The singular values of an m-by-n matrix A are the nonnegative real numbers sigma_i = sqrt(lambda_i), where the lambda_i are the (nonnegative) eigenvalues of the symmetric positive semidefinite matrix A^T A (equivalently A A^T). They are the diagonal entries of Sigma in a singular value decomposition A = U Sigma V^T, conventionally ordered sigma_1 >= sigma_2 >= ... >= 0. The number of nonzero singular values equals the rank of A; the largest equals the spectral (2-)norm and the smallest nonzero one relates to conditioning.",
+    "formula_latex": "\\sigma_i(A) = \\sqrt{\\lambda_i(A^{\\top}A)}, \\qquad \\sigma_1 \\ge \\sigma_2 \\ge \\cdots \\ge 0",
+    "formula_plaintext": "sigma_i(A) = sqrt(lambda_i(A^T A)), with sigma_1 >= sigma_2 >= ... >= 0",
+    "examples": [
+      "For a symmetric positive semidefinite matrix the singular values equal the eigenvalues.",
+      "For an orthogonal matrix all singular values equal 1.",
+      "The largest singular value sigma_1 equals the matrix 2-norm ||A||_2."
+    ],
+    "references": [
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra, Lecture 4"
+      },
+      {
+        "title": "Horn & Johnson, Matrix Analysis"
+      }
+    ],
+    "prerequisites": [
+      "eigenvalue-eigenvector"
+    ]
+  },
+  {
+    "id": "lu-decomposition",
+    "canonical_name": "LU decomposition",
+    "kind": "method",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "decompositions"
+    ],
+    "short_description": "A factorization of a square matrix into a lower- and an upper-triangular factor, produced by Gaussian elimination and used to solve linear systems efficiently.",
+    "summary": "LU decomposition writes a square matrix A as a product A = LU of a lower-triangular matrix L (unit diagonal) and an upper-triangular matrix U, arising directly from Gaussian elimination. To ensure numerical stability and existence one uses partial pivoting, giving PA = LU with a permutation matrix P. Once factored, systems Ax = b are solved by forward substitution Ly = Pb followed by back substitution Ux = y, reusing the factorization for multiple right-hand sides.",
+    "formula_latex": "PA = LU, \\quad L \\text{ unit lower triangular},\\; U \\text{ upper triangular},\\; P \\text{ a permutation matrix}",
+    "formula_plaintext": "PA = LU, with L unit lower triangular, U upper triangular, P a permutation matrix",
+    "steps": [
+      "Apply Gaussian elimination to A, at each column choosing the pivot of largest magnitude (partial pivoting) and recording the row swap in P.",
+      "Store the multipliers used to eliminate entries below each pivot as the subdiagonal entries of L.",
+      "The resulting reduced upper-triangular matrix is U; then PA = LU.",
+      "Solve Ax = b by permuting b, forward-solving Ly = Pb, then back-solving Ux = y."
+    ],
+    "inputs": [
+      "A square (usually nonsingular) matrix A"
+    ],
+    "outputs": [
+      "Unit lower-triangular L",
+      "Upper-triangular U",
+      "Permutation matrix P"
+    ],
+    "complexity": "O(n^3) (about 2n^3/3 flops) for the factorization; O(n^2) per solve",
+    "worked_example": "For $A=\\begin{pmatrix}2&1\\\\4&3\\end{pmatrix}$ without pivoting, $L=\\begin{pmatrix}1&0\\\\2&1\\end{pmatrix}$ and $U=\\begin{pmatrix}2&1\\\\0&1\\end{pmatrix}$.",
+    "references": [
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra, Lectures 20-21"
+      },
+      {
+        "title": "Golub & Van Loan, Matrix Computations, Section 3.2"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra, Chapter 2"
+      }
+    ],
+    "prerequisites": [
+      "gaussian-elimination"
+    ],
+    "related": [
+      "gaussian-elimination"
+    ]
+  },
+  {
+    "id": "qr-decomposition",
+    "canonical_name": "QR decomposition",
+    "kind": "method",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "decompositions"
+    ],
+    "short_description": "A factorization of a matrix into an orthogonal factor and an upper-triangular factor, fundamental for least-squares problems and orthonormalization.",
+    "summary": "The QR decomposition writes an m-by-n matrix A (m >= n) as A = QR, where Q has orthonormal columns (orthogonal/unitary in the square case) and R is upper triangular. It can be computed by Gram-Schmidt orthogonalization, Householder reflections, or Givens rotations; Householder is the standard numerically stable choice. QR is the workhorse for solving least-squares problems (minimize ||Ax - b||_2) and underlies the QR algorithm for eigenvalues.",
+    "formula_latex": "A = QR, \\quad Q^{\\top}Q = I,\\; R \\text{ upper triangular}",
+    "formula_plaintext": "A = QR, with Q^T Q = I and R upper triangular",
+    "steps": [
+      "Choose a method: Householder reflections (stable), Givens rotations, or (modified) Gram-Schmidt.",
+      "For Householder, successively apply reflectors H_k that zero the entries below the diagonal in each column, so that H_{n}...H_1 A = R.",
+      "Accumulate Q = H_1 ... H_n (or keep it implicitly as a product of reflectors).",
+      "For least squares, solve Rx = Q^T b by back substitution."
+    ],
+    "inputs": [
+      "An m-by-n matrix A with m >= n"
+    ],
+    "outputs": [
+      "Matrix Q with orthonormal columns",
+      "Upper-triangular R"
+    ],
+    "complexity": "O(m n^2) (about 2mn^2 - 2n^3/3 flops via Householder)",
+    "worked_example": "The columns of $Q$ are an orthonormal basis for the column space of $A$; for full-rank $A$ the diagonal of $R$ is nonzero.",
+    "references": [
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra, Lectures 7-10"
+      },
+      {
+        "title": "Golub & Van Loan, Matrix Computations, Section 5.2"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra, Chapter 4"
+      }
+    ],
+    "prerequisites": [
+      "gram-schmidt",
+      "orthogonal-matrix"
+    ]
+  },
+  {
+    "id": "cholesky-decomposition",
+    "canonical_name": "Cholesky decomposition",
+    "kind": "method",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "decompositions"
+    ],
+    "short_description": "A factorization of a symmetric positive definite matrix into a lower-triangular factor times its transpose, the most efficient direct solver for such systems.",
+    "summary": "For a symmetric (Hermitian) positive definite matrix A, the Cholesky decomposition gives A = L L^T (A = L L^* in the complex case) with L lower triangular having positive diagonal entries; it is unique. It is essentially Gaussian elimination specialized to the SPD case, requiring no pivoting for stability and about half the work of a general LU. It is used to solve SPD systems, in least squares via the normal equations, and to sample Gaussian distributions.",
+    "formula_latex": "A = LL^{\\top}, \\quad L \\text{ lower triangular},\\; \\ell_{ii} > 0, \\quad A = A^{\\top} \\succ 0",
+    "formula_plaintext": "A = L L^T, with L lower triangular and positive diagonal, valid for symmetric positive definite A",
+    "steps": [
+      "Verify (or assume) A is symmetric positive definite.",
+      "For j = 1..n, compute l_{jj} = sqrt(a_{jj} - sum_{k<j} l_{jk}^2).",
+      "For i > j, compute l_{ij} = (a_{ij} - sum_{k<j} l_{ik} l_{jk}) / l_{jj}.",
+      "Solve Ax = b via forward substitution Ly = b then back substitution L^T x = y. A negative radicand signals A is not positive definite."
+    ],
+    "inputs": [
+      "A symmetric (Hermitian) positive definite matrix A"
+    ],
+    "outputs": [
+      "Lower-triangular L with positive diagonal such that A = L L^T"
+    ],
+    "complexity": "O(n^3) (about n^3/3 flops, half of LU)",
+    "worked_example": "For $A=\\begin{pmatrix}4&2\\\\2&5\\end{pmatrix}$, $L=\\begin{pmatrix}2&0\\\\1&2\\end{pmatrix}$ since $LL^{\\top}=A$.",
+    "references": [
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra, Lecture 23"
+      },
+      {
+        "title": "Golub & Van Loan, Matrix Computations, Section 4.2"
+      },
+      {
+        "title": "Horn & Johnson, Matrix Analysis, Section 7.2"
+      }
+    ],
+    "prerequisites": [
+      "positive-definite"
+    ]
+  },
+  {
+    "id": "schur-decomposition",
+    "canonical_name": "Schur decomposition",
+    "kind": "method",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "decompositions"
+    ],
+    "short_description": "The theorem/factorization that every square complex matrix is unitarily similar to an upper-triangular matrix whose diagonal displays the eigenvalues.",
+    "summary": "Every square complex matrix A can be written as A = Q T Q^*, where Q is unitary and T is upper triangular; the diagonal entries of T are the eigenvalues of A. This is the Schur (triangularization) decomposition. Because it uses only unitary similarity, it is numerically stable and forms the basis of the practical QR algorithm for computing eigenvalues. For real matrices there is a real Schur form A = Q T Q^T with Q orthogonal and T quasi-upper-triangular (1x1 and 2x2 diagonal blocks). If A is normal, T is diagonal.",
+    "formula_latex": "A = QTQ^{*}, \\quad Q^{*}Q = I,\\; T \\text{ upper triangular},\\; T_{ii} = \\lambda_i(A)",
+    "formula_plaintext": "A = Q T Q^*, with Q unitary, T upper triangular, and diagonal entries of T equal to the eigenvalues of A",
+    "steps": [
+      "Compute an eigenvalue lambda_1 and a unit eigenvector; make it the first column of a unitary matrix.",
+      "Conjugate A by this unitary to deflate: the first column becomes lambda_1 with zeros below, leaving a smaller (n-1) block.",
+      "Recurse on the trailing block and accumulate the unitary factors into Q.",
+      "In practice, compute via the shifted QR algorithm applied after reduction to Hessenberg form."
+    ],
+    "inputs": [
+      "A square complex (or real) matrix A"
+    ],
+    "outputs": [
+      "Unitary/orthogonal Q",
+      "Upper-triangular (or quasi-triangular) T with eigenvalues on the diagonal"
+    ],
+    "complexity": "O(n^3) via reduction to Hessenberg form plus the QR algorithm",
+    "worked_example": "If $A$ is Hermitian, the Schur form is diagonal and $A = Q \\Lambda Q^{*}$ is the spectral decomposition with real eigenvalues.",
+    "references": [
+      {
+        "title": "Horn & Johnson, Matrix Analysis, Section 2.3 (Schur's theorem)"
+      },
+      {
+        "title": "Golub & Van Loan, Matrix Computations, Section 7.4"
+      },
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra, Lecture 24"
+      }
+    ],
+    "prerequisites": [
+      "eigenvalue-eigenvector",
+      "unitary-matrix"
+    ]
+  },
+  {
+    "id": "polar-decomposition",
+    "canonical_name": "Polar decomposition",
+    "kind": "method",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "decompositions"
+    ],
+    "short_description": "A factorization of a matrix into a unitary/orthogonal factor times a positive semidefinite factor, the matrix analogue of writing a complex number as r e^{i theta}.",
+    "summary": "Any square matrix A can be written as A = U P, where U is unitary (orthogonal in the real case) and P is positive semidefinite (P = sqrt(A^* A)); P is always unique, and U is unique when A is nonsingular. There is a left form A = P' U with P' = sqrt(A A^*). The decomposition is closely tied to the SVD: from A = W Sigma V^* one has U = W V^* and P = V Sigma V^*. U is the nearest unitary matrix to A in any unitarily invariant norm. It generalizes to m-by-n matrices with U having orthonormal columns.",
+    "formula_latex": "A = UP, \\quad U^{*}U = I,\\; P = (A^{*}A)^{1/2} \\succeq 0",
+    "formula_plaintext": "A = U P, with U unitary/orthogonal and P = (A^* A)^{1/2} positive semidefinite",
+    "steps": [
+      "Compute the SVD A = W Sigma V^* (W, V unitary, Sigma >= 0 diagonal).",
+      "Set the positive semidefinite factor P = V Sigma V^*.",
+      "Set the unitary factor U = W V^*.",
+      "Then A = U P; for the left polar form use P' = W Sigma W^* so that A = P' U."
+    ],
+    "inputs": [
+      "A square (or m-by-n with m >= n) matrix A"
+    ],
+    "outputs": [
+      "Unitary/orthogonal factor U",
+      "Positive semidefinite factor P"
+    ],
+    "complexity": "O(n^3), typically via the SVD (or a scaled Newton iteration)",
+    "worked_example": "For a scalar $a = re^{i\\theta}$ the polar decomposition is $U = e^{i\\theta}$, $P = r$, exactly the polar form of a complex number.",
+    "references": [
+      {
+        "title": "Horn & Johnson, Matrix Analysis, Section 7.3"
+      },
+      {
+        "title": "Polar decomposition (Wikipedia)",
+        "url": "https://en.wikipedia.org/wiki/Polar_decomposition"
+      }
+    ],
+    "prerequisites": [
+      "svd",
+      "positive-semidefinite"
+    ]
+  },
+  {
+    "id": "low-rank-approximation",
+    "canonical_name": "Low-rank approximation (Eckart-Young)",
+    "kind": "theorem",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "decompositions"
+    ],
+    "short_description": "The Eckart-Young-Mirsky theorem: the truncated SVD gives the best rank-k approximation of a matrix in both spectral and Frobenius norms.",
+    "statement": "Let A have SVD A = U Sigma V^T with singular values sigma_1 >= sigma_2 >= ... >= sigma_r > 0, and define the rank-k truncation A_k = sum_{i=1}^{k} sigma_i u_i v_i^T. Then for every matrix B of rank at most k, ||A - A_k|| <= ||A - B||, in the spectral norm with min error ||A - A_k||_2 = sigma_{k+1}, and in the Frobenius norm with min error ||A - A_k||_F = sqrt(sum_{i>k} sigma_i^2). Thus A_k is a best rank-k approximation of A (Eckart-Young for the Frobenius norm, extended by Mirsky to all unitarily invariant norms).",
+    "formula_latex": "A_k = \\sum_{i=1}^{k} \\sigma_i u_i v_i^{\\top}, \\qquad \\min_{\\operatorname{rank}(B)\\le k}\\|A-B\\|_2 = \\|A-A_k\\|_2 = \\sigma_{k+1}",
+    "formula_plaintext": "A_k = sum_{i=1}^k sigma_i u_i v_i^T; min over rank(B)<=k of ||A - B||_2 = ||A - A_k||_2 = sigma_{k+1}",
+    "proof_sketch": "For the spectral norm, ||A - A_k||_2 = sigma_{k+1} directly from the SVD. For any B of rank <= k, its null space has dimension >= n - k, which must intersect the (k+1)-dimensional span of v_1,...,v_{k+1}; a unit vector x in that intersection satisfies (A-B)x = Ax, and ||Ax||_2 >= sigma_{k+1}, so ||A - B||_2 >= sigma_{k+1}. The Frobenius-norm case follows because all unitarily invariant norms depend only on the singular values, and the truncation optimally discards the smallest ones (Mirsky's generalization).",
+    "consequences": [
+      "Optimal data compression, dimensionality reduction (PCA), and noise filtering via keeping the top-k singular components.",
+      "The approximation error is governed by the discarded singular values sigma_{k+1}, sigma_{k+2}, ...",
+      "A_k is unique when sigma_k > sigma_{k+1}."
+    ],
+    "worked_example": "If $A$ has singular values $5, 4, 0.1$, the best rank-2 approximation has spectral error $0.1$ and Frobenius error $0.1$; discarding the tiny third component loses almost nothing.",
+    "references": [
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra, Lecture 5"
+      },
+      {
+        "title": "Horn & Johnson, Matrix Analysis, Section 7.4"
+      },
+      {
+        "title": "Golub & Van Loan, Matrix Computations, Section 2.4"
+      }
+    ],
+    "prerequisites": [
+      "svd"
+    ]
+  },
+  {
+    "id": "positive-definite",
+    "canonical_name": "Positive definite matrix",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "special-matrices"
+    ],
+    "short_description": "A symmetric (or Hermitian) matrix whose quadratic form is strictly positive on all nonzero vectors, characterizing definite inner products and strict convexity.",
+    "definition": "A real symmetric matrix $A \\in \\mathbb{R}^{n\\times n}$ is positive definite if $x^{T} A x > 0$ for every nonzero $x \\in \\mathbb{R}^{n}$. Equivalently, all eigenvalues of $A$ are strictly positive, all leading principal minors are positive (Sylvester's criterion), or $A = R^{T} R$ for some invertible $R$. In the complex case, a Hermitian $A$ is positive definite if $x^{*} A x > 0$ for all nonzero $x$.",
+    "formula_latex": "x^{T} A x > 0 \\quad \\text{for all } x \\neq 0, \\qquad A = A^{T}",
+    "formula_plaintext": "x^T A x > 0 for all x != 0, with A = A^T",
+    "examples": [
+      "The identity matrix $I_n$ is positive definite since $x^T I x = \\lVert x\\rVert^2 > 0$ for $x\\neq 0$.",
+      "$\\begin{pmatrix} 2 & -1 \\\\ -1 & 2 \\end{pmatrix}$ has eigenvalues $1$ and $3$, hence is positive definite.",
+      "Any Gram matrix $R^T R$ with $R$ of full column rank is positive definite."
+    ],
+    "worked_example": "For $A=\\begin{pmatrix}2&-1\\\\-1&2\\end{pmatrix}$, $x^TAx = 2x_1^2 - 2x_1x_2 + 2x_2^2 = x_1^2 + (x_1-x_2)^2 + x_2^2 > 0$ for $x\\neq 0$.",
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Horn & Johnson, Matrix Analysis"
+      }
+    ],
+    "prerequisites": [
+      "symmetric-matrix",
+      "quadratic-form"
+    ],
+    "related": [
+      "positive-semidefinite"
+    ]
+  },
+  {
+    "id": "positive-semidefinite",
+    "canonical_name": "Positive semidefinite matrix",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "special-matrices"
+    ],
+    "short_description": "A symmetric (or Hermitian) matrix whose quadratic form is nonnegative on all vectors, equivalently having only nonnegative eigenvalues.",
+    "definition": "A real symmetric matrix $A \\in \\mathbb{R}^{n\\times n}$ is positive semidefinite if $x^{T} A x \\ge 0$ for every $x \\in \\mathbb{R}^{n}$. Equivalently, all eigenvalues of $A$ are nonnegative, or $A = B^{T} B$ for some matrix $B$. Unlike positive definite matrices, a positive semidefinite matrix may be singular (it may have a zero eigenvalue). In the complex case, a Hermitian $A$ is positive semidefinite if $x^{*} A x \\ge 0$ for all $x$.",
+    "formula_latex": "x^{T} A x \\ge 0 \\quad \\text{for all } x, \\qquad A = A^{T}",
+    "formula_plaintext": "x^T A x >= 0 for all x, with A = A^T",
+    "examples": [
+      "$\\begin{pmatrix} 1 & 0 \\\\ 0 & 0 \\end{pmatrix}$ is positive semidefinite but not positive definite (it is singular).",
+      "Any covariance matrix is positive semidefinite.",
+      "$A = B^T B$ for any matrix $B$ is positive semidefinite since $x^T B^T B x = \\lVert Bx\\rVert^2 \\ge 0$."
+    ],
+    "references": [
+      {
+        "title": "Horn & Johnson, Matrix Analysis"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      }
+    ],
+    "prerequisites": [
+      "symmetric-matrix",
+      "quadratic-form"
+    ]
+  },
+  {
+    "id": "quadratic-form",
+    "canonical_name": "Quadratic form",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "special-matrices"
+    ],
+    "short_description": "A homogeneous degree-two polynomial in several variables expressed as q(x)=x^T A x with a symmetric matrix A, central to optimization and definiteness.",
+    "definition": "A quadratic form on $\\mathbb{R}^{n}$ is a function $q(x) = x^{T} A x = \\sum_{i,j} a_{ij} x_i x_j$, where $A$ can always be taken symmetric (replace $A$ by $\\tfrac12(A+A^{T})$ without changing $q$). Its classification into positive definite, positive semidefinite, negative definite, negative semidefinite, or indefinite is determined by the signs of the eigenvalues of the symmetric matrix $A$. By the principal axis theorem, an orthogonal change of variables $x = Q y$ diagonalizes $q$ to $\\sum_i \\lambda_i y_i^2$.",
+    "formula_latex": "q(x) = x^{T} A x = \\sum_{i=1}^{n}\\sum_{j=1}^{n} a_{ij}\\, x_i x_j",
+    "formula_plaintext": "q(x) = x^T A x = sum_{i,j} a_{ij} x_i x_j",
+    "examples": [
+      "$q(x_1,x_2) = x_1^2 + 4x_1 x_2 + x_2^2$ corresponds to $A=\\begin{pmatrix}1&2\\\\2&1\\end{pmatrix}$.",
+      "$q(x)=\\lVert x\\rVert^2 = x^T I x$ is a positive definite quadratic form."
+    ],
+    "worked_example": "For $A=\\begin{pmatrix}1&2\\\\2&1\\end{pmatrix}$, eigenvalues are $3$ and $-1$, so $q$ is indefinite; diagonalizing gives $q = 3y_1^2 - y_2^2$.",
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right"
+      }
+    ]
+  },
+  {
+    "id": "hermitian-matrix",
+    "canonical_name": "Hermitian matrix",
+    "kind": "object",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "special-matrices"
+    ],
+    "short_description": "A complex square matrix equal to its own conjugate transpose, the complex analogue of a real symmetric matrix with real eigenvalues.",
+    "definition": "A matrix $A \\in \\mathbb{C}^{n\\times n}$ is Hermitian if $A = A^{*}$, where $A^{*} = \\overline{A}^{T}$ is the conjugate transpose; equivalently $a_{ij} = \\overline{a_{ji}}$ for all $i,j$. Every Hermitian matrix has real eigenvalues and admits an orthonormal basis of eigenvectors (the spectral theorem), so it is unitarily diagonalizable: $A = U \\Lambda U^{*}$ with $U$ unitary and $\\Lambda$ real diagonal. Diagonal entries of a Hermitian matrix are real. Real symmetric matrices are the special case with real entries.",
+    "notation": "$A = A^{*}$, where $A^{*} = \\overline{A}^{T}$",
+    "formula_latex": "A = A^{*} = \\overline{A}^{T}, \\qquad a_{ij} = \\overline{a_{ji}}",
+    "formula_plaintext": "A = A^* = conj(A)^T, i.e. a_{ij} = conj(a_{ji})",
+    "examples": [
+      "$\\begin{pmatrix} 2 & 3-i \\\\ 3+i & 5 \\end{pmatrix}$ is Hermitian.",
+      "Every real symmetric matrix is Hermitian.",
+      "The identity matrix is Hermitian."
+    ],
+    "references": [
+      {
+        "title": "Horn & Johnson, Matrix Analysis"
+      },
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra"
+      }
+    ],
+    "prerequisites": [
+      "adjoint"
+    ]
+  },
+  {
+    "id": "unitary-matrix",
+    "canonical_name": "Unitary matrix",
+    "kind": "object",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "special-matrices"
+    ],
+    "short_description": "A complex square matrix whose conjugate transpose is its inverse, preserving the Hermitian inner product and Euclidean norm; the complex analogue of an orthogonal matrix.",
+    "definition": "A matrix $U \\in \\mathbb{C}^{n\\times n}$ is unitary if $U^{*} U = U U^{*} = I$, equivalently $U^{-1} = U^{*}$. The columns (and rows) of $U$ form an orthonormal basis of $\\mathbb{C}^{n}$. Unitary matrices preserve inner products and norms, $\\langle Ux, Uy\\rangle = \\langle x, y\\rangle$ and $\\lVert Ux\\rVert = \\lVert x\\rVert$, so all eigenvalues have modulus $1$ and $|\\det U| = 1$. Real unitary matrices are exactly the orthogonal matrices.",
+    "notation": "$U^{*} U = U U^{*} = I$, so $U^{-1} = U^{*}$",
+    "formula_latex": "U^{*} U = U U^{*} = I",
+    "formula_plaintext": "U^* U = U U^* = I",
+    "examples": [
+      "$\\frac{1}{\\sqrt{2}}\\begin{pmatrix} 1 & 1 \\\\ 1 & -1 \\end{pmatrix}$ is unitary (in fact real orthogonal).",
+      "$\\begin{pmatrix} e^{i\\theta} & 0 \\\\ 0 & e^{i\\phi} \\end{pmatrix}$ is unitary for any real $\\theta,\\phi$.",
+      "Any orthogonal matrix is unitary."
+    ],
+    "references": [
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra"
+      },
+      {
+        "title": "Horn & Johnson, Matrix Analysis"
+      }
+    ],
+    "prerequisites": [
+      "adjoint"
+    ]
+  },
+  {
+    "id": "normal-matrix",
+    "canonical_name": "Normal matrix",
+    "kind": "object",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "special-matrices"
+    ],
+    "short_description": "A complex square matrix that commutes with its conjugate transpose, characterized exactly by being unitarily diagonalizable via the spectral theorem.",
+    "definition": "A matrix $A \\in \\mathbb{C}^{n\\times n}$ is normal if $A A^{*} = A^{*} A$. By the spectral theorem, $A$ is normal if and only if it is unitarily diagonalizable, i.e. $A = U \\Lambda U^{*}$ for some unitary $U$ and diagonal $\\Lambda$; equivalently $\\mathbb{C}^{n}$ has an orthonormal basis of eigenvectors of $A$. Hermitian, skew-Hermitian, and unitary matrices are all normal. Normal matrices are also characterized by $\\lVert Ax\\rVert = \\lVert A^{*}x\\rVert$ for all $x$.",
+    "notation": "$A A^{*} = A^{*} A$",
+    "formula_latex": "A A^{*} = A^{*} A",
+    "formula_plaintext": "A A^* = A^* A",
+    "examples": [
+      "Every Hermitian matrix ($A=A^*$) is normal.",
+      "Every unitary matrix ($U^*U=UU^*=I$) is normal.",
+      "$\\begin{pmatrix} 1 & 1 \\\\ 0 & 1 \\end{pmatrix}$ is NOT normal, since $AA^* \\neq A^*A$."
+    ],
+    "references": [
+      {
+        "title": "Horn & Johnson, Matrix Analysis"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right"
+      }
+    ],
+    "prerequisites": [
+      "adjoint"
+    ]
+  },
+  {
+    "id": "matrix-norm",
+    "canonical_name": "Matrix norm",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "norms-conditioning"
+    ],
+    "short_description": "A norm on the vector space of matrices, often an operator norm induced by vector norms or an entrywise norm, measuring matrix size for stability analysis.",
+    "definition": "A matrix norm is a function $\\|\\cdot\\|: \\mathbb{C}^{m\\times n}\\to[0,\\infty)$ satisfying, for all matrices $A,B$ and scalars $\\alpha$: (i) $\\|A\\|=0$ iff $A=0$; (ii) $\\|\\alpha A\\|=|\\alpha|\\,\\|A\\|$; (iii) $\\|A+B\\|\\le\\|A\\|+\\|B\\|$. For square matrices a norm is called submultiplicative if additionally $\\|AB\\|\\le\\|A\\|\\,\\|B\\|$. Two important families are the induced (operator) norms $\\|A\\|_p=\\max_{x\\ne 0}\\|Ax\\|_p/\\|x\\|_p$ and entrywise norms treating $A$ as a long vector.",
+    "formula_latex": "\\|A\\|_p = \\max_{x \\neq 0} \\frac{\\|Ax\\|_p}{\\|x\\|_p}",
+    "formula_plaintext": "||A||_p = max_{x != 0} ||Ax||_p / ||x||_p",
+    "notation": "\\|A\\|, \\|A\\|_p",
+    "examples": [
+      "Induced 1-norm: $\\|A\\|_1=\\max_j\\sum_i|a_{ij}|$ (max absolute column sum).",
+      "Induced $\\infty$-norm: $\\|A\\|_\\infty=\\max_i\\sum_j|a_{ij}|$ (max absolute row sum).",
+      "Frobenius and spectral norms are common non-induced and induced examples respectively."
+    ],
+    "worked_example": "For $A=\\begin{pmatrix}1&-2\\\\0&3\\end{pmatrix}$, the induced 1-norm is $\\max(1,5)=5$ (columns sum to $1$ and $5$), and the induced $\\infty$-norm is $\\max(3,3)=3$ (rows sum to $3$ and $3$).",
+    "references": [
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra, Lecture 3"
+      },
+      {
+        "title": "Horn & Johnson, Matrix Analysis, Chapter 5"
+      },
+      {
+        "title": "Matrix norm — Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Matrix_norm"
+      }
+    ],
+    "prerequisites": [
+      "vector-norm"
+    ]
+  },
+  {
+    "id": "frobenius-norm",
+    "canonical_name": "Frobenius norm",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "norms-conditioning"
+    ],
+    "short_description": "The entrywise Euclidean norm of a matrix, equal to the square root of the sum of squared entries and of the sum of squared singular values.",
+    "definition": "The Frobenius norm of $A\\in\\mathbb{C}^{m\\times n}$ treats the matrix as a vector of its entries and takes the Euclidean norm: $\\|A\\|_F=\\sqrt{\\sum_{i,j}|a_{ij}|^2}$. Equivalently $\\|A\\|_F=\\sqrt{\\operatorname{trace}(A^{*}A)}=\\sqrt{\\sum_k \\sigma_k^2}$, where $\\sigma_k$ are the singular values. It is submultiplicative and unitarily invariant, but it is not an induced (operator) norm.",
+    "formula_latex": "\\|A\\|_F = \\sqrt{\\sum_{i=1}^{m}\\sum_{j=1}^{n} |a_{ij}|^2} = \\sqrt{\\operatorname{trace}(A^{*}A)} = \\sqrt{\\sum_k \\sigma_k^2}",
+    "formula_plaintext": "||A||_F = sqrt(sum_{i,j} |a_ij|^2) = sqrt(trace(A^* A)) = sqrt(sum_k sigma_k^2)",
+    "notation": "\\|A\\|_F",
+    "examples": [
+      "For the identity $I_n$, $\\|I_n\\|_F=\\sqrt{n}$.",
+      "$\\|A\\|_F$ is unitarily invariant: $\\|UAV\\|_F=\\|A\\|_F$ for unitary $U,V$."
+    ],
+    "worked_example": "For $A=\\begin{pmatrix}1&2\\\\2&1\\end{pmatrix}$, $\\|A\\|_F=\\sqrt{1+4+4+1}=\\sqrt{10}$. Check via trace: $A^{*}A=\\begin{pmatrix}5&4\\\\4&5\\end{pmatrix}$, $\\operatorname{trace}=10$.",
+    "references": [
+      {
+        "title": "Golub & Van Loan, Matrix Computations, Section 2.3"
+      },
+      {
+        "title": "Horn & Johnson, Matrix Analysis, Chapter 5"
+      },
+      {
+        "title": "Matrix norm (Frobenius norm) — Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Matrix_norm#Frobenius_norm"
+      }
+    ],
+    "prerequisites": [
+      "matrix-norm"
+    ],
+    "related": [
+      "frobenius",
+      "matrix-norm",
+      "spectral-norm"
+    ]
+  },
+  {
+    "id": "spectral-norm",
+    "canonical_name": "Spectral norm",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "norms-conditioning"
+    ],
+    "short_description": "The operator 2-norm of a matrix, equal to its largest singular value, giving the maximum Euclidean stretch factor applied to any vector.",
+    "definition": "The spectral norm is the matrix norm induced by the Euclidean vector 2-norm: $\\|A\\|_2=\\max_{x\\ne 0}\\|Ax\\|_2/\\|x\\|_2$. It equals the largest singular value $\\sigma_{\\max}(A)$, equivalently $\\sqrt{\\lambda_{\\max}(A^{*}A)}$. It is submultiplicative and unitarily invariant, and for a normal matrix it equals the spectral radius (largest eigenvalue magnitude).",
+    "formula_latex": "\\|A\\|_2 = \\max_{x \\neq 0} \\frac{\\|Ax\\|_2}{\\|x\\|_2} = \\sigma_{\\max}(A) = \\sqrt{\\lambda_{\\max}(A^{*}A)}",
+    "formula_plaintext": "||A||_2 = max_{x != 0} ||Ax||_2 / ||x||_2 = sigma_max(A) = sqrt(lambda_max(A^* A))",
+    "notation": "\\|A\\|_2",
+    "examples": [
+      "For a symmetric matrix, $\\|A\\|_2=\\max_i|\\lambda_i|$.",
+      "For a diagonal matrix $\\operatorname{diag}(d_1,\\dots,d_n)$, $\\|A\\|_2=\\max_i|d_i|$."
+    ],
+    "worked_example": "For $A=\\begin{pmatrix}2&0\\\\0&-3\\end{pmatrix}$, $A^{*}A=\\operatorname{diag}(4,9)$, so $\\|A\\|_2=\\sqrt{9}=3=\\sigma_{\\max}$.",
+    "references": [
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra, Lecture 3"
+      },
+      {
+        "title": "Golub & Van Loan, Matrix Computations, Section 2.3"
+      },
+      {
+        "title": "Spectral norm — Wolfram MathWorld",
+        "url": "https://mathworld.wolfram.com/SpectralNorm.html"
+      }
+    ],
+    "prerequisites": [
+      "matrix-norm",
+      "singular-value"
+    ],
+    "related": [
+      "spectral_norm",
+      "matrix-norm",
+      "frobenius-norm",
+      "singular-value"
+    ]
+  },
+  {
+    "id": "condition-number",
+    "canonical_name": "Condition number",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "norms-conditioning"
+    ],
+    "short_description": "For an invertible matrix, the product of its norm and its inverse's norm, quantifying how sensitive the solution of Ax=b is to perturbations in A or b.",
+    "definition": "The condition number of an invertible matrix $A$ with respect to a matrix norm is $\\kappa(A)=\\|A\\|\\,\\|A^{-1}\\|$. It measures the sensitivity of the linear system $Ax=b$: relative errors in the data can be amplified by up to a factor $\\kappa(A)$ in the solution. In the spectral norm, $\\kappa_2(A)=\\sigma_{\\max}(A)/\\sigma_{\\min}(A)$. Always $\\kappa(A)\\ge 1$; a matrix with large $\\kappa(A)$ is called ill-conditioned. By convention $\\kappa(A)=\\infty$ for singular $A$.",
+    "formula_latex": "\\kappa(A) = \\|A\\|\\,\\|A^{-1}\\|, \\qquad \\kappa_2(A) = \\frac{\\sigma_{\\max}(A)}{\\sigma_{\\min}(A)}",
+    "formula_plaintext": "kappa(A) = ||A|| ||A^{-1}||,   kappa_2(A) = sigma_max(A) / sigma_min(A)",
+    "notation": "\\kappa(A), \\operatorname{cond}(A)",
+    "examples": [
+      "An orthogonal (or unitary) matrix has $\\kappa_2(A)=1$, the best possible conditioning.",
+      "The perturbation bound: if $A(x+\\delta x)=b+\\delta b$ then $\\|\\delta x\\|/\\|x\\|\\le\\kappa(A)\\,\\|\\delta b\\|/\\|b\\|$."
+    ],
+    "worked_example": "For $A=\\operatorname{diag}(1000,1)$, $\\|A\\|_2=1000$, $\\|A^{-1}\\|_2=1$, so $\\kappa_2(A)=1000$: a 0.1% relative data error can be amplified into a solution error near 100%.",
+    "references": [
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra, Lecture 12"
+      },
+      {
+        "title": "Golub & Van Loan, Matrix Computations, Section 2.6"
+      },
+      {
+        "title": "Condition number — Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Condition_number"
+      }
+    ],
+    "prerequisites": [
+      "spectral-norm",
+      "matrix-inverse"
+    ]
+  },
+  {
+    "id": "linear-system",
+    "canonical_name": "System of linear equations",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "linear-systems"
+    ],
+    "short_description": "A collection of linear equations in the same unknowns, written Ax = b, whose solution set is determined by the existence and uniqueness structure of A.",
+    "definition": "A system of m linear equations in n unknowns can be written in matrix form as Ax = b, where A is an m x n coefficient matrix, x is the n-vector of unknowns, and b is the m-vector of right-hand sides. A solution is any x satisfying all equations simultaneously. The system is consistent if at least one solution exists (equivalently b lies in the column space of A), and inconsistent otherwise. When consistent, the solution is unique if and only if the columns of A are linearly independent (rank A = n); otherwise the solution set is a translate of the null space of A. For a square matrix A, the system has a unique solution for every b if and only if A is invertible.",
+    "formula_latex": "A x = b, \\qquad A \\in \\mathbb{R}^{m \\times n},\\; x \\in \\mathbb{R}^{n},\\; b \\in \\mathbb{R}^{m}",
+    "formula_plaintext": "A x = b, with A an m-by-n matrix, x in R^n, b in R^m",
+    "examples": [
+      "The 2x2 system x + y = 3, x - y = 1 has the unique solution x = 2, y = 1.",
+      "The system x + y = 1, x + y = 2 is inconsistent (no solution).",
+      "x + y = 1 alone (one equation, two unknowns) has infinitely many solutions forming a line."
+    ],
+    "worked_example": "For $A = \\begin{pmatrix} 1 & 1 \\\\ 1 & -1 \\end{pmatrix}$, $b = \\begin{pmatrix} 3 \\\\ 1 \\end{pmatrix}$, solving gives $x = 2,\\ y = 1$; since $\\det A = -2 \\neq 0$ the solution is unique.",
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Axler, Linear Algebra Done Right"
+      }
+    ]
+  },
+  {
+    "id": "gaussian-elimination",
+    "canonical_name": "Gaussian elimination",
+    "kind": "method",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "linear-systems"
+    ],
+    "short_description": "A systematic row-reduction algorithm that transforms Ax = b to upper-triangular form, solving the system and yielding the LU factorization of A.",
+    "summary": "Gaussian elimination solves a linear system Ax = b by applying elementary row operations to reduce the augmented matrix to row echelon (upper-triangular) form, after which the unknowns are found by back substitution. The same forward-elimination process, when it uses no row exchanges, produces a factorization A = LU with L unit lower triangular and U upper triangular; with partial pivoting it produces PA = LU.",
+    "steps": [
+      "Form the augmented matrix [A | b].",
+      "Forward elimination: for each pivot column, (optionally) select a pivot by partial pivoting, then subtract multiples of the pivot row from the rows below to zero out entries beneath the pivot.",
+      "Continue until the coefficient part is in upper-triangular (row echelon) form.",
+      "Back substitution: solve for the unknowns from the last pivot equation upward."
+    ],
+    "inputs": [
+      "Coefficient matrix A (m x n)",
+      "Right-hand side vector b"
+    ],
+    "outputs": [
+      "Solution vector x (when unique)",
+      "Row echelon form of A; optionally the LU (or PA=LU) factorization"
+    ],
+    "complexity": "About (2/3)n^3 floating-point operations for an n x n system (forward elimination), plus O(n^2) for back substitution.",
+    "formula_latex": "[A \\mid b] \\xrightarrow{\\text{row operations}} [U \\mid c], \\qquad A = LU",
+    "formula_plaintext": "[A | b] -> [U | c] via row operations; A = LU",
+    "worked_example": "For $\\begin{pmatrix} 2 & 1 \\\\ 4 & 3 \\end{pmatrix}$, subtracting $2\\times$ row 1 from row 2 gives $\\begin{pmatrix} 2 & 1 \\\\ 0 & 1 \\end{pmatrix}$, so $L = \\begin{pmatrix} 1 & 0 \\\\ 2 & 1 \\end{pmatrix}$, $U = \\begin{pmatrix} 2 & 1 \\\\ 0 & 1 \\end{pmatrix}$.",
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra"
+      },
+      {
+        "title": "Golub & Van Loan, Matrix Computations"
+      }
+    ],
+    "prerequisites": [
+      "linear-system"
+    ]
+  },
+  {
+    "id": "row-echelon-form",
+    "canonical_name": "Row echelon form",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "linear-systems"
+    ],
+    "short_description": "A staircase matrix form in which each leading nonzero entry sits to the right of the one above it; its reduced version (RREF) is unique for a given matrix.",
+    "definition": "A matrix is in row echelon form (REF) if all zero rows are at the bottom, and the leading (leftmost nonzero) entry of each nonzero row, called a pivot, lies strictly to the right of the pivot in the row above it, so that all entries below each pivot are zero. It is in reduced row echelon form (RREF) if, additionally, every pivot equals 1 and is the only nonzero entry in its column. While the (unreduced) row echelon form of a matrix is not unique, the reduced row echelon form is uniquely determined by the matrix. The positions of the pivots identify the pivot columns and hence the rank.",
+    "formula_latex": "\\begin{pmatrix} 1 & * & 0 & * \\\\ 0 & 0 & 1 & * \\\\ 0 & 0 & 0 & 0 \\end{pmatrix}",
+    "formula_plaintext": "e.g. RREF: [[1,*,0,*],[0,0,1,*],[0,0,0,0]] with leading 1s (pivots) and zeros elsewhere in pivot columns",
+    "examples": [
+      "The identity matrix I_n is in reduced row echelon form.",
+      "The matrix [[1,2,0],[0,0,1]] is in RREF with pivots in columns 1 and 3.",
+      "[[2,4],[0,3]] is in (unreduced) row echelon form but not reduced."
+    ],
+    "worked_example": "Reducing $\\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix}$ gives RREF $\\begin{pmatrix} 1 & 0 \\\\ 0 & 1 \\end{pmatrix}$, showing the matrix has rank 2.",
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Row echelon form, Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Row_echelon_form"
+      }
+    ],
+    "prerequisites": [
+      "gaussian-elimination"
+    ]
+  },
+  {
+    "id": "least-squares",
+    "canonical_name": "Least squares",
+    "kind": "method",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "linear-systems"
+    ],
+    "short_description": "A method that finds the vector x minimizing the Euclidean norm of the residual Ax - b, giving the best approximate solution to overdetermined systems.",
+    "summary": "Given an (often overdetermined) system Ax = b with no exact solution, the least-squares method seeks x that minimizes the squared Euclidean norm of the residual, ||Ax - b||_2^2. Geometrically, Ax is the orthogonal projection of b onto the column space of A, so the residual is orthogonal to that subspace. When A has full column rank the minimizer is unique and satisfies the normal equations A^T A x = A^T b; numerically it is often computed via the QR factorization or the SVD for better stability.",
+    "steps": [
+      "Given A (m x n, m >= n) and b, form the least-squares problem: minimize ||Ax - b||_2.",
+      "Either form the normal equations A^T A x = A^T b, or (preferred numerically) compute a QR factorization A = QR.",
+      "With QR: solve R x = Q^T b by back substitution.",
+      "Return x; the fitted values are Ax, the orthogonal projection of b onto Col(A)."
+    ],
+    "inputs": [
+      "Matrix A (m x n)",
+      "Observation vector b (m-vector)"
+    ],
+    "outputs": [
+      "Minimizer x",
+      "Residual r = b - Ax orthogonal to Col(A)"
+    ],
+    "complexity": "O(m n^2) via Householder QR for an m x n matrix.",
+    "formula_latex": "\\min_{x} \\; \\lVert A x - b \\rVert_2^2",
+    "formula_plaintext": "minimize over x of ||Ax - b||_2^2",
+    "worked_example": "Fitting a line through $(1,1),(2,2),(3,2)$ leads to an overdetermined system solved in the least-squares sense, minimizing the sum of squared vertical residuals.",
+    "references": [
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra"
+      },
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Golub & Van Loan, Matrix Computations"
+      }
+    ],
+    "prerequisites": [
+      "orthogonal-projection",
+      "normal-equations"
+    ]
+  },
+  {
+    "id": "pseudoinverse",
+    "canonical_name": "Moore-Penrose pseudoinverse",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "linear-systems"
+    ],
+    "short_description": "The unique matrix A^+ generalizing the inverse to any (including non-square or rank-deficient) matrix, giving the minimum-norm least-squares solution of Ax = b.",
+    "definition": "For an m x n matrix A, the Moore-Penrose pseudoinverse A^+ is the unique n x m matrix satisfying the four Penrose conditions: A A^+ A = A, A^+ A A^+ = A^+, (A A^+)^T = A A^+, and (A^+ A)^T = A^+ A. It can be computed from the singular value decomposition A = U Sigma V^T as A^+ = V Sigma^+ U^T, where Sigma^+ is formed by transposing Sigma and inverting its nonzero singular values. The vector x = A^+ b is the least-squares solution of Ax = b of smallest Euclidean norm. When A is invertible, A^+ = A^{-1}; when A has full column rank, A^+ = (A^T A)^{-1} A^T.",
+    "notation": "A^{+} (also written A^{\\dagger})",
+    "formula_latex": "A = U \\Sigma V^{T} \\;\\Rightarrow\\; A^{+} = V \\Sigma^{+} U^{T}, \\qquad x = A^{+} b",
+    "formula_plaintext": "If A = U Sigma V^T then A^+ = V Sigma^+ U^T; x = A^+ b is the minimum-norm least-squares solution",
+    "examples": [
+      "For a full-column-rank A, A^+ = (A^T A)^{-1} A^T (the left inverse).",
+      "For a full-row-rank A, A^+ = A^T (A A^T)^{-1} (the right inverse).",
+      "For an invertible square A, A^+ = A^{-1}."
+    ],
+    "worked_example": "For $A = \\begin{pmatrix} 1 \\\\ 2 \\end{pmatrix}$, $A^+ = (A^T A)^{-1} A^T = \\tfrac{1}{5}\\begin{pmatrix} 1 & 2 \\end{pmatrix}$.",
+    "references": [
+      {
+        "title": "Golub & Van Loan, Matrix Computations"
+      },
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra"
+      },
+      {
+        "title": "Moore-Penrose inverse, Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Moore%E2%80%93Penrose_inverse"
+      }
+    ],
+    "prerequisites": [
+      "svd"
+    ],
+    "related": [
+      "least-squares"
+    ]
+  },
+  {
+    "id": "normal-equations",
+    "canonical_name": "Normal equations",
+    "kind": "formula",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "linear-systems"
+    ],
+    "short_description": "The linear system A^T A x = A^T b whose solutions are exactly the least-squares solutions of the (possibly overdetermined) system Ax = b.",
+    "statement": "The least-squares solutions of Ax = b, i.e. the minimizers of ||Ax - b||_2, are precisely the solutions of the normal equations A^T A x = A^T b. If A has full column rank then A^T A is invertible (symmetric positive definite) and the least-squares solution is unique: x = (A^T A)^{-1} A^T b.",
+    "formula_latex": "A^{T} A\\, x = A^{T} b",
+    "formula_plaintext": "A^T A x = A^T b",
+    "derivation": "Minimizing f(x) = ||Ax - b||_2^2 = (Ax-b)^T(Ax-b), set the gradient to zero: grad f = 2 A^T (Ax - b) = 0, giving A^T A x = A^T b. Equivalently, the residual b - Ax must be orthogonal to the column space of A, i.e. A^T (b - Ax) = 0.",
+    "conditions": [
+      "Holds for any real A and b; solutions always exist since A^T b lies in the column space of A^T A.",
+      "A^T A is invertible (unique solution) if and only if A has full column rank (linearly independent columns).",
+      "Numerically the normal equations can be ill-conditioned (condition number squared); QR or SVD is often preferred."
+    ],
+    "worked_example": "For $A = \\begin{pmatrix} 1 & 0 \\\\ 1 & 1 \\\\ 1 & 2 \\end{pmatrix}$, $b = \\begin{pmatrix} 1 \\\\ 2 \\\\ 2 \\end{pmatrix}$, the normal equations $A^T A x = A^T b$ give the best-fit line coefficients.",
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Trefethen & Bau, Numerical Linear Algebra"
+      }
+    ],
+    "prerequisites": [
+      "transpose"
+    ]
+  },
+  {
+    "id": "kronecker-product",
+    "canonical_name": "Kronecker product",
+    "kind": "transform",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "operations"
+    ],
+    "short_description": "The Kronecker product of two matrices forms a larger block matrix whose blocks are scalar multiples of the second matrix, encoding tensor products of linear maps.",
+    "formula_latex": "A \\otimes B = \\begin{bmatrix} a_{11}B & \\cdots & a_{1n}B \\\\ \\vdots & \\ddots & \\vdots \\\\ a_{m1}B & \\cdots & a_{mn}B \\end{bmatrix}",
+    "formula_plaintext": "A ⊗ B = [ a_ij * B ] (block matrix of size (m p) x (n q) when A is m x n and B is p x q)",
+    "definition": "For A an m×n matrix and B a p×q matrix, the Kronecker product A ⊗ B is the mp×nq block matrix whose (i,j) block is a_{ij}B. It represents the tensor product of the two linear maps in the standard bases.",
+    "notation": "A \\otimes B",
+    "inverse_latex": "(A \\otimes B)^{-1} = A^{-1} \\otimes B^{-1} \\quad (A, B \\text{ invertible})",
+    "domain_of_definition": "Any pair of matrices A (m×n) and B (p×q) over a common field; no size compatibility is required.",
+    "worked_example": "For $A=\\begin{bmatrix}1&2\\\\3&4\\end{bmatrix}$ and $B=\\begin{bmatrix}0&1\\\\1&0\\end{bmatrix}$, $A\\otimes B=\\begin{bmatrix}0&1&0&2\\\\1&0&2&0\\\\0&3&0&4\\\\3&0&4&0\\end{bmatrix}$.",
+    "references": [
+      {
+        "title": "Horn & Johnson, Topics in Matrix Analysis, Ch. 4"
+      },
+      {
+        "title": "Kronecker product — Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Kronecker_product"
+      }
+    ],
+    "prerequisites": [
+      "matrix-multiplication"
+    ]
+  },
+  {
+    "id": "outer-product",
+    "canonical_name": "Outer product",
+    "kind": "transform",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "operations"
+    ],
+    "short_description": "The outer product of two vectors is the matrix u v^T; it is a rank-1 matrix (when nonzero) and is the building block of low-rank decompositions.",
+    "formula_latex": "u v^{T} = \\begin{bmatrix} u_1 v_1 & \\cdots & u_1 v_n \\\\ \\vdots & \\ddots & \\vdots \\\\ u_m v_1 & \\cdots & u_m v_n \\end{bmatrix}, \\qquad (u v^{T})_{ij} = u_i v_j",
+    "formula_plaintext": "u v^T has (i,j) entry u_i * v_j, giving an m x n matrix from u in R^m and v in R^n",
+    "definition": "Given column vectors u ∈ R^m and v ∈ R^n, the outer product is the m×n matrix u v^T with entries (u v^T)_{ij} = u_i v_j. If u and v are both nonzero, u v^T has rank exactly 1, and every rank-1 matrix arises this way.",
+    "notation": "u v^{T} \\quad (\\text{or } u \\otimes v)",
+    "domain_of_definition": "Any vectors u ∈ R^m (or C^m) and v ∈ R^n; for complex vectors the conjugate transpose u v^* is often used.",
+    "worked_example": "With $u=(1,2,3)^T$ and $v=(4,5)^T$, $uv^{T}=\\begin{bmatrix}4&5\\\\8&10\\\\12&15\\end{bmatrix}$, a rank-1 matrix whose column space is spanned by $u$.",
+    "references": [
+      {
+        "title": "Strang, Introduction to Linear Algebra"
+      },
+      {
+        "title": "Outer product — Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Outer_product"
+      }
+    ],
+    "prerequisites": [
+      "vector"
+    ]
+  },
+  {
+    "id": "matrix-exponential",
+    "canonical_name": "Matrix exponential",
+    "kind": "function",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "operations"
+    ],
+    "short_description": "The matrix exponential exp(A) is the convergent power series sum of A^k/k!; it gives the solution operator e^{tA} of the linear system dx/dt = A x.",
+    "formula_latex": "e^{A} = \\sum_{k=0}^{\\infty} \\frac{A^{k}}{k!} = I + A + \\frac{A^{2}}{2!} + \\frac{A^{3}}{3!} + \\cdots",
+    "formula_plaintext": "exp(A) = sum_{k=0}^infty A^k / k! = I + A + A^2/2! + A^3/3! + ...",
+    "definition": "For a square matrix A ∈ C^{n×n}, the matrix exponential is defined by the power series exp(A) = Σ_{k≥0} A^k/k!, which converges for every A. It satisfies (d/dt) e^{tA} = A e^{tA} = e^{tA} A, so x(t) = e^{tA} x_0 solves dx/dt = A x with x(0) = x_0.",
+    "domain_of_definition": "All square matrices A ∈ C^{n×n} (equivalently R^{n×n}); the defining series converges absolutely for every A.",
+    "range": "Invertible matrices: exp(A) ∈ GL(n) with (e^A)^{-1} = e^{-A} and det(e^A) = e^{tr(A)}.",
+    "worked_example": "If $A$ is diagonalizable as $A = P D P^{-1}$ with $D=\\mathrm{diag}(\\lambda_1,\\dots,\\lambda_n)$, then $e^{A}=P\\,\\mathrm{diag}(e^{\\lambda_1},\\dots,e^{\\lambda_n})\\,P^{-1}$.",
+    "references": [
+      {
+        "title": "Horn & Johnson, Topics in Matrix Analysis, Ch. 6"
+      },
+      {
+        "title": "Matrix exponential — Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Matrix_exponential"
+      }
+    ],
+    "prerequisites": [
+      "diagonalization"
+    ]
+  },
+  {
+    "id": "direct-sum",
+    "canonical_name": "Direct sum",
+    "kind": "concept",
+    "domain": [
+      "linear-algebra"
+    ],
+    "subtopics": [
+      "operations"
+    ],
+    "short_description": "A vector space V is the direct sum of subspaces U and W when every vector decomposes uniquely as u + w; equivalently V = U + W and U ∩ W = {0}.",
+    "formula_latex": "V = U \\oplus W \\iff V = U + W \\ \\text{and}\\ U \\cap W = \\{0\\}",
+    "formula_plaintext": "V = U ⊕ W  iff  V = U + W and U ∩ W = {0}",
+    "definition": "A vector space V is the (internal) direct sum of subspaces U and W, written V = U ⊕ W, if V = U + W and U ∩ W = {0}. Equivalently, every v ∈ V has a unique representation v = u + w with u ∈ U and w ∈ W. In finite dimensions this gives dim V = dim U + dim W.",
+    "examples": [
+      "R^2 = span{(1,0)} ⊕ span{(0,1)}: every vector splits uniquely into horizontal and vertical parts.",
+      "For any matrix, R^n decomposes as the direct sum of the row space and the null space of the matrix (in R^n with the standard inner product).",
+      "The space of n×n matrices is the direct sum of the symmetric and skew-symmetric matrices: M = (M+M^T)/2 + (M-M^T)/2."
+    ],
+    "references": [
+      {
+        "title": "Axler, Linear Algebra Done Right, Sec. 1.C"
+      },
+      {
+        "title": "Direct sum of modules — Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Direct_sum_of_modules"
+      }
+    ],
+    "prerequisites": [
+      "subspace"
+    ]
+  }
+]

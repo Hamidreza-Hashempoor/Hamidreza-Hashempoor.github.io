@@ -365,6 +365,54 @@ function renderRelations(db, title, items) {
   return section(title, wrap);
 }
 
+// Kind-specific prose fields (concept/object/theorem/method/transform/function/formula/
+// distribution). Presence-driven and skips fields already rendered elsewhere (formula,
+// worked_example, range, parameters, assumptions). Text may carry inline $...$ (typeset later).
+const CARD_BODY_FIELDS = [
+  { key: "definition", label: "Definition", type: "prose" },
+  { key: "notation", label: "Notation", type: "prose" },
+  { key: "examples", label: "Examples", type: "list" },
+  { key: "statement", label: "Statement", type: "prose" },
+  { key: "hypotheses", label: "Hypotheses", type: "list" },
+  { key: "conclusion", label: "Conclusion", type: "prose" },
+  { key: "proof_sketch", label: "Proof sketch", type: "prose" },
+  { key: "consequences", label: "Consequences", type: "list" },
+  { key: "derivation", label: "Derivation", type: "prose" },
+  { key: "conditions", label: "Conditions", type: "list" },
+  { key: "equality_conditions", label: "Equality conditions", type: "prose" },
+  { key: "summary", label: "Summary", type: "prose" },
+  { key: "inputs", label: "Inputs", type: "list" },
+  { key: "outputs", label: "Outputs", type: "list" },
+  { key: "steps", label: "Steps", type: "steps" },
+  { key: "complexity", label: "Complexity", type: "prose" },
+  { key: "domain_of_definition", label: "Domain", type: "prose" },
+  { key: "special_values", label: "Special values", type: "list" },
+  { key: "inverse_latex", label: "Inverse", type: "latex" },
+  { key: "support", label: "Support", type: "prose" },
+  { key: "pdf_pmf", label: "PDF / PMF", type: "latex" },
+  { key: "mean", label: "Mean", type: "prose" },
+  { key: "variance", label: "Variance", type: "prose" },
+  { key: "moments", label: "Moments", type: "prose" },
+  { key: "mgf", label: "Moment-generating function", type: "latex" },
+  { key: "conjugate_prior", label: "Conjugate prior", type: "prose" },
+];
+
+function renderCardBody(root, measure) {
+  for (const f of CARD_BODY_FIELDS) {
+    const v = measure[f.key];
+    if (f.type === "list" || f.type === "steps") {
+      if (Array.isArray(v) && v.length) {
+        const list = el(f.type === "steps" ? "ol" : "ul", {}, v.map((x) => el("li", {}, [inlineMath(String(x))])));
+        root.appendChild(section(f.label, list));
+      }
+    } else if (f.type === "latex") {
+      if (v) root.appendChild(section(f.label, mathDiv(v)));
+    } else if (v) {
+      root.appendChild(section(f.label, el("p", { class: "detail-prose" }, [inlineMath(String(v))])));
+    }
+  }
+}
+
 export function renderDetail(db, app, measure) {
   const root = el("article", { class: "detail" });
 
@@ -396,6 +444,8 @@ export function renderDetail(db, app, measure) {
   if (measure.worked_example) {
     root.appendChild(section("Worked example", el("div", { class: "worked" }, [inlineMath(measure.worked_example)])));
   }
+
+  renderCardBody(root, measure);
 
   const badges = propertyBadges(measure);
   const propsTable = propertyTable(measure);
@@ -504,8 +554,11 @@ export function renderDetail(db, app, measure) {
     if (relWrap.childNodes.length) root.appendChild(section("Related / See also", relWrap));
   }
 
-  // Code.
-  root.appendChild(renderCodePanel(db, measure));
+  // Code — measure-only: non-measure kinds have no code templates and the panel copy is
+  // measure-specific, so only show it for measures (or any card that declares code templates).
+  if (measure.kind === "measure" || (measure.code_templates && measure.code_templates.length)) {
+    root.appendChild(renderCodePanel(db, measure));
+  }
 
   // References.
   if ((measure.references || []).length) {
@@ -642,8 +695,10 @@ export function renderTypesView(db, app) {
 
   const groups = new Map();
   for (const m of db.measures) {
-    const types = (m.input_types && m.input_types.length) ? m.input_types : ["unknown"];
-    for (const t of types) {
+    // "Browse by object type" is about measures' operands; cards without input_types
+    // (concepts, theorems, and other non-measure kinds) are skipped rather than bucketed as "unknown".
+    if (!(m.input_types && m.input_types.length)) continue;
+    for (const t of m.input_types) {
       if (!groups.has(t)) groups.set(t, []);
       groups.get(t).push(m);
     }

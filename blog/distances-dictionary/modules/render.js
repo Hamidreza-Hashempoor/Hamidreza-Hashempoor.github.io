@@ -1088,11 +1088,11 @@ const PIPELINE_GROUPS = [
       id: "data",
       cat: "data",
       title: "Dictionary data",
-      short: "Curated JSON cards + taxonomy, indexed, graphed & validated on load",
-      modules: ["data.js", "measures.json", "taxonomy.json", "aliases.json"],
+      short: "Curated JSON cards across many domains & kinds, indexed, graphed & validated on load",
+      modules: ["data.js", "measures.json", "cards/linear-algebra.json", "taxonomy.json"],
       detail: [
-        "Every card is one JSON object: a kind and domain(s) from the taxonomy, name, aliases, symbols, formula, properties, cross-linked identities & inequalities, related/prerequisite links, audited code, and references.",
-        "On load, data.js builds fast lookups (by id + an alias index), a taxonomy of kinds/domains, and a relationship graph (symmetric “related” plus prerequisite/dependent edges), then validates ids, taxonomy, and graph consistency (dangling links, prerequisite cycles). Cards load from a multi-file manifest, so new domains drop in as separate files. This single source of truth powers search, the assistant, and the PDF linker.",
+        "Every card is one JSON object classified by a kind (measure, concept, object, theorem, method, transform, function, formula) and domain(s) from the taxonomy. Measures carry formulas, properties, symbols, cross-linked identities & inequalities, and audited code; other kinds carry definitions, statements, proof sketches, and worked examples. All share names, aliases, references, and related/prerequisite links.",
+        "On load, data.js builds fast lookups (by id + an alias index), a taxonomy of kinds/domains, and a relationship graph (symmetric “related” plus prerequisite/dependent edges), then validates ids, taxonomy, and graph consistency (dangling links, prerequisite cycles). Cards load from a multi-file manifest — distances & divergences plus a growing set of domain files (linear algebra first), added one wave at a time. This single source of truth powers search, the assistant, and the PDF linker.",
       ],
       link: { href: "#/contribute", label: "How to add a card" },
     }],
@@ -1119,7 +1119,7 @@ const PIPELINE_GROUPS = [
         short: "Free semantic search — MiniLM, no key, on your device",
         modules: ["embeddings.js", "Transformers.js"],
         detail: [
-          "“Enable AI search” downloads a small embedding model (MiniLM, ~23MB, then cached) that runs fully in your browser and ranks measures by meaning — so natural-language queries work even with no keyword overlap. No API key; nothing leaves your device.",
+          "“Enable AI search” downloads a small embedding model (MiniLM, ~23MB, then cached) that runs fully in your browser and ranks cards by meaning — so natural-language queries work even with no keyword overlap. No API key; nothing leaves your device.",
           "This is the “light web version”: whenever a BYOK model is not configured, the app falls back to these free, on-device methods.",
         ],
         link: { href: "#/", label: "Try it on search" },
@@ -1208,6 +1208,7 @@ const PIPELINE_GROUPS = [
         modules: ["render.js", "mathjax.js", "codegen.js", "graph.js"],
         detail: [
           "Detail pages render formulas with MathJax, show audited NumPy / PyTorch / JAX (never AI-generated code), and cross-linked identities & inequalities.",
+          "Non-measure kinds (concepts, theorems, methods, …) show their definition, statement, proof sketch and worked example instead — audited code panels appear only for measures.",
           "From the relationship graph they also surface prerequisites, a learning path (the ordered chain to reach a concept), what a card builds toward, and related / see-also cards — with an SVG neighbourhood graph.",
         ],
       },
@@ -1215,10 +1216,12 @@ const PIPELINE_GROUPS = [
         id: "collaborate",
         cat: "data",
         title: "Collaborate",
-        short: "Data-driven cards, GitHub PR + CI, stable permalinks",
-        modules: ["config.js", "GitHub Actions"],
+        short: "Authoring kit + data-driven cards, GitHub PR + CI, stable permalinks",
+        modules: ["config.js", "validate-cards.mjs", "generate-card.md", "GitHub Actions"],
         detail: [
-          "Because cards are just data, anyone can propose or edit one on GitHub. CI validates every change — schema, taxonomy (kinds/domains), and relationship consistency (dangling links, prerequisite cycles); once merged, GitHub Pages rebuilds and the card updates everywhere — including inside already-annotated PDFs, whose links point to the stable #/m/:id permalink.",
+          "Cards are just data, so anyone can add one. An in-app Contribute form — kind- and domain-aware, with client-side validation and a live formula preview — drafts a schema-valid card and opens a prefilled GitHub issue or PR.",
+          "New domains arrive in content waves via an authoring kit: a per-kind JSON template, a fixed generation prompt (references required, no fabrication), and an offline validator (scripts/validate-cards.mjs) — the loop is generate → human review → cross-link → validate → re-embed → commit.",
+          "CI re-checks every change — schema, taxonomy (kinds/domains), references, LaTeX, and relationship consistency (dangling links, prerequisite cycles); once merged, GitHub Pages rebuilds and cards update everywhere — including inside already-annotated PDFs, whose links point to the stable #/m/:id permalink.",
         ],
         link: { href: "#/contribute", label: "Contribute" },
       },
@@ -1343,7 +1346,7 @@ export function renderPipeline(db) {
   }
 
   root.appendChild(el("p", { class: "muted pipe-footnote" }, [
-    "Everything runs in your browser. The only network calls are to your own AI / Mathpix provider (if you add a key) and to CDNs for libraries.",
+    "Everything runs in your browser. The only network calls are to your own AI provider (LLM / vision, if you add a key) and to CDNs for libraries.",
   ]));
   return root;
 }

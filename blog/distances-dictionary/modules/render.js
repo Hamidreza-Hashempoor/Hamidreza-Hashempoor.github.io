@@ -798,7 +798,9 @@ export function renderTopicsView(db, app) {
     const used = new Set();
     let subShown = 0;
     for (const s of order) {
-      const inSub = cards.filter((m) => (m.subtopics || []).includes(s));
+      // Each card appears under only its first matching subtopic within a domain, so the
+      // tile count matches the section header (a card can still appear in other DOMAIN sections).
+      const inSub = cards.filter((m) => !used.has(m) && (m.subtopics || []).includes(s));
       if (!inSub.length) continue;
       inSub.forEach((m) => used.add(m));
       sec.appendChild(el("h3", { class: "topic-subhead" }, [prettySub(s)]));
@@ -1186,11 +1188,12 @@ const PIPELINE_GROUPS = [
       {
         id: "search",
         cat: "browser",
-        title: "Search & filter",
-        short: "Instant lexical search + faceted filters (no key)",
+        title: "Search & browse",
+        short: "Instant lexical search, domain/kind facets & topic browse (no key)",
         modules: ["search.js", "fuzzy.js", "aliasResolver.js", "filters.js"],
         detail: [
-          "A dependency-free cascade: exact alias → fuzzy (bigram-Dice + edit distance) → field-weighted token match. Facet filters (object type, property, family, application) are URL-driven, so a filtered view is shareable.",
+          "A dependency-free cascade: exact alias → fuzzy (bigram-Dice + edit distance) → field-weighted token match. Facet filters — domain, kind, object type, property, family, application — are URL-driven, so a filtered view is shareable.",
+          "You can also browse the whole library by topic (grouped by domain & subtopic at #/topics) or by object type (#/types) — every card links to its stable #/m/:id page.",
           "Runs entirely in your browser — no network, no key.",
         ],
         link: { href: "#/", label: "Open search" },
@@ -1506,7 +1509,7 @@ function pipeNodes() {
   return [
     N("data", "data", "Dictionary data", "cylinder", "data", 230, 30, 300, 130),
     // explore lane (left column, top → bottom)
-    N("search", "search", "Search & filter", "rect", "browser", 45, 220, 145, 80),
+    N("search", "search", "Search & browse", "rect", "browser", 45, 220, 145, 80),
     N("assistant", "assistant", "Rule-based assistant", "rect", "browser", 200, 220, 145, 80),
     N("gate", null, "Key + model set?", "diamond", "neutral", 140, 340, 110, 110),
     N("lightai", "lightai", "Light in-browser AI", "hexagon", "model", 45, 490, 145, 80),
